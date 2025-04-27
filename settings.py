@@ -1,0 +1,2 @@
+DEBUGGING = False
+DEBUG_ACCOUNT = "debug"

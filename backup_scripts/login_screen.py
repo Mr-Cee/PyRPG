@@ -91,7 +91,6 @@ class LoginScreen(BaseScreen):
         self.forgot_password_popup = None
         self.new_password_popup = None
         self.reset_target_username = None
-        self.register_popup = None
 
     def setup(self):
         self.account_manager = AccountManager()
@@ -114,26 +113,14 @@ class LoginScreen(BaseScreen):
         )
         self.password_entry.set_text_hidden(True)
 
-        self.username_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((150, 180), (90, 30)),
-            text="Username:",
-            manager=self.manager
-        )
-
-        self.password_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((150, 250), (90, 30)),
-            text="Password:",
-            manager=self.manager
-        )
-
         self.login_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((250, 320), (145, 50)),
+            relative_rect=pygame.Rect((250, 310), (145, 50)),
             text="Login",
             manager=self.manager
         )
 
         self.register_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((405, 320), (145, 50)),
+            relative_rect=pygame.Rect((405, 310), (145, 50)),
             text="Register",
             manager=self.manager
         )
@@ -156,13 +143,13 @@ class LoginScreen(BaseScreen):
             manager=self.manager
         )
 
-        # self.email_entry = pygame_gui.elements.UITextEntryLine(
-        #     relative_rect=pygame.Rect((250, 310), (300, 50)),
-        #     manager=self.manager
-        # )
+        self.email_entry = pygame_gui.elements.UITextEntryLine(
+            relative_rect=pygame.Rect((250, 310), (300, 50)),
+            manager=self.manager
+        )
 
         self.forgot_password_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((250, 490), (300, 30)),
+            relative_rect=pygame.Rect((250, 460), (300, 30)),
             text="Forgot Password?",
             manager=self.manager
         )
@@ -179,8 +166,7 @@ class LoginScreen(BaseScreen):
         self.remember_me_button.kill()
         self.remember_me_label.kill()
         self.forgot_password_button.kill()
-        self.username_label.kill()
-        self.password_label.kill()
+        self.email_entry.kill()
 
     def load_remembered_login(self):
         save_path = os.path.join('Save_Data', 'login_info.json')
@@ -227,72 +213,17 @@ class LoginScreen(BaseScreen):
             manager=self.manager,
             window_title="Forgot Password",
             action_long_desc="Enter your email in the input field below.",
+            confirming_button_text="Submit",
+            denying_button_text="Cancel",
             object_id="#forgot_password_popup"
         )
 
-        self.forgot_email_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((50, 65), (300, 30)),
-            text="Email:",
-            manager=self.manager,
-            container=self.forgot_password_popup
-        )
         # Create a small text entry line inside the popup
         self.forgot_email_entry = pygame_gui.elements.UITextEntryLine(
-            relative_rect=pygame.Rect((50, 95), (300, 30)),
+            relative_rect=pygame.Rect((50, 110), (300, 30)),
             manager=self.manager,
             container=self.forgot_password_popup
         )
-
-
-
-    def open_register_popup(self):
-        if hasattr(self, 'register_popup') and self.register_popup:
-            return  # Prevent multiple popups
-
-        self.register_popup = pygame_gui.windows.UIConfirmationDialog(
-            rect=pygame.Rect((200, 200), (400, 300)),
-            manager=self.manager,
-            window_title="Register New Account",
-            action_long_desc="Enter Username, Password, and Email."
-        )
-
-        self.register_username_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((50, 35), (300, 30)),
-            text="Username:",
-            manager=self.manager,
-            container=self.register_popup
-        )
-        self.register_username_entry = pygame_gui.elements.UITextEntryLine(
-            relative_rect=pygame.Rect((50, 60), (300, 30)),
-            manager=self.manager,
-            container=self.register_popup
-        )
-
-        self.register_password_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((50, 95), (300, 30)),
-            text="Password:",
-            manager=self.manager,
-            container=self.register_popup
-        )
-        self.register_password_entry = pygame_gui.elements.UITextEntryLine(
-            relative_rect=pygame.Rect((50, 120), (300, 30)),
-            manager=self.manager,
-            container=self.register_popup
-        )
-
-        self.register_email_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((50, 155), (300, 30)),
-            text="Email:",
-            manager=self.manager,
-            container=self.register_popup
-        )
-        self.register_email_entry = pygame_gui.elements.UITextEntryLine(
-            relative_rect=pygame.Rect((50, 180), (300, 30)),
-            manager=self.manager,
-            container=self.register_popup
-        )
-
-        self.register_password_entry.set_text_hidden(True)
 
     def open_new_password_popup(self, username):
         if self.new_password_popup:
@@ -305,37 +236,22 @@ class LoginScreen(BaseScreen):
             manager=self.manager,
             window_title="Reset Password",
             action_long_desc="Enter a new password.",
+            confirming_button_text="Reset",
+            denying_button_text="Cancel",
             object_id="#new_password_popup"
         )
-        self.new_password_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((50, 60), (300, 30)),
-            text="New Password:",
-            manager=self.manager,
-            container=self.new_password_popup
-        )
+
         self.new_password_entry = pygame_gui.elements.UITextEntryLine(
-            relative_rect=pygame.Rect((50, 90), (300, 30)),
+            relative_rect=pygame.Rect((50, 110), (300, 30)),
             manager=self.manager,
             container=self.new_password_popup
         )
 
-
-
-        self.new_password_confirm_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((50, 120), (300, 30)),
-            text="Confirm Password:",
-            manager=self.manager,
-            container=self.new_password_popup
-        )
         self.new_password_confirm_entry = pygame_gui.elements.UITextEntryLine(
             relative_rect=pygame.Rect((50, 150), (300, 30)),
             manager=self.manager,
             container=self.new_password_popup
         )
-
-
-
-
 
     def handle_event(self, event):
 
@@ -381,8 +297,12 @@ class LoginScreen(BaseScreen):
 
             username = self.username_entry.get_text().strip()
             password = self.password_entry.get_text().strip()
+            email = self.email_entry.get_text().strip()
 
-            if event.ui_element == self.login_button:
+            if not username or not password:
+                self.message_label.set_text("Username and password required.")
+
+            elif event.ui_element == self.login_button:
                 #if self.account_manager.login(username, password):
                 if username and password:
                     self.message_label.set_text("Connecting to server...")
@@ -392,25 +312,26 @@ class LoginScreen(BaseScreen):
                     # Start the login attempt in a background thread
                     self.login_thread = threading.Thread(target=self.background_login, args=(username, password))
                     self.login_thread.start()
-                else:
-                    self.message_label.set_text("Username and password required.")
 
-            if event.ui_element == self.register_button:
-                self.open_register_popup()
+            elif event.ui_element == self.register_button:
+                if username and password:
+                    self.message_label.set_text("Connecting...")
+                    self.connecting = True
+                    success = attempt_register(username, password, email)
+                    self.connecting = False
 
-            if hasattr(self, 'register_popup') and self.register_popup:
-                if event.ui_element == self.register_popup.cancel_button:
-                    self.register_popup.kill()
-                    self.register_popup = None
+                    if success:
+                        self.message_label.set_text("Registration Successful! Please login.")
+                    else:
+                        self.message_label.set_text("Registration Failed.")
 
-            if self.forgot_password_popup and event.ui_element == self.forgot_password_popup.cancel_button:
+            elif self.forgot_password_popup and event.ui_element == self.forgot_password_popup.cancel_button:
                 self.forgot_password_popup.kill()
 
-            if self.new_password_popup and event.ui_element == self.new_password_popup.cancel_button:
+            elif self.new_password_popup and event.ui_element == self.new_password_popup.cancel_button:
                 self.new_password_popup.kill()
 
         elif event.type == pygame_gui.UI_CONFIRMATION_DIALOG_CONFIRMED:
-
             if event.ui_element == self.forgot_password_popup:
                 email = self.forgot_email_entry.get_text().strip()
                 username = attempt_forgot_password(email)
@@ -436,21 +357,7 @@ class LoginScreen(BaseScreen):
 
                 self.new_password_popup.kill()
 
-            elif hasattr(self, 'register_popup') and event.ui_element == self.register_popup:
-                username = self.register_username_entry.get_text().strip()
-                password = self.register_password_entry.get_text().strip()
-                email = self.register_email_entry.get_text().strip()
 
-                if username and password and email:
-                    if attempt_register(username, password, email):
-                        self.message_label.set_text("Registration Successful! Please login.")
-                    else:
-                        self.message_label.set_text("Registration Failed.")
-                else:
-                    self.message_label.set_text("All fields required.")
-
-                self.register_popup.kill()
-                self.register_popup = None
 
     def update(self, time_delta):
         self.manager.update(time_delta)

@@ -1,11 +1,16 @@
-# player.py
+import datetime
+
+
 
 class Player:
-    def __init__(self, name, char_class, level=1, experience=0):
+    def __init__(self, name, char_class, level=1, experience=0, inventory=None, equipment=None, skills=None):
         self.name = name
         self.char_class = char_class
         self.level = level
         self.experience = experience
+        self.inventory = inventory if inventory else {}
+        self.equipment = equipment if equipment else {}
+        self.skills = skills if skills else {}
 
         self.stats = {
             "Strength": 5,
@@ -75,3 +80,16 @@ class Player:
             player.inventory = data.get("inventory", [])
             player.equipment = data.get("equipment", player.equipment)
             return player
+
+    @classmethod
+    def from_server_data(cls, data):
+        return cls(
+            name=data["name"],
+            char_class=data["char_class"],
+            level=data["level"],
+            experience=data["experience"],
+            inventory=data["inventory"],
+            equipment=data["equipment"],
+            skills=data["skills"]
+        )
+

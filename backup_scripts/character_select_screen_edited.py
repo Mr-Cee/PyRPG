@@ -1,9 +1,10 @@
+import requests
 from player import Player
 from screen_manager import *
 import pygame
 import pygame_gui
-import requests
 from screen_registry import ScreenRegistry
+import os
 
 SERVER_URL = "http://localhost:8000"
 
@@ -29,14 +30,14 @@ class ConfirmDeletePopup:
         )
 
         self.yes_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((30, 170), (100, 50)),
+            relative_rect=pygame.Rect((30, 170), (100, 50)),  # Y moved down to 170
             text="Yes",
             manager=self.manager,
             container=self.window
         )
 
         self.cancel_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((170, 170), (100, 50)),
+            relative_rect=pygame.Rect((170, 170), (100, 50)),  # Y moved down to 170
             text="Cancel",
             manager=self.manager,
             container=self.window
@@ -52,15 +53,15 @@ class ConfirmDeletePopup:
                 self.callback_cancel()
                 self.window.kill()
 
-
 class CharacterSelectScreen(BaseScreen):
     def setup(self):
+        # Load character names
+        character_names = self.load_character_names()
         self.confirm_popup = None
-        self.character_data = None  # Store full character info
 
         self.character_list = pygame_gui.elements.UISelectionList(
             relative_rect=pygame.Rect((250, 150), (300, 300)),
-            item_list=[],
+            item_list=character_names,
             manager=self.manager
         )
 
@@ -76,21 +77,18 @@ class CharacterSelectScreen(BaseScreen):
             manager=self.manager
         )
 
+        self.message_label = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect((250, 530), (300, 30)),
+            text="Select or Create a Character",
+            manager=self.manager
+        )
         self.delete_character_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((250, 530), (300, 50)),
             text="Delete Character",
             manager=self.manager
         )
 
-        self.message_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((250, 590), (300, 30)),
-            text="Select or Create a Character",
-            manager=self.manager
-        )
-
-        self.load_character_from_server()
-
-    def load_character_from_server(self):
+    def load_character_names(self):
         headers = {"Authorization": f"Bearer {self.screen_manager.auth_token}"}
 
         try:
@@ -100,64 +98,45 @@ class CharacterSelectScreen(BaseScreen):
             )
 
             if response.status_code == 200:
-                self.character_data = response.json()
-
-                if self.character_data:
-                    names = [char["name"] for char in self.character_data]
-                    self.character_list.set_item_list(names)
-                    self.message_label.set_text("Select your character.")
-                else:
-                    self.character_list.set_item_list([])
-                    self.message_label.set_text("No characters found. Create one!")
-
+                self.player_data = response.json()
+                self.show_character()
             else:
-                self.character_list.set_item_list([])
-                self.message_label.set_text("No characters found. Create one!")
+                self.show_create_character()
 
         except Exception as e:
-            print(f"❌ Failed to load character info: {e}")
-            self.character_list.set_item_list([])
-            self.message_label.set_text("Connection error.")
+            print(f"❌ Failed to load player info: {e}")
+            self.show_create_character()
 
     def delete_character(self, name):
-        headers = {"Authorization": f"Bearer {self.screen_manager.auth_token}"}
+        import os
 
-        try:
-            response = requests.delete(
-                f"{SERVER_URL}/player/{self.screen_manager.current_account}",
-                headers=headers
-            )
+        save_path = os.path.join('Save_Data', 'Characters', f"{name}.json")
+        if os.path.exists(save_path):
+            os.remove(save_path)
 
-            if response.status_code == 200:
-                print("✅ Character deleted successfully.")
-                self.character_list.set_item_list([])
-                self.message_label.set_text(f"Character '{name}' deleted.")
-            else:
-                print(f"❌ Failed to delete character: {response.text}")
-                self.message_label.set_text("Failed to delete character.")
-
-        except Exception as e:
-            print(f"❌ Connection error during deletion: {e}")
-            self.message_label.set_text("Connection error.")
+        # Refresh character list
+        character_names = self.load_character_names()
+        self.character_list.set_item_list(character_names)
+        self.message_label.set_text(f"Character '{name}' deleted.")
 
     def confirm_delete(self, name):
-        self.confirm_popup = None
+        self.confirm_popup = None  # <<< Reset
         self.delete_character(name)
 
     def cancel_delete(self):
-        self.confirm_popup = None
+        self.confirm_popup = None  # <<< Just reset, no deletion
 
     def teardown(self):
         self.character_list.kill()
         self.new_character_button.kill()
         self.select_character_button.kill()
-        self.delete_character_button.kill()
         self.message_label.kill()
+        self.delete_character_button.kill()
 
     def handle_event(self, event):
         if self.confirm_popup:
             self.confirm_popup.process_event(event)
-            return
+            return  # <<< Don't process other stuff if popup is open
 
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.new_character_button:
@@ -166,24 +145,22 @@ class CharacterSelectScreen(BaseScreen):
                     self.screen_manager.set_screen(character_creation_class(self.manager, self.screen_manager))
 
             elif event.ui_element == self.select_character_button:
-                selected_name = self.character_list.get_single_selection()
-                if selected_name:
-                    # Find the correct character data
-                    for char in self.character_data:
-                        if char["name"] == selected_name:
-                            self.screen_manager.player = Player.from_server_data(char)
-                            break
+                selected_character_name = self.character_list.get_single_selection()
+                if selected_character_name:
+                    from player import Player
+                    self.screen_manager.player = Player.load(selected_character_name)
 
+                    # After loading, go to main game screen
                     main_game_screen_class = ScreenRegistry.get("main_game")
                     if main_game_screen_class:
                         self.screen_manager.set_screen(main_game_screen_class(self.manager, self.screen_manager))
 
             elif event.ui_element == self.delete_character_button:
-                selected_name = self.character_list.get_single_selection()
-                if selected_name and not self.confirm_popup:
+                selected_character_name = self.character_list.get_single_selection()
+                if selected_character_name and not self.confirm_popup:
                     self.confirm_popup = ConfirmDeletePopup(
                         self.manager,
-                        selected_name,
+                        selected_character_name,
                         self.confirm_delete,
                         self.cancel_delete
                     )
@@ -191,8 +168,8 @@ class CharacterSelectScreen(BaseScreen):
     def update(self, time_delta):
         self.manager.update(time_delta)
 
-    def draw(self, surface):
-        self.manager.draw_ui(surface)
-
+    def draw(self, window_surface):
+        self.manager.draw_ui(window_surface)
 
 ScreenRegistry.register("character_select", CharacterSelectScreen)
+
