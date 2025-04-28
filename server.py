@@ -37,6 +37,16 @@ class ResetPasswordRequest(BaseModel):
     username: str
     new_password: str
 
+from pydantic import BaseModel
+
+class UpdatePlayerRequest(BaseModel):
+    username: str
+    name: str
+    level: int
+    experience: int
+    gold: int
+    last_logout_time: str  # ISO 8601 string format
+
 def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
     to_encode = data.copy()
     expire = datetime.datetime.utcnow() + (expires_delta or datetime.timedelta(minutes=15))
@@ -50,6 +60,31 @@ def get_current_username(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Invalid authentication")
     return username
 
+@app.post("/update_player")
+def update_player(request: UpdatePlayerRequest):
+    db = SessionLocal()
+
+    account = db.query(Account).filter_by(username=request.username).first()
+    if not account:
+        db.close()
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    character = db.query(Player).filter_by(account_id=account.id, name=request.name).first()
+    if not character:
+        db.close()
+        raise HTTPException(status_code=404, detail="Character not found.")
+
+    character.level = request.level
+    character.experience = request.experience
+    character.gold = request.gold
+    character.last_logout_time = request.last_logout_time
+
+    db.commit()
+    db.refresh(character)
+    db.close()
+
+    return {"msg": "Player updated successfully!"}
+
 @app.post("/register")
 def register(request: RegisterRequest):
     db = SessionLocal()
@@ -59,7 +94,11 @@ def register(request: RegisterRequest):
         raise HTTPException(status_code=400, detail="Username already registered.")
 
     hashed_password = pwd_context.hash(request.password)
-    new_account = Account(username=request.username, password_hash=hashed_password, email=request.email)
+    new_account = Account(
+        username=request.username,
+        password_hash=hashed_password,
+        email=request.email,
+        role="player" )
 
     db.add(new_account)
     db.commit()
@@ -78,7 +117,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
     access_token = create_access_token(data={"sub": user.username})
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token,
+            "token_type": "bearer",
+            "username": user.username,
+            "role": user.role}
 
 @app.get("/player/{username}")
 def get_players(username: str, token: str = Depends(oauth2_scheme)):
@@ -98,9 +140,11 @@ def get_players(username: str, token: str = Depends(oauth2_scheme)):
             "char_class": p.char_class,
             "level": p.level,
             "experience": p.experience,
+            "gold": p.gold,
             "inventory": p.inventory,
             "equipment": p.equipment,
-            "skills": p.skills
+            "skills": p.skills,
+            "username": account.username
         })
 
     db.close()
@@ -128,6 +172,7 @@ def create_player(username: str, player_data: dict = Body(...), token: str = Dep
         char_class=player_data.get("char_class", "Warrior"),
         level=player_data.get("level", 1),
         experience=player_data.get("experience", 0),
+        gold=player_data.get("gold", 0),  # ✅ ADD THIS!
         inventory=player_data.get("inventory", {}),
         equipment=player_data.get("equipment", {}),
         skills=player_data.get("skills", {})
@@ -185,3 +230,27 @@ def reset_password(request: ResetPasswordRequest):
     db.close()
 
     return {"msg": "Password reset successfully."}
+
+@app.delete("/account/{username}")
+def delete_account(username: str, token: str = Depends(oauth2_scheme)):
+    db = SessionLocal()
+
+    account = db.query(Account).filter_by(username=username).first()
+    if not account:
+        db.close()
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    # ✅ Delete associated players first
+    players = db.query(Player).filter_by(account_id=account.id).all()
+    for player in players:
+        db.delete(player)
+
+    db.flush()  # ✅ Force delete of players first
+
+    # ✅ Then delete account
+    db.delete(account)
+
+    db.commit()
+    db.close()
+
+    return {"msg": "Account and associated players deleted successfully."}

@@ -14,6 +14,7 @@ class Account(Base):
     username = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
+    role = Column(String, default="player")
 
 class Player(Base):
     __tablename__ = 'players'
@@ -24,6 +25,8 @@ class Player(Base):
     char_class = Column(String, nullable=False)
     level = Column(Integer, default=1)
     experience = Column(Integer, default=0)
-    inventory = Column(JSONB, default=dict)    # Store as JSON blob
+    gold = Column(Integer, default=0)  # ✅ Add this
+    last_logout_time = Column(String, nullable=True)  # ✅ Add this, store ISO string
+    inventory = Column(JSONB, default=dict)
     equipment = Column(JSONB, default=dict)
     skills = Column(JSONB, default=dict)

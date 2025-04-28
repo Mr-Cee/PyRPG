@@ -19,9 +19,12 @@ def attempt_login(username, password):
         )
 
         if response.status_code == 200:
-            token = response.json().get("access_token")
+            data = response.json()
+            token = data.get("access_token")
+            role = data.get("role", "player")
             print(f"✅ Login successful! Token: {token}")
-            return token
+
+            return {"token": token, "role": role}
         else:
             print(f"❌ Login failed: {response.json()['detail']}")
             return None
@@ -215,8 +218,8 @@ class LoginScreen(BaseScreen):
             os.remove(save_path)
 
     def background_login(self, username, password):
-        token = attempt_login(username, password)
-        self.login_result = token
+        result = attempt_login(username, password)
+        self.login_result = result
 
     def open_forgot_password_popup(self):
         if self.forgot_password_popup:
@@ -242,8 +245,6 @@ class LoginScreen(BaseScreen):
             manager=self.manager,
             container=self.forgot_password_popup
         )
-
-
 
     def open_register_popup(self):
         if hasattr(self, 'register_popup') and self.register_popup:
@@ -333,20 +334,14 @@ class LoginScreen(BaseScreen):
             container=self.new_password_popup
         )
 
-
-
-
-
     def handle_event(self, event):
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_TAB:
                 if self.username_entry.is_focused:
-                    print("Test1")
                     self.username_entry.unfocus()
                     self.password_entry.focus()
                 elif self.password_entry.is_focused:
-                    print("test2")
                     self.password_entry.unfocus()
                     self.username_entry.focus()
 
@@ -460,7 +455,8 @@ class LoginScreen(BaseScreen):
             self.connecting = False
 
             if self.login_result:
-                self.screen_manager.auth_token = self.login_result
+                self.screen_manager.auth_token = self.login_result["token"]
+                self.screen_manager.player_role = self.login_result.get("role", "player")
                 self.screen_manager.current_account = self.username_entry.get_text().strip()
                 self.message_label.set_text("Login successful!")
 
