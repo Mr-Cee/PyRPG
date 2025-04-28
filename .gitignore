@@ -1,3 +1,2 @@
-.venv\*
-Assets\*
-Save_Data\*
+/Assets/
+/Assets/GUI/Icons/
