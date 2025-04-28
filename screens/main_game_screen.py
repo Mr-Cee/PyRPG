@@ -1,5 +1,5 @@
 # screens/main_game_screen.py
-
+from chat_system import ChatWindow, ChatInputBar
 import pygame
 import pygame_gui
 from screen_manager import BaseScreen
@@ -13,7 +13,11 @@ class MainGameScreen(BaseScreen):
         self.idle_chest_window = None
 
     def setup(self):
+        self.chat_window = ChatWindow(self.manager)
+        self.chat_input = ChatInputBar(self.manager, self.chat_window)
+
         self.player = self.screen_manager.player
+        self.player.last_logout_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=10)
         self.player.calculate_idle_rewards()
 
         self.background_panel = pygame_gui.elements.UIPanel(
@@ -49,6 +53,9 @@ class MainGameScreen(BaseScreen):
             container=self.background_panel
         )
 
+        self.chest_icon = pygame.image.load("Assets/GUI/Icons/treasureChest.png").convert_alpha()
+        self.chest_icon = pygame.transform.scale(self.chest_icon, (64, 64))  # Resize if needed
+
         self.earned_gold = 0
         self.idle_timer = 0
 
@@ -60,6 +67,7 @@ class MainGameScreen(BaseScreen):
         self.gold_label.kill()
         if self.idle_chest_window:
             self.idle_chest_window.kill()
+
 
     def update_gold_label(self):
         if self.gold_label:
@@ -73,9 +81,15 @@ class MainGameScreen(BaseScreen):
                 self.player.save_to_server(self.screen_manager.auth_token)  # Add this line
                 self.screen_manager.set_screen(CharacterSelectScreen(self.manager, self.screen_manager))
 
+            if self.idle_chest_popup_open and event.ui_element == self.idle_chest_button:
+                self.claim_idle_rewards()
+
         if event.type == pygame_gui.UI_CONFIRMATION_DIALOG_CONFIRMED:
             if self.idle_chest_window and event.ui_element == self.idle_chest_window:
                 self.claim_idle_rewards()
+
+        self.chat_window.process_event(event)
+        self.chat_input.process_event(event)
 
     def update(self, time_delta):
         self.manager.update(time_delta)
@@ -90,29 +104,45 @@ class MainGameScreen(BaseScreen):
         if self.player.pending_idle_rewards and not self.idle_chest_popup_open:
             self.open_idle_rewards_chest()
 
+        if hasattr(self, "idle_chest_button") and self.idle_chest_button:
+            self.idle_chest_button.set_image(self.chest_icon)
+
+        self.chat_window.update(time_delta)
+        self.chat_input.update(time_delta)
+
     def draw(self, window_surface):
         self.manager.draw_ui(window_surface)
 
     def open_idle_rewards_chest(self):
         self.idle_chest_popup_open = True
 
-        self.idle_chest_window = pygame_gui.windows.UIConfirmationDialog(
-            rect=pygame.Rect((300, 200), (400, 200)),
+        self.idle_chest_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((500, 300), (64, 64)),
+            text="",
             manager=self.manager,
-            window_title="Idle Rewards",
-            action_long_desc=f"You've earned {self.player.pending_idle_rewards['xp']} XP and {self.player.pending_idle_rewards['gold']} gold while idle! Claim your rewards.",
-            object_id="#idle_chest_popup"
+            container=self.background_panel,
+            tool_tip_text="Click to claim Idle Rewards!",
+            object_id="#idle_chest_button"
         )
+
+        # Set the icon again every frame (already doing this)
+        self.idle_chest_button.set_image(self.chest_icon)
+
+        # ✅ Make background transparent manually
+        self.idle_chest_button.drawable_shape.background_colour = pygame.Color(0, 0, 0, 0)
+        self.idle_chest_button.drawable_shape.border_colour = pygame.Color(0, 0, 0, 0)
 
     def claim_idle_rewards(self):
         if self.player.pending_idle_rewards:
             self.player.experience += self.player.pending_idle_rewards['xp']
-            self.earned_gold += self.player.pending_idle_rewards['gold']
+            self.player.gold += self.player.pending_idle_rewards['gold']
             self.player.pending_idle_rewards = None
+            self.update_gold_label()
 
-        if self.idle_chest_window:
-            self.idle_chest_window.kill()
-            self.idle_chest_window = None
-            self.idle_chest_popup_open = False
+        if hasattr(self, "idle_chest_button") and self.idle_chest_button:
+            self.idle_chest_button.kill()
+            self.idle_chest_button = None
+
+        self.idle_chest_popup_open = False
 
 ScreenRegistry.register("main_game", MainGameScreen)

@@ -10,10 +10,13 @@ from settings import *
 
 pygame.init()
 
+GAME_WIDTH = 1280
+GAME_HEIGHT = 720
+
 # Screen setup
 pygame.display.set_caption("Test RPG")
-window_surface = pygame.display.set_mode((800, 600))
-ui_manager = pygame_gui.UIManager((800, 600))
+window_surface = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
+ui_manager = pygame_gui.UIManager((GAME_WIDTH, GAME_HEIGHT))
 
 clock = pygame.time.Clock()
 
