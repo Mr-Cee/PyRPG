@@ -12,7 +12,7 @@ from pydantic import BaseModel
 import models
 from models import Base, Account, Player
 
-DATABASE_URL = "postgresql+psycopg2://PyRPG_Admin:Christie91!@localhost/PyRPG"
+from settings import DATABASE_URL
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)

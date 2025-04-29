@@ -13,6 +13,8 @@ ROLE_HIERARCHY = {
     "dev": 2
 }
 
+from settings import SERVER_URL
+
 class ChatWindow:
     def __init__(self, manager, player, container=None):
         self.player = player
@@ -120,7 +122,7 @@ class ChatWindow:
 
     def fetch_recent_messages(self):
         try:
-            response = requests.get("http://localhost:8000/chat/recent", timeout=2)
+            response = requests.get(f"{SERVER_URL}/chat/recent", timeout=2)
             if response.status_code == 200:
                 data = response.json()
                 for msg in data.get("messages", []):

@@ -6,7 +6,8 @@ import pygame
 import pygame_gui
 import requests
 
-SERVER_URL = "http://localhost:8000"
+from settings import SERVER_URL  # or wherever your server runs
+
 
 class CharacterCreationScreen(BaseScreen):
     def __init__(self, manager, screen_manager):

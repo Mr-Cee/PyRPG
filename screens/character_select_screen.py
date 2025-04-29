@@ -5,7 +5,8 @@ import pygame_gui
 import requests
 from screen_registry import ScreenRegistry
 
-SERVER_URL = "http://localhost:8000"
+from settings import SERVER_URL  # or wherever your server runs
+
 
 class ConfirmDeletePopup:
     def __init__(self, manager, character_name, callback_confirm, callback_cancel):

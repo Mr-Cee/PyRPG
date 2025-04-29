@@ -8,7 +8,8 @@ import json
 import requests
 import threading
 
-SERVER_URL = "http://localhost:8000"
+from settings import SERVER_URL  # or wherever your server runs
+
 
 
 def attempt_login(username, password):

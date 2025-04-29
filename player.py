@@ -3,7 +3,7 @@ import json
 import os
 import requests
 
-SERVER_URL = "http://localhost:8000"  # or wherever your server runs
+from settings import SERVER_URL  # or wherever your server runs
 
 class Player:
     def __init__(self, name, char_class, level=1, experience=0, inventory=None, equipment=None, skills=None, username=None, role="player"):

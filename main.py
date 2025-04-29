@@ -26,30 +26,11 @@ autoload_screens()
 # 🚀 Create a screen manager and start on the login screen
 screen_manager = ScreenManager()
 
-if DEBUGGING:
-    print(f"DEBUG MODE: Auto-logging into debug account '{DEBUG_ACCOUNT}'...")
 
-    # Simulate login
-    from account_manager import AccountManager
-    account_manager = AccountManager()
-
-    if DEBUG_ACCOUNT not in account_manager.accounts:
-        account_manager.register(DEBUG_ACCOUNT, "debug_password")
-        print(f"DEBUG MODE: Created test account '{DEBUG_ACCOUNT}'.")
-
-    # Set current account manually
-    screen_manager.current_account = DEBUG_ACCOUNT
-
-    # Move to Character Select Screen
-    character_select_class = ScreenRegistry.get("character_select")
-    if character_select_class:
-        screen_manager.set_screen(character_select_class(ui_manager, screen_manager))
-
-else:
-    # Normal login flow
-    login_class = ScreenRegistry.get("login")
-    if login_class:
-        screen_manager.set_screen(login_class(ui_manager, screen_manager))
+# Normal login flow
+login_class = ScreenRegistry.get("login")
+if login_class:
+    screen_manager.set_screen(login_class(ui_manager, screen_manager))
 
 running = True
 while running:
