@@ -6,7 +6,8 @@ import requests
 SERVER_URL = "http://localhost:8000"  # or wherever your server runs
 
 class Player:
-    def __init__(self, name, char_class, level=1, experience=0, inventory=None, equipment=None, skills=None, username=None):
+    def __init__(self, name, char_class, level=1, experience=0, inventory=None, equipment=None, skills=None, username=None, role="player"):
+        self.role = role
         self.username = username
         self.name = name
         self.char_class = char_class
@@ -96,10 +97,12 @@ class Player:
             inventory=data["inventory"],
             equipment=data["equipment"],
             skills=data["skills"],
-            username=data["username"]
+            username=data["username"],
+            role=data.get("role", "player")
         )
         if data.get("last_logout_time"):
             player.last_logout_time = datetime.datetime.fromisoformat(data["last_logout_time"])
+
 
         player.gold = data.get("gold", 0)
 

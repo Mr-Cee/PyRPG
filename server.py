@@ -144,7 +144,8 @@ def get_players(username: str, token: str = Depends(oauth2_scheme)):
             "inventory": p.inventory,
             "equipment": p.equipment,
             "skills": p.skills,
-            "username": account.username
+            "username": account.username,
+            "role": account.role
         })
 
     db.close()

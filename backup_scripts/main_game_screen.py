@@ -1,5 +1,5 @@
 # screens/main_game_screen.py
-from chat_system import ChatWindow
+from chat_system import ChatWindow, ChatInputBar
 import pygame
 import pygame_gui
 from screen_manager import BaseScreen
@@ -13,43 +13,44 @@ class MainGameScreen(BaseScreen):
         self.idle_chest_window = None
 
     def setup(self):
+        self.chat_window = ChatWindow(self.manager)
+        self.chat_input = ChatInputBar(self.manager, self.chat_window)
+
         self.player = self.screen_manager.player
         self.player.last_logout_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=10)
         self.player.calculate_idle_rewards()
 
-        self.chat_window = ChatWindow(self.manager, self.player)
-        self.chat_window.panel.set_relative_position((10, 480))
-        self.chat_window.panel.set_dimensions((400, 220))
-
         self.background_panel = pygame_gui.elements.UIPanel(
-            relative_rect=pygame.Rect((10, 10), (400, 450)),
+            relative_rect=pygame.Rect((50, 50), (700, 500)),
             manager=self.manager
         )
 
         self.player_info_label = pygame_gui.elements.UITextBox(
             html_text=f"<b>{self.player.name}</b><br>Class: {self.player.char_class}<br>Level: {self.player.level}<br>Experience: {self.player.experience}",
-            relative_rect=pygame.Rect((20, 20), (360, 100)),
-            manager=self.manager,
-            container=self.background_panel
-        )
-
-        self.gold_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((20, 140), (360, 30)),
-            text=f"Gold: {self.player.gold}",
+            relative_rect=pygame.Rect((100, 100), (600, 150)),
             manager=self.manager,
             container=self.background_panel
         )
 
         self.idle_status_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((10, 430), (400, 30)),
+            relative_rect=pygame.Rect((250, 300), (300, 30)),
             text="You are idling in town...",
-            manager=self.manager
+            manager=self.manager,
+            container=self.background_panel
         )
 
         self.logout_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((1050, 650), (200, 50)),
+            relative_rect=pygame.Rect((300, 400), (200, 50)),
             text="Logout to Main Menu",
-            manager=self.manager
+            manager=self.manager,
+            container=self.background_panel
+        )
+
+        self.gold_label = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect((250, 260), (300, 30)),
+            text=f"Gold: {self.player.gold}",
+            manager=self.manager,
+            container=self.background_panel
         )
 
         self.chest_icon = pygame.image.load("Assets/GUI/Icons/treasureChest.png").convert_alpha()
@@ -88,7 +89,7 @@ class MainGameScreen(BaseScreen):
                 self.claim_idle_rewards()
 
         self.chat_window.process_event(event)
-
+        self.chat_input.process_event(event)
 
     def update(self, time_delta):
         self.manager.update(time_delta)
@@ -107,6 +108,7 @@ class MainGameScreen(BaseScreen):
             self.idle_chest_button.set_image(self.chest_icon)
 
         self.chat_window.update(time_delta)
+        self.chat_input.update(time_delta)
 
     def draw(self, window_surface):
         self.manager.draw_ui(window_surface)

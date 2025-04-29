@@ -1,36 +1,41 @@
 # chat_system.py
+import inspect
 
 import pygame
 import pygame_gui
 import datetime
 
-# --- ChatWindow ---
+ROLE_HIERARCHY = {
+    "player": 0,
+    "gm": 1,
+    "dev": 2
+}
 
 class ChatWindow:
-    def __init__(self, manager, container=None):
+    def __init__(self, manager, player, container=None):
+        self.player = player
         self.manager = manager
         self.container = container
 
-        # Chat tabs
-        self.tabs = ["Chat", "System", "Combat", "Admin", "Debug"]
-        self.active_tab = "Chat"
+        self.tabs = ["All", "Chat", "System", "Combat", "Admin", "Debug"]
+        self.active_tab = "All"
 
-        # Flashing tabs notification
         self.flashing_tabs = set()
+        self.flash_timer = 0.0
+        self.flash_on = False
+        self.flash_interval = 0.5
 
-        # Store messages {tab: [(timestamp, text)]}
         self.messages = {tab: [] for tab in self.tabs}
+        self.MAX_MESSAGE_LENGTH = 500
 
-        # Panel
         self.panel = pygame_gui.elements.UIPanel(
-            relative_rect=pygame.Rect((10, 300), (400, 250)),
+            relative_rect=pygame.Rect((10, 480), (400, 220)),
             manager=self.manager,
             container=self.container
         )
 
-        # Tabs (as buttons)
         self.tab_buttons = []
-        button_width = 70
+        button_width = 60
         for idx, tab in enumerate(self.tabs):
             btn = pygame_gui.elements.UIButton(
                 relative_rect=pygame.Rect((5 + idx * (button_width + 5), 5), (button_width, 30)),
@@ -40,9 +45,8 @@ class ChatWindow:
             )
             self.tab_buttons.append(btn)
 
-        # Chat container
-        self.chat_container = pygame_gui.elements.UIScrollingContainer(
-            relative_rect=pygame.Rect((5, 40), (390, 200)),
+        self.scroll_container = pygame_gui.elements.UIScrollingContainer(
+            relative_rect=pygame.Rect((5, 40), (380, 130)),
             manager=self.manager,
             container=self.panel
         )
@@ -50,33 +54,148 @@ class ChatWindow:
         self.labels = []
         self.y_offset = 5
 
+        self.input_box = pygame_gui.elements.UITextEntryLine(
+            relative_rect=pygame.Rect((5, 175), (390, 30)),
+            manager=self.manager,
+            container=self.panel
+        )
+        self.input_box.hide()
+
+        self.input_active = False
+        self.defer_text = None
+        self.history = []
+        self.history_index = -1
+
+        # Command setup
+        self.commands = {}
+        self.commands.update(self._load_player_commands())
+        self.commands.update(self._load_gm_commands())
+        self.commands.update(self._load_dev_commands())
+
+        self.alias_map = {}
+        for cmd_name, data in self.commands.items():
+            for alias in data.get("aliases", []):
+                self.alias_map[alias] = cmd_name
+
+    def _load_player_commands(self):
+        return {
+            "help": {
+                "func": self.cmd_help,
+                "min_role": "player",
+                "aliases": [],
+                "help": "Usage: /commands\nLists all available commands (no descriptions)."
+            },
+            "commands":{
+                "func": self.cmd_commands,
+                "min_role": "player",
+                "aliases": [],
+                "help": "Usage: /commands\nLists all available commands (no descriptions)."
+            },
+            "status": {
+                "func": self.cmd_status,
+                "min_role": "player",
+                "aliases": [],
+                "help": "Usage: /status\nShow your current role."
+            }
+        }
+
+    def _load_gm_commands(self):
+        return {
+            "admin": {
+                "func": self.cmd_admin,
+                "min_role": "gm",
+                "aliases": [],
+                "help": "Usage: /admin\nToggles admin mode (GM only)."
+            }
+        }
+
+    def _load_dev_commands(self):
+        return {
+            "addcoins": {
+                "func": self.cmd_addcoins,
+                "min_role": "dev",
+                "aliases": ["ac"],
+                "help": "Usage: /addcoins <amount> <type>\nAdds coins to player."
+            }
+        }
+
+    def wrap_text(self, text, font, max_width):
+        if isinstance(text, tuple):
+            text = text[0]
+
+        wrapped_lines = []
+        for paragraph in text.splitlines():
+            line = ''
+            for word in paragraph.split():
+                if font.size(word)[0] > max_width:
+                    broken = []
+                    current = ''
+                    for char in word:
+                        if font.size(current + char)[0] <= max_width:
+                            current += char
+                        else:
+                            broken.append(current)
+                            current = char
+                    if current:
+                        broken.append(current)
+
+                    for part in broken:
+                        if line:
+                            wrapped_lines.append(line)
+                        line = part
+                else:
+                    test_line = f"{line} {word}".strip()
+                    if font.size(test_line)[0] <= max_width:
+                        line = test_line
+                    else:
+                        wrapped_lines.append(line)
+                        line = word
+            wrapped_lines.append(line)
+
+        return wrapped_lines
+
     def log_message(self, message, msg_type="Chat"):
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-        if msg_type not in self.messages:
+
+        if msg_type not in self.tabs:
             msg_type = "Chat"
 
-        self.messages[msg_type].append((timestamp, message))
+        # Display with name prefix for Chat, timestamp otherwise
+        display_text = f"{self.player.name}: {message}" if msg_type == "Chat" else f"[{timestamp}] {message}"
 
-        # If message is for current tab, add label
-        if msg_type == self.active_tab:
-            self._add_label(timestamp, message)
+        self.messages[msg_type].append((timestamp, message, msg_type))
+        self.messages["All"].append((timestamp, message, msg_type))
+
+        if self.active_tab == msg_type or self.active_tab == "All":
+            self._create_label(display_text, msg_type)
         else:
             self.flashing_tabs.add(msg_type)
 
-    def _add_label(self, timestamp, message):
-        full_message = f"[{timestamp}] {message}"
+    def _create_label(self, text, msg_type="Chat"):
+        object_id = f"#chat_message_{msg_type.lower()}"
+        font = self.manager.get_theme().get_font([object_id])
+        container_width = self.scroll_container.get_relative_rect().width
+        label_width = container_width - 10
 
-        label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((5, self.y_offset), (380, 20)),
-            text=full_message,
-            manager=self.manager,
-            container=self.chat_container
-        )
-        self.labels.append(label)
-        self.y_offset += 25
+        if len(text) > self.MAX_MESSAGE_LENGTH:
+            text = text[:self.MAX_MESSAGE_LENGTH - 3] + "..."
 
-        self.chat_container.set_scrollable_area_dimensions((390, self.y_offset + 5))
-        self.chat_container.set_vertical_scroll_percentage(1.0)
+        wrapped_lines = self.wrap_text(text, font, label_width-20)
+
+        for line in wrapped_lines:
+            label = pygame_gui.elements.UILabel(
+                relative_rect=pygame.Rect((5, self.y_offset), (label_width, 20)),
+                text=line,
+                manager=self.manager,
+                container=self.scroll_container,
+                object_id=object_id,
+                anchors={"top": "top", "left": "left"}
+            )
+            self.labels.append(label)
+            self.y_offset += 25
+
+        self.scroll_container.set_scrollable_area_dimensions((label_width - 20, self.y_offset + 5))
+        self.scroll_container.vert_scroll_bar.set_scroll_from_start_percentage(100)
 
     def switch_tab(self, new_tab):
         if new_tab not in self.tabs:
@@ -91,37 +210,12 @@ class ChatWindow:
         self.labels = []
         self.y_offset = 5
 
-        for timestamp, message in self.messages[new_tab]:
-            self._add_label(timestamp, message)
+        for timestamp, message, msg_type in self.messages[new_tab] if new_tab != "All" else self.messages["All"]:
+            display_text = f"{self.player.name}: {message}" if msg_type == "Chat" else f"[{timestamp}] {message}"
+            self._create_label(display_text, msg_type)
 
-    def process_event(self, event):
-        if event.type == pygame_gui.UI_BUTTON_PRESSED:
-            for idx, btn in enumerate(self.tab_buttons):
-                if event.ui_element == btn:
-                    self.switch_tab(self.tabs[idx])
-
-    def update(self, time_delta):
-        pass
-
-# --- ChatInputBar ---
-
-class ChatInputBar:
-    def __init__(self, manager, chat_window, container=None):
-        self.manager = manager
-        self.chat_window = chat_window
-        self.container = container
-
-        self.input_active = False
-        self.history = []
-        self.history_index = -1
-
-        # Input bar
-        self.input_box = pygame_gui.elements.UITextEntryLine(
-            relative_rect=pygame.Rect((10, 560), (400, 30)),
-            manager=self.manager,
-            container=self.container
-        )
-        self.input_box.hide()
+        self.scroll_container.set_scrollable_area_dimensions((self.scroll_container.get_relative_rect().width - 30, self.y_offset + 5))
+        self.scroll_container.vert_scroll_bar.set_scroll_from_start_percentage(100)
 
     def toggle_input(self):
         if self.input_active:
@@ -129,18 +223,34 @@ class ChatInputBar:
             self.input_active = False
         else:
             self.input_box.show()
+            self.input_box.focus()
             self.input_active = True
             self.input_box.set_text("")
 
     def process_event(self, event):
+        if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            for idx, btn in enumerate(self.tab_buttons):
+                if event.ui_element == btn:
+                    self.switch_tab(self.tabs[idx])
+
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_RETURN and self.input_active:
-                text = self.input_box.get_text().strip()
-                if text:
-                    self.chat_window.log_message(text, "Chat")
-                    self.history.append(text)
-                    self.history_index = len(self.history)
-                self.toggle_input()
+            if event.key in (pygame.K_RETURN, pygame.K_SLASH):
+                if not self.input_active:
+                    self.toggle_input()
+                    if event.key == pygame.K_SLASH:
+                        self.defer_text = "/"
+                else:
+                    if event.key == pygame.K_RETURN:
+                        text = self.input_box.get_text().strip()
+                        self.history.append(text)
+                        self.history_index = len(self.history)
+                        if text:
+                            if text.startswith("/"):
+                                self.handle_command(text)
+                            else:
+                                self.log_message(text, "Chat")
+
+                        self.toggle_input()
 
             elif event.key == pygame.K_UP and self.input_active:
                 if self.history and self.history_index > 0:
@@ -155,4 +265,128 @@ class ChatInputBar:
                     self.input_box.set_text("")
 
     def update(self, time_delta):
-        pass
+        if self.defer_text is not None and self.input_active:
+            self.input_box.set_text(self.defer_text)
+            self.input_box.focus()
+            self.defer_text = None
+
+        self.flash_timer += time_delta
+        if self.flash_timer >= self.flash_interval:
+            self.flash_timer = 0.0
+            self.flash_on = not self.flash_on
+
+            for idx, tab_name in enumerate(self.tabs):
+                if tab_name in self.flashing_tabs:
+                    button = self.tab_buttons[idx]
+                    if self.flash_on:
+                        button.select()
+                    else:
+                        button.unselect()
+
+        # --- Command handling ---
+
+    def has_permission(self, required_role):
+        return ROLE_HIERARCHY.get(self.player.role, 0) >= ROLE_HIERARCHY.get(required_role, 0)
+
+    def handle_command(self, user_input):
+        parts = user_input[1:].split()
+        command = parts[0].lower()
+        args = parts[1:]
+
+        if command == "help":
+            if not args:
+                self.log_message("[Help] Available commands:", "System")
+                for cmd_name, cmd_data in self.commands.items():
+                    min_role = cmd_data.get("min_role", "player")
+                    if self.has_permission(min_role):
+                        aliases = cmd_data.get("aliases", [])
+                        alias_text = f" ({', '.join(aliases)})" if aliases else ""
+
+                        help_line = cmd_data.get("help", "").split('\n')[0]  # just show first line
+                        self.log_message(f"  /{cmd_name}{alias_text} - {help_line}", "System")
+            else:
+                help_target = args[0]
+                if help_target in self.alias_map:
+                    help_target = self.alias_map[help_target]
+                min_role = self.commands[help_target].get("min_role", "player")
+                if help_target in self.commands:
+                    if self.has_permission(min_role):
+                        help_line = self.commands[help_target].get("help")
+                        self.log_message(f"{help_line}", "System")
+            return
+
+        resolved_command = self.alias_map.get(command, command)
+
+        if resolved_command in self.commands:
+            command_entry = self.commands[resolved_command]
+            min_role = command_entry.get("min_role", "player")
+            if self.has_permission(min_role):
+                func = command_entry["func"]
+                try:
+                    sig = inspect.signature(func)
+                    params = [
+                        p for p in sig.parameters.values()
+                        if p.kind in (inspect.Parameter.POSITIONAL_ONLY,
+                                      inspect.Parameter.POSITIONAL_OR_KEYWORD)
+                    ]
+                    required_params = [
+                        p for p in params
+                        if p.default == inspect.Parameter.empty
+                    ]
+                    param_names = [p.name for p in required_params]
+
+                    if len(args) < len(required_params):
+                        self.log_message(f"[Error] Too few arguments for '{command}'.", "System")
+                        self.log_message(f"Required: {', '.join(param_names)}", "System")
+                    elif len(args) > len(params):
+                        self.log_message(
+                            f"[Error] Too many arguments for '{command}'. Max allowed: {len(params)}.\nUse /help {command} for more information",
+                            "System")
+                    else:
+                        func(*args)
+                except Exception as e:
+                    self.log_message(f"[Error] Command failed: {e}", "System")
+            else:
+                self.log_message("No Command Found", "System")
+        else:
+            self.log_message("No Command Found", "System")
+
+
+    # --- Command functions ---
+
+    def cmd_help(self, *args):
+        self.log_message("[Help] Available commands:", "System")
+        for cmd_name, cmd_data in self.commands.items():
+            min_role = cmd_data.get("min_role", "player")
+            aliases = cmd_data.get("aliases", [])
+            alias_text = f" ({', '.join(aliases)})" if aliases else ""
+            help_line = cmd_data.get("help", "").split('\n')[0]  # just show first line
+            if self.has_permission(min_role):
+                self.log_message(f"/{cmd_name}{alias_text} - {help_line}", "System")
+
+    def cmd_commands(self):
+        self.log_message("[Commands] Available:", "System")
+        for cmd_name, cmd_data in self.commands.items():
+            min_role = cmd_data.get("min_role", "player")
+            if self.has_permission(min_role):
+                self.log_message(f"/{cmd_name}", "System")
+
+    def cmd_admin(self):
+        self.log_message(f"[Admin] Your current role is: {self.player.role}", "System")
+
+    def cmd_status(self):
+        self.log_message(f"[Status] Your current role is: {self.player.role}", "System")
+
+    def cmd_addcoins(self, amount, cointype):
+        try:
+            amount = int(amount)
+            if hasattr(self.player, "add_coins"):
+                print("made it here")
+                self.player.add_coins(amount, cointype)
+                self.log_message(f"[Admin] Added {amount} {cointype} coins.", "System")
+            else:
+                print("here instead")
+                self.log_message("[Debug] Player object has no 'add_coins' method.", "Debug")
+        except ValueError:
+            print("error")
+            self.log_message("[Error] Invalid amount.", "System")
