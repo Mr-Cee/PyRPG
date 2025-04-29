@@ -1,7 +1,7 @@
 # models.py
 
 import uuid
-from sqlalchemy import Column, String, Integer, ForeignKey
+from sqlalchemy import Column, String, Integer, ForeignKey, Float
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -30,3 +30,12 @@ class Player(Base):
     inventory = Column(JSONB, default=dict)
     equipment = Column(JSONB, default=dict)
     skills = Column(JSONB, default=dict)
+
+class ChatMessage(Base):
+    __tablename__ = 'chat_messages'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sender = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    timestamp = Column(Float, nullable=False)
+    type = Column(String, nullable=False, default="Chat")

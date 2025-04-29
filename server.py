@@ -1,6 +1,6 @@
 # server.py
 
-from fastapi import FastAPI, HTTPException, Depends, Body, Security
+from fastapi import FastAPI, HTTPException, Depends, Body, Security, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
@@ -9,6 +9,7 @@ from jose import jwt
 import datetime
 from pydantic import BaseModel
 
+import models
 from models import Base, Account, Player
 
 DATABASE_URL = "postgresql+psycopg2://PyRPG_Admin:Christie91!@localhost/PyRPG"
@@ -25,6 +26,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
+chat_messages = []
+
 class RegisterRequest(BaseModel):
     username: str
     password: str
@@ -37,7 +40,11 @@ class ResetPasswordRequest(BaseModel):
     username: str
     new_password: str
 
-from pydantic import BaseModel
+class ChatMessage(BaseModel):
+    sender: str
+    message: str
+    timestamp: float
+    type: str = "Chat"  # default to normal chat unless specified
 
 class UpdatePlayerRequest(BaseModel):
     username: str
@@ -60,30 +67,20 @@ def get_current_username(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Invalid authentication")
     return username
 
-@app.post("/update_player")
-def update_player(request: UpdatePlayerRequest):
+@app.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
     db = SessionLocal()
-
-    account = db.query(Account).filter_by(username=request.username).first()
-    if not account:
-        db.close()
-        raise HTTPException(status_code=404, detail="Account not found.")
-
-    character = db.query(Player).filter_by(account_id=account.id, name=request.name).first()
-    if not character:
-        db.close()
-        raise HTTPException(status_code=404, detail="Character not found.")
-
-    character.level = request.level
-    character.experience = request.experience
-    character.gold = request.gold
-    character.last_logout_time = request.last_logout_time
-
-    db.commit()
-    db.refresh(character)
+    user = db.query(Account).filter_by(username=form_data.username).first()
     db.close()
+    if not user or not pwd_context.verify(form_data.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Incorrect username or password.")
 
-    return {"msg": "Player updated successfully!"}
+    access_token = create_access_token(data={"sub": user.username})
+
+    return {"access_token": access_token,
+            "token_type": "bearer",
+            "username": user.username,
+            "role": user.role}
 
 @app.post("/register")
 def register(request: RegisterRequest):
@@ -107,50 +104,31 @@ def register(request: RegisterRequest):
 
     return {"msg": "Registration successful."}
 
-@app.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
+@app.post("/forgot-password")
+def forgot_password(request: ForgotPasswordRequest):
     db = SessionLocal()
-    user = db.query(Account).filter_by(username=form_data.username).first()
+    account = db.query(Account).filter_by(email=request.email).first()
     db.close()
-    if not user or not pwd_context.verify(form_data.password, user.password_hash):
-        raise HTTPException(status_code=400, detail="Incorrect username or password.")
+    if not account:
+        raise HTTPException(status_code=404, detail="Email not found.")
 
-    access_token = create_access_token(data={"sub": user.username})
+    return {"msg": "Email found.", "username": account.username}
 
-    return {"access_token": access_token,
-            "token_type": "bearer",
-            "username": user.username,
-            "role": user.role}
-
-@app.get("/player/{username}")
-def get_players(username: str, token: str = Depends(oauth2_scheme)):
+@app.post("/reset-password")
+def reset_password(request: ResetPasswordRequest):
     db = SessionLocal()
-
-    account = db.query(Account).filter_by(username=username).first()
+    account = db.query(Account).filter_by(username=request.username).first()
     if not account:
         db.close()
-        raise HTTPException(status_code=404, detail="Account not found.")
+        raise HTTPException(status_code=404, detail="Username not found.")
 
-    players = db.query(Player).filter_by(account_id=account.id).all()
+    hashed_password = pwd_context.hash(request.new_password)
+    account.password_hash = hashed_password
 
-    player_list = []
-    for p in players:
-        player_list.append({
-            "name": p.name,
-            "char_class": p.char_class,
-            "level": p.level,
-            "experience": p.experience,
-            "gold": p.gold,
-            "inventory": p.inventory,
-            "equipment": p.equipment,
-            "skills": p.skills,
-            "username": account.username,
-            "role": account.role
-        })
-
+    db.commit()
     db.close()
 
-    return player_list
+    return {"msg": "Password reset successfully."}
 
 @app.post("/player/{username}")
 def create_player(username: str, player_data: dict = Body(...), token: str = Depends(oauth2_scheme)):
@@ -186,6 +164,104 @@ def create_player(username: str, player_data: dict = Body(...), token: str = Dep
 
     return {"msg": "Player created successfully!"}
 
+@app.post("/update_player")
+def update_player(request: UpdatePlayerRequest):
+    db = SessionLocal()
+
+    account = db.query(Account).filter_by(username=request.username).first()
+    if not account:
+        db.close()
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    character = db.query(Player).filter_by(account_id=account.id, name=request.name).first()
+    if not character:
+        db.close()
+        raise HTTPException(status_code=404, detail="Character not found.")
+
+    character.level = request.level
+    character.experience = request.experience
+    character.gold = request.gold
+    character.last_logout_time = request.last_logout_time
+
+    db.commit()
+    db.refresh(character)
+    db.close()
+
+    return {"msg": "Player updated successfully!"}
+
+@app.post("/chat/send")
+def send_chat_message(chat: ChatMessage):
+    db = SessionLocal()
+    new_msg = models.ChatMessage(
+        sender=chat.sender,
+        message=chat.message,
+        timestamp=chat.timestamp,
+        type=chat.type
+    )
+    db.add(new_msg)
+    db.commit()
+    return {"success": True}
+
+@app.get("/player/{username}")
+def get_players(username: str, token: str = Depends(oauth2_scheme)):
+    db = SessionLocal()
+
+    account = db.query(Account).filter_by(username=username).first()
+    if not account:
+        db.close()
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    players = db.query(Player).filter_by(account_id=account.id).all()
+
+    player_list = []
+    for p in players:
+        player_list.append({
+            "name": p.name,
+            "char_class": p.char_class,
+            "level": p.level,
+            "experience": p.experience,
+            "gold": p.gold,
+            "inventory": p.inventory,
+            "equipment": p.equipment,
+            "skills": p.skills,
+            "username": account.username,
+            "role": account.role
+        })
+
+    db.close()
+
+    return player_list
+
+@app.get("/chat/fetch")
+def fetch_chat_messages(since: float = Query(0.0)):
+    db = SessionLocal()
+    messages = db.query(models.ChatMessage).filter(models.ChatMessage.timestamp > since).order_by(models.ChatMessage.timestamp).all()
+    return {
+        "messages": [
+            {
+                "sender": msg.sender,
+                "message": msg.message,
+                "timestamp": msg.timestamp,
+                "type": msg.type
+            } for msg in messages
+        ]
+    }
+
+@app.get("/chat/recent")
+def fetch_recent_messages(limit: int = 25):
+    db = SessionLocal()
+    messages = db.query(models.ChatMessage).order_by(models.ChatMessage.timestamp.desc()).limit(limit).all()
+    return {
+        "messages": [
+            {
+                "sender": msg.sender,
+                "message": msg.message,
+                "timestamp": msg.timestamp,
+                "type": msg.type
+            } for msg in reversed(messages)
+        ]
+    }
+
 @app.delete("/player/{username}")
 def delete_player(username: str, token: str = Depends(oauth2_scheme)):
     db = SessionLocal()
@@ -205,32 +281,6 @@ def delete_player(username: str, token: str = Depends(oauth2_scheme)):
     db.close()
 
     return {"msg": "Player deleted successfully."}
-
-@app.post("/forgot-password")
-def forgot_password(request: ForgotPasswordRequest):
-    db = SessionLocal()
-    account = db.query(Account).filter_by(email=request.email).first()
-    db.close()
-    if not account:
-        raise HTTPException(status_code=404, detail="Email not found.")
-
-    return {"msg": "Email found.", "username": account.username}
-
-@app.post("/reset-password")
-def reset_password(request: ResetPasswordRequest):
-    db = SessionLocal()
-    account = db.query(Account).filter_by(username=request.username).first()
-    if not account:
-        db.close()
-        raise HTTPException(status_code=404, detail="Username not found.")
-
-    hashed_password = pwd_context.hash(request.new_password)
-    account.password_hash = hashed_password
-
-    db.commit()
-    db.close()
-
-    return {"msg": "Password reset successfully."}
 
 @app.delete("/account/{username}")
 def delete_account(username: str, token: str = Depends(oauth2_scheme)):

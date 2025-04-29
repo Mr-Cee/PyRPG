@@ -1,6 +1,8 @@
 # chat_system.py
 import inspect
-
+import threading
+import time
+import requests
 import pygame
 import pygame_gui
 import datetime
@@ -76,6 +78,63 @@ class ChatWindow:
         for cmd_name, data in self.commands.items():
             for alias in data.get("aliases", []):
                 self.alias_map[alias] = cmd_name
+
+        self.fetch_recent_messages()
+
+        self.last_fetch_time = time.time()
+        self.polling_thread = threading.Thread(target=self.poll_server_for_messages, daemon=True)
+        self.polling_thread.start()
+
+    def send_chat_to_server(self, text):
+        payload = {
+            "sender": self.player.name,
+            "message": text,
+            "timestamp": time.time(),
+            "type": "Chat"
+        }
+        try:
+            requests.post("http://localhost:8000/chat/send", json=payload, timeout=1)
+        except Exception as e:
+            self.log_message(f"[Error] Failed to send message: {e}", "System")
+
+    def poll_server_for_messages(self):
+        while True:
+            try:
+                response = requests.get(f"http://localhost:8000/chat/fetch?since={self.last_fetch_time}", timeout=2)
+                if response.status_code == 200:
+                    data = response.json()
+                    for msg in data.get("messages", []):
+                        self.last_fetch_time = max(self.last_fetch_time, msg["timestamp"])
+                        display = f"{msg['sender']}: {msg['message']}" if msg[
+                                                                              'type'] == "Chat" else f"[{msg['timestamp']}] {msg['message']}"
+                        self.messages[msg['type']].append((msg['timestamp'], msg['message'], msg['type']))
+                        self.messages["All"].append((msg['timestamp'], msg['message'], msg['type']))
+
+                        if self.active_tab == msg['type'] or self.active_tab == "All":
+                            self._create_label(display, msg['type'])
+                        else:
+                            self.flashing_tabs.add(msg['type'])
+            except:
+                pass
+            time.sleep(2)
+
+    def fetch_recent_messages(self):
+        try:
+            response = requests.get("http://localhost:8000/chat/recent", timeout=2)
+            if response.status_code == 200:
+                data = response.json()
+                for msg in data.get("messages", []):
+                    # Insert into local memory
+                    self.messages[msg["type"]].append((msg["timestamp"], msg["message"], msg["type"]))
+                    self.messages["All"].append((msg["timestamp"], msg["message"], msg["type"]))
+
+                    # Also display if it matches active tab
+                    display = f"{msg['sender']}: {msg['message']}" if msg[
+                                                                          'type'] == "Chat" else f"[{msg['timestamp']}] {msg['message']}"
+                    if self.active_tab == msg["type"] or self.active_tab == "All":
+                        self._create_label(display, msg["type"])
+        except Exception as e:
+            self.log_message(f"[Error] Failed to load recent chat: {e}", "System")
 
     def _load_player_commands(self):
         return {
@@ -248,7 +307,8 @@ class ChatWindow:
                             if text.startswith("/"):
                                 self.handle_command(text)
                             else:
-                                self.log_message(text, "Chat")
+                                self.send_chat_to_server(text)
+                                # self.log_message(text, "Chat")
 
                         self.toggle_input()
 
