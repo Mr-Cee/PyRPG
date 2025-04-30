@@ -175,6 +175,15 @@ def set_active_character(username: str = Body(...), character_name: str = Body(.
     account.is_online = True  # ✅ mark account as online
     account.last_seen = datetime.datetime.now(datetime.UTC)  # ✅ set last_seen immediately
 
+    # Send system broadcast when character logs in
+    broadcast = models.ChatMessage(
+        sender="System",
+        message=f"🟢 {character.name} has entered the world.",
+        timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+        type="System"
+    )
+    db.add(broadcast)
+
     db.commit()
 
     return {"msg": f"Character '{character_name}' set as active for user '{username}'."}
@@ -200,22 +209,6 @@ def heartbeat(data: HeartbeatRequest, db: Session = Depends(get_db)):
 
     db.commit()
     return {"msg": f"Heartbeat OK: {data.username} on {data.client_version}"}
-
-# @app.post("/logout/{username}")
-# def logout(username: str, db: Session = Depends(get_db)):
-#     user = db.query(Account).filter_by(username=username).first()
-#     if not user:
-#         raise HTTPException(status_code=404, detail="User not found.")
-#
-#     user.is_online = False
-#
-#     # ✅ Deactivate all characters
-#     characters = db.query(Player).filter_by(account_id=user.id).all()
-#     for c in characters:
-#         c.is_active = False
-#
-#     db.commit()
-#     return {"msg": f"{username} logged out"}
 
 @app.post("/register")
 def register(request: RegisterRequest, db: Session = Depends(get_db)):
