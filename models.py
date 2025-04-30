@@ -1,7 +1,7 @@
 # models.py
 
 import uuid
-from sqlalchemy import Column, String, Integer, ForeignKey, Float
+from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -15,6 +15,7 @@ class Account(Base):
     password_hash = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False)
     role = Column(String, default="player")
+    is_online = Column(Boolean, default=False)
 
 class Player(Base):
     __tablename__ = 'players'

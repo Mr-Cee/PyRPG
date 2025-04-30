@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI, HTTPException, Depends, Body, Security, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from requests import Session
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from passlib.context import CryptContext
@@ -27,6 +28,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 chat_messages = []
+online_users = set()
 
 class RegisterRequest(BaseModel):
     username: str
@@ -67,27 +69,46 @@ def get_current_username(token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=401, detail="Invalid authentication")
     return username
 
-@app.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
+def get_db():
     db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@app.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(Account).filter_by(username=form_data.username).first()
-    db.close()
+
     if not user or not pwd_context.verify(form_data.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Incorrect username or password.")
 
     access_token = create_access_token(data={"sub": user.username})
 
-    return {"access_token": access_token,
-            "token_type": "bearer",
-            "username": user.username,
-            "role": user.role}
+    # ✅ Register as online
+    user.is_online = True
+    db.commit()
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "username": user.username,
+        "role": user.role
+    }
+
+@app.post("/logout/{username}")
+def logout(username: str, db: Session = Depends(get_db)):
+    user = db.query(Account).filter_by(username=username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    user.is_online = False
+    db.commit()
+    return {"msg": f"{username} logged out"}
 
 @app.post("/register")
-def register(request: RegisterRequest):
-    db = SessionLocal()
+def register(request: RegisterRequest, db: Session = Depends(get_db)):
     existing_user = db.query(Account).filter_by(username=request.username).first()
     if existing_user:
-        db.close()
         raise HTTPException(status_code=400, detail="Username already registered.")
 
     hashed_password = pwd_context.hash(request.password)
@@ -100,49 +121,41 @@ def register(request: RegisterRequest):
     db.add(new_account)
     db.commit()
     db.refresh(new_account)
-    db.close()
 
     return {"msg": "Registration successful."}
 
 @app.post("/forgot-password")
-def forgot_password(request: ForgotPasswordRequest):
-    db = SessionLocal()
+def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
     account = db.query(Account).filter_by(email=request.email).first()
-    db.close()
     if not account:
         raise HTTPException(status_code=404, detail="Email not found.")
 
     return {"msg": "Email found.", "username": account.username}
 
 @app.post("/reset-password")
-def reset_password(request: ResetPasswordRequest):
-    db = SessionLocal()
+def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
     account = db.query(Account).filter_by(username=request.username).first()
     if not account:
-        db.close()
         raise HTTPException(status_code=404, detail="Username not found.")
 
     hashed_password = pwd_context.hash(request.new_password)
     account.password_hash = hashed_password
 
     db.commit()
-    db.close()
 
     return {"msg": "Password reset successfully."}
 
 @app.post("/player/{username}")
-def create_player(username: str, player_data: dict = Body(...), token: str = Depends(oauth2_scheme)):
-    db = SessionLocal()
+def create_player(username: str, player_data: dict = Body(...), token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+
 
     account = db.query(Account).filter_by(username=username).first()
     if not account:
-        db.close()
         raise HTTPException(status_code=404, detail="Account not found.")
 
     # Check if a player with that name already exists for this account
     existing_player = db.query(Player).filter_by(account_id=account.id, name=player_data["name"]).first()
     if existing_player:
-        db.close()
         raise HTTPException(status_code=400, detail="Character name already exists for this account.")
 
     new_player = Player(
@@ -160,22 +173,18 @@ def create_player(username: str, player_data: dict = Body(...), token: str = Dep
     db.add(new_player)
     db.commit()
     db.refresh(new_player)
-    db.close()
 
     return {"msg": "Player created successfully!"}
 
 @app.post("/update_player")
-def update_player(request: UpdatePlayerRequest):
-    db = SessionLocal()
+def update_player(request: UpdatePlayerRequest, db: Session = Depends(get_db)):
 
     account = db.query(Account).filter_by(username=request.username).first()
     if not account:
-        db.close()
         raise HTTPException(status_code=404, detail="Account not found.")
 
     character = db.query(Player).filter_by(account_id=account.id, name=request.name).first()
     if not character:
-        db.close()
         raise HTTPException(status_code=404, detail="Character not found.")
 
     character.level = request.level
@@ -185,7 +194,6 @@ def update_player(request: UpdatePlayerRequest):
 
     db.commit()
     db.refresh(character)
-    db.close()
 
     return {"msg": "Player updated successfully!"}
 
@@ -203,12 +211,9 @@ def send_chat_message(chat: ChatMessage):
     return {"success": True}
 
 @app.get("/player/{username}")
-def get_players(username: str, token: str = Depends(oauth2_scheme)):
-    db = SessionLocal()
-
+def get_players(username: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     account = db.query(Account).filter_by(username=username).first()
     if not account:
-        db.close()
         raise HTTPException(status_code=404, detail="Account not found.")
 
     players = db.query(Player).filter_by(account_id=account.id).all()
@@ -228,13 +233,10 @@ def get_players(username: str, token: str = Depends(oauth2_scheme)):
             "role": account.role
         })
 
-    db.close()
-
     return player_list
 
 @app.get("/chat/fetch")
-def fetch_chat_messages(since: float = Query(0.0)):
-    db = SessionLocal()
+def fetch_chat_messages(since: float = Query(0.0), db: Session = Depends(get_db)):
     messages = db.query(models.ChatMessage).filter(models.ChatMessage.timestamp > since).order_by(models.ChatMessage.timestamp).all()
     return {
         "messages": [
@@ -248,8 +250,7 @@ def fetch_chat_messages(since: float = Query(0.0)):
     }
 
 @app.get("/chat/recent")
-def fetch_recent_messages(limit: int = 25):
-    db = SessionLocal()
+def fetch_recent_messages(limit: int = 25, db: Session = Depends(get_db)):
     messages = db.query(models.ChatMessage).order_by(models.ChatMessage.timestamp.desc()).limit(limit).all()
     return {
         "messages": [
@@ -262,33 +263,31 @@ def fetch_recent_messages(limit: int = 25):
         ]
     }
 
-@app.delete("/player/{username}")
-def delete_player(username: str, token: str = Depends(oauth2_scheme)):
-    db = SessionLocal()
+@app.get("/online_players")
+def get_online_players(db: Session = Depends(get_db)):
+    users = db.query(Account).filter_by(is_online=True).all()
+    return {"online": [u.username for u in users]}
 
+@app.delete("/player/{username}")
+def delete_player(username: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     account = db.query(Account).filter_by(username=username).first()
     if not account:
-        db.close()
         raise HTTPException(status_code=404, detail="Account not found.")
 
     player = db.query(Player).filter_by(account_id=account.id).first()
     if not player:
-        db.close()
         raise HTTPException(status_code=404, detail="Player not found.")
 
     db.delete(player)
     db.commit()
-    db.close()
 
     return {"msg": "Player deleted successfully."}
 
 @app.delete("/account/{username}")
-def delete_account(username: str, token: str = Depends(oauth2_scheme)):
-    db = SessionLocal()
+def delete_account(username: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
 
     account = db.query(Account).filter_by(username=username).first()
     if not account:
-        db.close()
         raise HTTPException(status_code=404, detail="Account not found.")
 
     # ✅ Delete associated players first
@@ -302,6 +301,5 @@ def delete_account(username: str, token: str = Depends(oauth2_scheme)):
     db.delete(account)
 
     db.commit()
-    db.close()
 
     return {"msg": "Account and associated players deleted successfully."}

@@ -1,6 +1,7 @@
 # main.py
 import pygame
 import pygame_gui
+import requests
 
 from player import Player
 from player_registry import unregister_player
@@ -42,8 +43,10 @@ while running:
     for event in events:
         if event.type == pygame.QUIT:
             # When the game is quitting or logging out
-            if screen_manager.player:
-                unregister_player(screen_manager.player.name)
+            try:
+                requests.post(f"{SERVER_URL}/logout/{screen_manager.player.username}", timeout=1)
+            except:
+                pass
             running = False
 
         ui_manager.process_events(event)   # <<< Must always process first

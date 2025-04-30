@@ -494,7 +494,15 @@ class ChatWindow:
             self.log_message(f"[Dev] Failed to add item to {target.name}'s inventory (Full?).", "Debug")
 
     def cmd_online(self):
-        from player_registry import list_online_names
-        names = list_online_names()
-        self.log_message(f"[Online] {len(names)} player(s): {', '.join(names)}", "System")
+        try:
+            response = requests.get(f"{SERVER_URL}/online_players", timeout=2)
+            data = response.json()
+            names = data.get("online", [])
+            if names:
+                self.log_message(f"[Online] {len(names)} player(s): {', '.join(names)}", "System")
+            else:
+                self.log_message("[Online] No players are currently online.", "System")
+        except Exception as e:
+            self.log_message(f"[Error] Failed to fetch online players: {e}", "System")
+
 
