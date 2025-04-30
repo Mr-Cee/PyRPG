@@ -251,7 +251,16 @@ class CharacterSelectScreen(BaseScreen):
                     for char in self.character_data:
                         if char["name"] == selected_name:
                             self.screen_manager.player = Player.from_server_data(char)
-                            register_player(Player.from_server_data(char))
+                            try:
+                                response = requests.post(
+                                    f"{SERVER_URL}/set_active_character",
+                                    json={"username": self.screen_manager.current_account,
+                                          "character_name": selected_name}
+                                )
+                                if response.status_code != 200:
+                                    print(f"⚠️ Failed to set active character: {response.text}")
+                            except Exception as e:
+                                print(f"❌ Error setting active character: {e}")
                             break
 
                     main_game_screen_class = ScreenRegistry.get("main_game")

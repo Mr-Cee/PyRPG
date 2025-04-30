@@ -96,6 +96,25 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "role": user.role
     }
 
+@app.post("/set_active_character")
+def set_active_character(username: str = Body(...), character_name: str = Body(...), db: Session = Depends(get_db)):
+    account = db.query(Account).filter_by(username=username).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found.")
+
+    # Deactivate all characters
+    db.query(Player).filter_by(account_id=account.id).update({"is_active": False})
+
+    # Activate selected one
+    character = db.query(Player).filter_by(account_id=account.id, name=character_name).first()
+    if not character:
+        raise HTTPException(status_code=404, detail="Character not found.")
+
+    character.is_active = True
+    db.commit()
+
+    return {"msg": f"Character '{character_name}' set as active for user '{username}'."}
+
 @app.post("/logout/{username}")
 def logout(username: str, db: Session = Depends(get_db)):
     user = db.query(Account).filter_by(username=username).first()
@@ -224,13 +243,6 @@ def get_players(username: str, token: str = Depends(oauth2_scheme), db: Session 
         raise HTTPException(status_code=404, detail="Account not found.")
 
     players = db.query(Player).filter_by(account_id=account.id).all()
-
-    # Mark the first player (or later: selected player) as active
-    if players:
-        for p in players:
-            p.is_active = False  # clear others
-        players[0].is_active = True
-        db.commit()
 
     player_list = []
     for p in players:
