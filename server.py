@@ -143,6 +143,13 @@ def logout(username: str = Body(...), db: Session = Depends(get_db)):
 
     account.is_online = False
     account.last_seen = datetime.datetime.now(datetime.UTC)
+
+    # ✅ Deactivate active player character
+    active_player = db.query(models.Player).filter_by(account_id=account.id, is_active=True).first()
+    if active_player:
+        active_player.is_active = False
+        active_player.last_seen = datetime.datetime.now(datetime.UTC)
+
     db.commit()
 
     return {"msg": f"{username} logged out successfully."}
