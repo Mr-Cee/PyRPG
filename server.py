@@ -178,7 +178,7 @@ def set_active_character(username: str = Body(...), character_name: str = Body(.
     # Send system broadcast when character logs in
     broadcast = models.ChatMessage(
         sender="System",
-        message=f"🟢 {character.name} has entered the world.",
+        message=f"[System] {character.name} has entered the world.",
         timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
         type="System"
     )
