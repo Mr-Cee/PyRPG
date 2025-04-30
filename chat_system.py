@@ -240,7 +240,8 @@ class ChatWindow:
             "report-resolve": {
                 "func": self.cmd_report_resolve,
                 "min_role": "gm",
-                "help": "Usage: /report-resolve <case number>"
+                "help": "Usage: /report-resolve <case number>",
+                "params": ["case_id"]
             }
         }
 
@@ -539,15 +540,14 @@ class ChatWindow:
                     ]
                     param_names = [p.name for p in required_params]
 
-                    if len(args) < len(required_params):
-                        self.log_message(f"[Error] Too few arguments for '{command}'.", "System")
-                        self.log_message(f"Required: {', '.join(param_names)}", "System")
-                    elif len(args) > len(params):
-                        self.log_message(
-                            f"[Error] Too many arguments for '{command}'. Max allowed: {len(params)}.\nUse /help {command} for more information",
-                            "System")
-                    else:
+                    try:
                         func(*args)
+                    except TypeError as e:
+                        self.log_message(f"[Error] Invalid usage of '{command}': {e}", "System")
+                    except Exception as e:
+                        self.log_message(f"[Error] Command failed: {e}", "System")
+
+
                 except Exception as e:
                     self.log_message(f"[Error] Command failed: {e}", "System")
             else:
