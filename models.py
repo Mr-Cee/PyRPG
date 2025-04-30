@@ -39,6 +39,7 @@ class ChatMessage(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     sender = Column(String, nullable=False)
+    recipient = Column(String, nullable=True)
     message = Column(String, nullable=False)
     timestamp = Column(Float, nullable=False)
     type = Column(String, nullable=False, default="Chat")
