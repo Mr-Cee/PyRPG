@@ -44,9 +44,13 @@ while running:
         if event.type == pygame.QUIT:
             # When the game is quitting or logging out
             try:
-                requests.post(f"{SERVER_URL}/logout/{screen_manager.player.username}", timeout=1)
-            except:
-                pass
+                requests.post(
+                    f"{SERVER_URL}/logout",
+                    json={"username": screen_manager.current_account},
+                    timeout=3
+                )
+            except Exception as e:
+                print(f"[Logout] Failed to notify server: {e}")
             running = False
 
         ui_manager.process_events(event)   # <<< Must always process first
