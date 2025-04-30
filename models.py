@@ -44,3 +44,12 @@ class ChatMessage(Base):
     message = Column(String, nullable=False)
     timestamp = Column(Float, nullable=False)
     type = Column(String, nullable=False, default="Chat")
+
+class ReportCase(Base):
+    __tablename__ = "report_cases"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sender = Column(String, nullable=False)
+    message = Column(String, nullable=False)
+    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
+    status = Column(String, default="open")  # "open" or "closed"

@@ -231,6 +231,16 @@ class ChatWindow:
                 "min_role": "gm",
                 "aliases": ["alog"],
                 "help": "Usage: /adminlog\nShows all persistent admin reports."
+            },
+            "reports-view": {
+                "func": self.cmd_reports_view,
+                "min_role": "gm",
+                "help": "Shows all open report cases."
+            },
+            "report-resolve": {
+                "func": self.cmd_report_resolve,
+                "min_role": "gm",
+                "help": "Usage: /report-resolve <case number>"
             }
         }
 
@@ -668,6 +678,35 @@ class ChatWindow:
                 self.log_message(f"[Error] {data.get('error', 'Report failed.')}", "System")
         except Exception as e:
             self.log_message("[Error] Could not send report.", "System")
+
+    def cmd_reports_view(self):
+        try:
+            res = requests.get(f"{SERVER_URL}/reports_view", timeout=5)
+            data = res.json()
+            if data.get("success"):
+                for case in data.get("reports", []):
+                    text = f"[Case #{case['id']}] {case['timestamp']} - {case['sender']}: {case['message']}"
+                    self.log_message(text, "Admin")
+            else:
+                self.log_message("[Admin] Failed to load report log.", "System")
+        except Exception:
+            self.log_message("[Error] Could not reach server.", "System")
+
+    def cmd_report_resolve(self, *args):
+        if not args:
+            self.log_message("Usage: /report-resolve <case number>", "System")
+            return
+
+        try:
+            case_id = int(args[0])
+            res = requests.post(f"{SERVER_URL}/report_resolve", json={"case_id": case_id}, timeout=5)
+            data = res.json()
+            if data.get("success"):
+                self.log_message(f"✅ {data.get('message')}", "Admin")
+            else:
+                self.log_message(f"[Admin] {data.get('error')}", "System")
+        except Exception:
+            self.log_message("[Error] Could not contact server.", "System")
 
     def cmd_adminlog(self):
         try:

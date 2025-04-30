@@ -507,7 +507,14 @@ def submit_report(payload: dict, db: Session = Depends(get_db)):
     if not sender or not message:
         return {"success": False, "error": "Missing sender or message."}
 
-    # Find online staff
+    # Create persistent case
+    report = models.ReportCase(sender=sender, message=message)
+    db.add(report)
+    db.commit()
+    db.refresh(report)
+
+    # Broadcast to online GMs/Devs in Admin tab
+    timestamp = datetime.datetime.now(datetime.UTC).timestamp()
     staff = (
         db.query(models.Player.name)
         .join(models.Account, models.Account.id == models.Player.account_id)
@@ -519,21 +526,47 @@ def submit_report(payload: dict, db: Session = Depends(get_db)):
         .all()
     )
 
-    if not staff:
-        return {"success": False, "error": "No GMs or Devs are currently online."}
-
-    timestamp = datetime.datetime.now(datetime.UTC).timestamp()
     for (recipient,) in staff:
         db.add(models.ChatMessage(
             sender="Report",
             recipient=recipient,
-            message=f"[Report] from {sender}: {message}",
+            message=f"[Report Case #{report.id}] from {sender}: {message}",
             timestamp=timestamp,
-            type="Admin"
+            type="admin"
         ))
 
     db.commit()
     return {"success": True}
+
+@app.get("/reports_view")
+def reports_view(db: Session = Depends(get_db)):
+    cases = db.query(models.ReportCase).filter(models.ReportCase.status == "open").order_by(models.ReportCase.timestamp.desc()).all()
+
+    return {
+        "success": True,
+        "reports": [
+            {
+                "id": case.id,
+                "sender": case.sender,
+                "message": case.message,
+                "timestamp": case.timestamp.strftime("%Y-%m-%d %H:%M:%S")
+            } for case in cases
+        ]
+    }
+
+@app.post("/report_resolve")
+def resolve_report(payload: dict, db: Session = Depends(get_db)):
+    case_id = payload.get("case_id")
+
+    case = db.query(models.ReportCase).filter(models.ReportCase.id == case_id).first()
+    if not case:
+        return {"success": False, "error": "Report not found."}
+    if case.status == "closed":
+        return {"success": False, "error": "Report already resolved."}
+
+    case.status = "closed"
+    db.commit()
+    return {"success": True, "message": f"Report Case #{case_id} marked as resolved."}
 
 @app.get("/adminlog")
 def get_admin_log(db: Session = Depends(get_db)):
