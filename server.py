@@ -589,7 +589,6 @@ def get_online_gms(db: Session = Depends(get_db)):
         )
         .all()
     )
-
     gm_names = [gm.name for gm in online_gms]
     return {"success": True, "gms": gm_names}
 

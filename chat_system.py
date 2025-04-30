@@ -593,7 +593,9 @@ class ChatWindow:
     def check_online_gms(self):
         try:
             response = requests.get(f"{SERVER_URL}/online_gms", timeout=5)
+            print(response.text)
             data = response.json()
+            print(data)
             if data.get("success"):
                 gms = data.get("gms", [])
                 if gms:
