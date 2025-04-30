@@ -318,8 +318,20 @@ def send_chat_message(chat: ChatMessage):
     db = SessionLocal()
 
     player = db.query(Player).filter_by(name=chat.sender, is_active=True).first()
-    if not player or player.is_muted:
-        return {"success": False, "error": "You are muted and cannot speak."}
+    if not player:
+        return {"success": False, "error": "Sender not found."}
+
+    if player.is_muted:
+        system_msg = models.ChatMessage(
+            sender="System",
+            message="You have been muted. Please contact a GM to resolve this issue.",
+            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+            type="System",
+            recipient=player.name  # Only this player receives it
+        )
+        db.add(system_msg)
+        db.commit()
+        return {"success": False, "error": "Muted"}
 
     new_msg = models.ChatMessage(
         sender=chat.sender,
