@@ -31,6 +31,7 @@ class Player(Base):
     inventory = Column(JSONB, default=dict)
     equipment = Column(JSONB, default=dict)
     skills = Column(JSONB, default=dict)
+    is_active = Column(Boolean, default=False)
 
 class ChatMessage(Base):
     __tablename__ = 'chat_messages'

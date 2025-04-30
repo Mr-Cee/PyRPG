@@ -101,7 +101,14 @@ def logout(username: str, db: Session = Depends(get_db)):
     user = db.query(Account).filter_by(username=username).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
+
     user.is_online = False
+
+    # ✅ Deactivate all characters
+    characters = db.query(Player).filter_by(account_id=user.id).all()
+    for c in characters:
+        c.is_active = False
+
     db.commit()
     return {"msg": f"{username} logged out"}
 
@@ -218,6 +225,13 @@ def get_players(username: str, token: str = Depends(oauth2_scheme), db: Session 
 
     players = db.query(Player).filter_by(account_id=account.id).all()
 
+    # Mark the first player (or later: selected player) as active
+    if players:
+        for p in players:
+            p.is_active = False  # clear others
+        players[0].is_active = True
+        db.commit()
+
     player_list = []
     for p in players:
         player_list.append({
@@ -265,8 +279,17 @@ def fetch_recent_messages(limit: int = 25, db: Session = Depends(get_db)):
 
 @app.get("/online_players")
 def get_online_players(db: Session = Depends(get_db)):
-    users = db.query(Account).filter_by(is_online=True).all()
-    return {"online": [u.username for u in users]}
+    accounts = db.query(Account).filter_by(is_online=True).all()
+    result = []
+
+    for account in accounts:
+        character = db.query(Player).filter_by(account_id=account.id, is_active=True).first()
+        if character:
+            result.append(character.name)
+        else:
+            result.append(f"[No Active Character for {account.username}]")
+
+    return {"online": result}
 
 @app.delete("/player/{username}")
 def delete_player(username: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
