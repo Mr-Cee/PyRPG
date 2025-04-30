@@ -140,22 +140,21 @@ async def login(request: Request, db: Session = Depends(get_db)):
 
 @app.post("/logout")
 def logout(payload: LogoutRequest, db: Session = Depends(get_db)):
-    account = payload.username
+    account = db.query(Account).filter_by(username=payload.username).first()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
     account.is_online = False
     account.last_seen = datetime.datetime.now(datetime.UTC)
 
-    # ✅ Deactivate active player character
-    active_player = db.query(models.Player).filter_by(account_id=account.id, is_active=True).first()
+    # ✅ Deactivate active character
+    active_player = db.query(Player).filter_by(account_id=account.id, is_active=True).first()
     if active_player:
         active_player.is_active = False
         active_player.last_seen = datetime.datetime.now(datetime.UTC)
 
     db.commit()
-
-    return {"msg": f"{username} logged out successfully."}
+    return {"msg": f"{payload.username} logged out successfully."}
 
 @app.post("/set_active_character")
 def set_active_character(username: str = Body(...), character_name: str = Body(...), db: Session = Depends(get_db)):
@@ -202,21 +201,21 @@ def heartbeat(data: HeartbeatRequest, db: Session = Depends(get_db)):
     db.commit()
     return {"msg": f"Heartbeat OK: {data.username} on {data.client_version}"}
 
-@app.post("/logout/{username}")
-def logout(username: str, db: Session = Depends(get_db)):
-    user = db.query(Account).filter_by(username=username).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found.")
-
-    user.is_online = False
-
-    # ✅ Deactivate all characters
-    characters = db.query(Player).filter_by(account_id=user.id).all()
-    for c in characters:
-        c.is_active = False
-
-    db.commit()
-    return {"msg": f"{username} logged out"}
+# @app.post("/logout/{username}")
+# def logout(username: str, db: Session = Depends(get_db)):
+#     user = db.query(Account).filter_by(username=username).first()
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found.")
+#
+#     user.is_online = False
+#
+#     # ✅ Deactivate all characters
+#     characters = db.query(Player).filter_by(account_id=user.id).all()
+#     for c in characters:
+#         c.is_active = False
+#
+#     db.commit()
+#     return {"msg": f"{username} logged out"}
 
 @app.post("/register")
 def register(request: RegisterRequest, db: Session = Depends(get_db)):
