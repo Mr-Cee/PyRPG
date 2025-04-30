@@ -576,6 +576,23 @@ def get_online_players(db: Session = Depends(get_db)):
 
     return {"online": result}
 
+@app.get("/online_gms")
+def get_online_gms(db: Session = Depends(get_db)):
+    gm_roles = ["gm", "dev"]
+    online_gms = (
+        db.query(models.Player)
+        .join(models.Account, models.Account.id == models.Player.account_id)
+        .filter(
+            models.Player.is_active == True,
+            models.Account.is_online == True,
+            models.Account.role.in_(gm_roles)
+        )
+        .all()
+    )
+
+    gm_names = [gm.name for gm in online_gms]
+    return {"success": True, "gms": gm_names}
+
 @app.delete("/player/{username}")
 def delete_player(username: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     account = db.query(Account).filter_by(username=username).first()

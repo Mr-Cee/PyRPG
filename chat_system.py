@@ -474,6 +474,9 @@ class ChatWindow:
             self.send_whisper(target_name, message)
             return
 
+        elif command == "gms":
+            self.check_online_gms()
+
         elif command in self.admin_commands:
             self.send_admin_command(f"/{command} {' '.join(args)}")
             return
@@ -586,6 +589,22 @@ class ChatWindow:
                 self.log_message("[Online] No players are currently online.", "System")
         except Exception as e:
             self.log_message(f"[Error] Failed to fetch online players: {e}", "System")
+
+    def check_online_gms(self):
+        try:
+            response = requests.get(f"{SERVER_URL}/online_gms", timeout=5)
+            data = response.json()
+            if data.get("success"):
+                gms = data.get("gms", [])
+                if gms:
+                    names = ", ".join(gms)
+                    self.log_message(f"Online GMs: {names}", "System")
+                else:
+                    self.log_message("No GMs are currently online.", "System")
+            else:
+                self.log_message("[Error] Failed to fetch GM list.", "System")
+        except Exception as e:
+            self.log_message("[Error] Could not contact server.", "System")
 
 
 
