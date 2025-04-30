@@ -1,5 +1,6 @@
 # server.py
 import threading
+import time
 
 from fastapi import FastAPI, HTTPException, Depends, Body, Security, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -92,7 +93,7 @@ def background_cleanup_thread():
         finally:
             db.close()
 
-        datetime.time.sleep(60)  # Run every 60 seconds
+        time.sleep(60)  # Run every 60 seconds
 
 @app.on_event("startup")
 def start_background_cleanup():
