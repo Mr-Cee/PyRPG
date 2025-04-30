@@ -8,7 +8,7 @@ import json
 import requests
 import threading
 
-from settings import SERVER_URL, CLIENT_VERSION  # or wherever your server runs
+from settings import *  # or wherever your server runs
 
 
 
@@ -19,7 +19,7 @@ def attempt_login(username, password):
             json={
                 "username": username,
                 "password": password,
-                "client_version": CLIENT_VERSION  # ✅ add this
+                "client_version": CLIENT_VERSION
             }
         )
 
@@ -27,16 +27,12 @@ def attempt_login(username, password):
             data = response.json()
             token = data.get("access_token")
             role = data.get("role", "player")
-            print(f"✅ Login successful! Token: {token}")
-
-            return {"token": token, "role": role}
+            return {"data": {"token": token, "role": role}}
         else:
-            print(f"❌ Login failed: {response.json()['detail']}")
-            return None
+            return {"error": response.json().get("detail", "Unknown error.")}
 
     except Exception as e:
-        print(f"❌ Could not connect to server: {e}")
-        return None
+        return {"error": f"Could not connect to server: {e}"}
 
 def attempt_register(username, password, email):
     try:
@@ -339,6 +335,40 @@ class LoginScreen(BaseScreen):
             container=self.new_password_popup
         )
 
+    def show_popup(self, title, message):
+        from pygame_gui.elements import UIWindow, UILabel, UIButton
+
+        print(str(len(message)) + " " + message)
+
+        # Estimate width from message length (basic heuristic)
+        estimated_width = max(300, min(600, len(message) * 10))
+        window_rect = pygame.Rect(
+            (GAME_WIDTH // 2 - estimated_width // 2, GAME_HEIGHT // 2 - 75),
+            (estimated_width, 175)
+        )
+
+        popup = UIWindow(
+            window_rect,
+            self.manager,
+            window_display_title=title
+        )
+
+        UILabel(
+            pygame.Rect((10, 30), (estimated_width - 20, 60)),
+            message,
+            self.manager,
+            container=popup
+        )
+
+        UIButton(
+            pygame.Rect(((estimated_width - 100) // 2, 100), (100, 30)),
+            "OK",
+            self.manager,
+            container=popup
+        )
+
+        self.active_popup = popup
+
     def handle_event(self, event):
 
         if event.type == pygame.KEYDOWN:
@@ -366,6 +396,10 @@ class LoginScreen(BaseScreen):
                     self.login_thread.start()
 
         elif event.type == pygame_gui.UI_BUTTON_PRESSED:
+
+            if hasattr(self, "active_popup") and event.ui_element.text == "OK":
+                self.active_popup.kill()
+                self.active_popup = None
 
             if event.ui_element == self.forgot_password_button:
                 self.open_forgot_password_popup()
@@ -460,22 +494,26 @@ class LoginScreen(BaseScreen):
             self.connecting = False
 
             if self.login_result:
-                self.screen_manager.auth_token = self.login_result["token"]
-                self.screen_manager.player_role = self.login_result.get("role", "player")
-                self.screen_manager.current_account = self.username_entry.get_text().strip()
-                self.message_label.set_text("Login successful!")
+                if "data" in self.login_result:
+                    data = self.login_result["data"]
+                    self.screen_manager.auth_token = data["token"]
+                    self.screen_manager.player_role = data.get("role", "player")
+                    self.screen_manager.current_account = self.username_entry.get_text().strip()
+                    self.message_label.set_text("Login successful!")
 
-                if self.remember_me_checked:
-                    self.save_remembered_login(self.screen_manager.current_account)
-                else:
-                    self.clear_remembered_login()
+                    if self.remember_me_checked:
+                        self.save_remembered_login(self.screen_manager.current_account)
+                    else:
+                        self.clear_remembered_login()
 
-                character_select_screen_class = ScreenRegistry.get("character_select")
-                if character_select_screen_class:
-                    self.screen_manager.set_screen(
-                        character_select_screen_class(self.manager, self.screen_manager))
-            else:
-                self.message_label.set_text("Login Failed.")
+                    character_select_screen_class = ScreenRegistry.get("character_select")
+                    if character_select_screen_class:
+                        self.screen_manager.set_screen(
+                            character_select_screen_class(self.manager, self.screen_manager)
+                        )
+
+                elif "error" in self.login_result:
+                    self.show_popup("Login Failed", self.login_result["error"])
 
     def draw(self, window_surface):
         self.manager.draw_ui(window_surface)
