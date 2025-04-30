@@ -41,6 +41,9 @@ class Player:
 
         self.chat_window = None
 
+        self.last_heartbeat_time = 0
+        self.heartbeat_interval = 30  # seconds
+
         self.last_logout_time = None  # Track when they logged out
         self.pending_idle_rewards = None  # Store calculated rewards when logging back in
 
@@ -140,17 +143,30 @@ class Player:
                 print(f"{slot.title()}: Empty")
         print("-- End Equipment --\n")
 
-    # def to_dict(self):
-    #     return {
-    #         "name": self.name,
-    #         "char_class": self.char_class,
-    #         "level": self.level,
-    #         "experience": self.experience,
-    #         "stats": self.stats,
-    #         "inventory": self.inventory,
-    #         "equipment": self.equipment,
-    #         "last_logout_time": self.last_logout_time.isoformat() if self.last_logout_time else None
-    #     }
+    def start_heartbeat(self, username):
+        self._heartbeat_username = username
+        self._heartbeat_running = True
+        self._heartbeat_last_time = 0
+        self._heartbeat_interval = 30  # seconds
+
+    def stop_heartbeat(self):
+        self._heartbeat_running = False
+
+    def update_heartbeat(self, time_delta):
+        if not self._heartbeat_running:
+            return
+
+        self._heartbeat_last_time += time_delta
+        if self._heartbeat_last_time >= self._heartbeat_interval:
+            self._heartbeat_last_time = 0
+            try:
+                requests.post(
+                    f"{SERVER_URL}/heartbeat",
+                    json={"username": self._heartbeat_username},
+                    timeout=2
+                )
+            except Exception as e:
+                print(f"[Heartbeat Error] {e}")
 
     @classmethod
     def from_server_data(cls, data):

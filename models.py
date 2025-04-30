@@ -1,7 +1,7 @@
 # models.py
-
+import datetime
 import uuid
-from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean
+from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -16,6 +16,7 @@ class Account(Base):
     email = Column(String, unique=True, nullable=False)
     role = Column(String, default="player")
     is_online = Column(Boolean, default=False)
+    last_seen = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
 
 class Player(Base):
     __tablename__ = 'players'

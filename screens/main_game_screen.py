@@ -14,6 +14,7 @@ class MainGameScreen(BaseScreen):
 
     def setup(self):
         self.player = self.screen_manager.player
+        self.player.start_heartbeat(self.screen_manager.current_account)
         self.player.last_logout_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=10)
         self.player.calculate_idle_rewards()
 
@@ -66,6 +67,11 @@ class MainGameScreen(BaseScreen):
         self.gold_label.kill()
         if self.idle_chest_window:
             self.idle_chest_window.kill()
+        if self.chat_window:
+            self.chat_window.teardown()
+            self.chat_window = None
+        if self.player:
+            self.player.stop_heartbeat()
 
 
     def update_gold_label(self):
@@ -87,11 +93,14 @@ class MainGameScreen(BaseScreen):
             if self.idle_chest_window and event.ui_element == self.idle_chest_window:
                 self.claim_idle_rewards()
 
-        self.chat_window.process_event(event)
+        if self.chat_window:
+            self.chat_window.process_event(event)
 
 
     def update(self, time_delta):
         self.manager.update(time_delta)
+
+        self.player.update_heartbeat(time_delta)
 
         self.idle_timer += time_delta
         if self.idle_timer >= 5.0:

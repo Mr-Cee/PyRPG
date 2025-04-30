@@ -1,4 +1,5 @@
 # server.py
+import threading
 
 from fastapi import FastAPI, HTTPException, Depends, Body, Security, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -76,6 +77,28 @@ def get_db():
     finally:
         db.close()
 
+def background_cleanup_thread():
+    while True:
+        db = SessionLocal()
+        try:
+            cutoff = datetime.utcnow() - datetime.timedelta(minutes=2)
+            stale_users = db.query(Account).filter(Account.is_online == True, Account.last_seen < cutoff).all()
+            for user in stale_users:
+                user.is_online = False
+                print(f"[Cleanup] Auto-marked {user.username} as offline (last seen: {user.last_seen})")
+            db.commit()
+        except Exception as e:
+            print(f"[Cleanup Error] {e}")
+        finally:
+            db.close()
+
+        datetime.time.sleep(60)  # Run every 60 seconds
+
+@app.on_event("startup")
+def start_background_cleanup():
+    threading.Thread(target=background_cleanup_thread, daemon=True).start()
+    print("[Startup] Background cleanup thread started.")
+
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(Account).filter_by(username=form_data.username).first()
@@ -114,6 +137,17 @@ def set_active_character(username: str = Body(...), character_name: str = Body(.
     db.commit()
 
     return {"msg": f"Character '{character_name}' set as active for user '{username}'."}
+
+@app.post("/heartbeat")
+def heartbeat(username: str = Body(...), db: Session = Depends(get_db)):
+    account = db.query(Account).filter_by(username=username).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    account.last_seen = datetime.datetime.now(datetime.UTC)
+    account.is_online = True
+    db.commit()
+    return {"msg": f"Heartbeat received for {username}"}
 
 @app.post("/logout/{username}")
 def logout(username: str, db: Session = Depends(get_db)):
@@ -291,7 +325,10 @@ def fetch_recent_messages(limit: int = 25, db: Session = Depends(get_db)):
 
 @app.get("/online_players")
 def get_online_players(db: Session = Depends(get_db)):
-    accounts = db.query(Account).filter_by(is_online=True).all()
+    now = datetime.datetime.now(datetime.UTC)
+    cutoff = now - datetime.timedelta(minutes=2)
+
+    accounts = db.query(Account).filter(Account.is_online == True, Account.last_seen >= cutoff).all()
     result = []
 
     for account in accounts:
@@ -338,3 +375,8 @@ def delete_account(username: str, token: str = Depends(oauth2_scheme), db: Sessi
     db.commit()
 
     return {"msg": "Account and associated players deleted successfully."}
+
+
+
+
+

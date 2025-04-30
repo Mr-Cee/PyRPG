@@ -89,9 +89,22 @@ class ChatWindow:
 
         self.fetch_recent_messages()
 
+        self.running = True
+
         self.last_fetch_time = time.time()
         self.polling_thread = threading.Thread(target=self.poll_server_for_messages, daemon=True)
         self.polling_thread.start()
+
+    def teardown(self):
+        self.running = False
+        self.panel.kill()
+        for label in self.labels:
+            label.kill()
+        self.labels = []
+        self.scroll_container.kill()
+        self.input_box.kill()
+        for btn in self.tab_buttons:
+            btn.kill()
 
     def send_chat_to_server(self, text):
         payload = {
@@ -107,7 +120,7 @@ class ChatWindow:
             print(f"[Error] Failed to send message: {e}", "System")
 
     def poll_server_for_messages(self):
-        while True:
+        while self.running:
             try:
                 response = requests.get(f"{SERVER_URL}/chat/fetch?since={self.last_fetch_time}", timeout=2)
                 if response.status_code == 200:
@@ -504,5 +517,7 @@ class ChatWindow:
                 self.log_message("[Online] No players are currently online.", "System")
         except Exception as e:
             self.log_message(f"[Error] Failed to fetch online players: {e}", "System")
+
+
 
 
