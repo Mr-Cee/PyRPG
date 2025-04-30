@@ -1,10 +1,15 @@
 # screens/main_game_screen.py
+import requests
+
 from chat_system import ChatWindow
 import pygame
 import pygame_gui
 from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
 import datetime
+
+from settings import SERVER_URL
+
 
 class MainGameScreen(BaseScreen):
     def __init__(self, manager, screen_manager):
@@ -81,6 +86,14 @@ class MainGameScreen(BaseScreen):
     def handle_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.logout_button:
+                try:
+                    requests.post(
+                        f"{SERVER_URL}/logout",
+                        json={"username": self.screen_manager.current_account},
+                        timeout=3
+                    )
+                except Exception as e:
+                    print(f"[Logout] Failed to notify server: {e}")
                 from screens.character_select_screen import CharacterSelectScreen
                 self.player.last_logout_time = datetime.datetime.now(datetime.UTC)
                 self.player.save_to_server(self.screen_manager.auth_token)  # Add this line

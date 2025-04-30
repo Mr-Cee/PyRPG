@@ -324,7 +324,7 @@ def send_chat_message(chat: ChatMessage):
     if player.is_muted:
         system_msg = models.ChatMessage(
             sender="System",
-            message="You have been muted. Please contact a GM to resolve this issue.",
+            message="You have been muted. Please contact a GM to resolve this issue.\n User /gms to find any GMs online right now",
             timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
             type="System",
             recipient=player.name  # Only this player receives it
@@ -370,117 +370,6 @@ def send_whisper(payload: dict, db: Session = Depends(get_db)):
     db.commit()
 
     return {"success": True}
-
-@app.post("/admin_command")
-def admin_command(payload: dict, db: Session = Depends(get_db)):
-    username = payload.get("username")
-    command_text = payload.get("command", "").strip()
-    account = db.query(Account).filter_by(username=username).first()
-
-    if not account:
-        return {"success": False, "error": "Account not found."}
-
-    # Extract actual command word (e.g., "kick" from "/kick ...")
-    parts = command_text.split()
-    if not parts:
-        return {"success": False, "error": "Empty command."}
-    command = parts[0].lstrip("/")
-
-    # Permission check
-    allowed_commands = ROLE_COMMANDS.get(account.role, [])
-    if command not in allowed_commands:
-        return {"success": False, "error": f"Permission denied for command: /{command}"}
-
-
-    # ✅ Step 2: Parse command
-    if command_text.startswith("/broadcast"):
-        parts = command_text.split(maxsplit=1)
-        if len(parts) < 2:
-            return {"success": False, "error": "Usage: /broadcast <message>"}
-
-        message = parts[1]
-        broadcast = models.ChatMessage(
-            sender="System",
-            message=f"[Admin] {message}",
-            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
-            type="System"
-        )
-        db.add(broadcast)
-        db.commit()
-        return {"success": True, "message": "Broadcast sent."}
-
-    elif command_text.startswith("/kick"):
-        parts = command_text.split()
-        if len(parts) < 2:
-            return {"success": False, "error": "Usage: /kick <character_name>"}
-
-        target_name = parts[1]
-        player = db.query(Player).filter_by(name=target_name, is_active=True).first()
-        if not player:
-            return {"success": False, "error": f"{target_name} not found or not active."}
-
-        player.is_active = False
-        account = db.query(Account).filter_by(id=player.account_id).first()
-        if account:
-            account.is_online = False
-            account.last_seen = datetime.datetime.now(datetime.UTC)
-
-        system_msg = models.ChatMessage(
-            sender="System",
-            message=f"{target_name} has been kicked by an admin.",
-            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
-            type="System"
-        )
-        db.add(system_msg)
-        db.commit()
-        return {"success": True, "message": f"{target_name} kicked."}
-
-    elif command == "mute":
-        if len(parts) < 2:
-            return {"success": False, "error": "Usage: /mute <character_name>"}
-        target_name = parts[1]
-        player = db.query(Player).filter_by(name=target_name).first()
-        if not player:
-            return {"success": False, "error": f"Player {target_name} not found."}
-        player.is_muted = True
-        db.commit()
-        return {"success": True, "message": f"{target_name} has been muted."}
-
-    elif command == "unmute":
-        if len(parts) < 2:
-            return {"success": False, "error": "Usage: /unmute <character_name>"}
-        target_name = parts[1]
-        player = db.query(Player).filter_by(name=target_name).first()
-        if not player:
-            return {"success": False, "error": f"Player {target_name} not found."}
-        player.is_muted = False
-        db.commit()
-        return {"success": True, "message": f"{target_name} has been unmuted."}
-
-    elif command == "addcoins":
-        if len(parts) < 3:
-            return {"success": False, "error": "Usage: /addcoins <character_name> <amount>"}
-        target_name = parts[1]
-        try:
-            amount = int(parts[2])
-        except ValueError:
-            return {"success": False, "error": "Amount must be a number."}
-
-        player = db.query(Player).filter_by(name=target_name).first()
-        if not player:
-            return {"success": False, "error": f"Player {target_name} not found."}
-        player.gold += amount
-        db.commit()
-        return {"success": True, "message": f"Added {amount} gold to {target_name}."}
-
-    elif command == "spawnboss":
-        if len(parts) < 2:
-            return {"success": False, "error": "Usage: /spawnboss <zone>"}
-        zone = parts[1]
-        # TODO: Implement your boss logic here
-        return {"success": True, "message": f"Boss spawned in zone: {zone} (stubbed)"}
-
-    return {"success": False, "error": "Unknown command."}
 
 @app.get("/required_version")
 def get_required_version():
@@ -592,6 +481,59 @@ def get_online_gms(db: Session = Depends(get_db)):
     gm_names = [gm.name for gm in online_gms]
     return {"success": True, "gms": gm_names}
 
+@app.get("/online_staff")
+def get_online_staff(db: Session = Depends(get_db)):
+    staff_roles = ["gm", "dev"]
+    staff = (
+        db.query(models.Player.name, models.Account.role)
+        .join(models.Account, models.Account.id == models.Player.account_id)
+        .filter(
+            models.Player.is_active == True,
+            models.Account.is_online == True,
+            models.Account.role.in_(staff_roles)
+        )
+        .all()
+    )
+
+    formatted = [f"{name} ({role})" for name, role in staff]
+    return {"success": True, "staff": formatted}
+
+@app.post("/report")
+def submit_report(payload: dict, db: Session = Depends(get_db)):
+    sender = payload.get("sender")
+    message = payload.get("message", "").strip()
+
+    if not sender or not message:
+        return {"success": False, "error": "Missing sender or message."}
+
+    # Find online staff
+    staff = (
+        db.query(models.Player.name)
+        .join(models.Account, models.Account.id == models.Player.account_id)
+        .filter(
+            models.Player.is_active == True,
+            models.Account.is_online == True,
+            models.Account.role.in_(["gm", "dev"])
+        )
+        .all()
+    )
+
+    if not staff:
+        return {"success": False, "error": "No GMs or Devs are currently online."}
+
+    timestamp = datetime.datetime.now(datetime.UTC).timestamp()
+    for (recipient,) in staff:
+        db.add(models.ChatMessage(
+            sender="Report",
+            recipient=recipient,
+            message=f"[Report] from {sender}: {message}",
+            timestamp=timestamp,
+            type="System"
+        ))
+
+    db.commit()
+    return {"success": True}
+
 @app.delete("/player/{username}")
 def delete_player(username: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     account = db.query(Account).filter_by(username=username).first()
@@ -627,6 +569,117 @@ def delete_account(username: str, token: str = Depends(oauth2_scheme), db: Sessi
     db.commit()
 
     return {"msg": "Account and associated players deleted successfully."}
+
+@app.post("/admin_command")
+def admin_command(payload: dict, db: Session = Depends(get_db)):
+    username = payload.get("username")
+    command_text = payload.get("command", "").strip()
+    account = db.query(Account).filter_by(username=username).first()
+
+    if not account:
+        return {"success": False, "error": "Account not found."}
+
+    # Extract actual command word (e.g., "kick" from "/kick ...")
+    parts = command_text.split()
+    if not parts:
+        return {"success": False, "error": "Empty command."}
+    command = parts[0].lstrip("/")
+
+    # Permission check
+    allowed_commands = ROLE_COMMANDS.get(account.role, [])
+    if command not in allowed_commands:
+        return {"success": False, "error": f"Permission denied for command: /{command}"}
+
+
+    # ✅ Step 2: Parse command
+    if command_text.startswith("/broadcast"):
+        parts = command_text.split(maxsplit=1)
+        if len(parts) < 2:
+            return {"success": False, "error": "Usage: /broadcast <message>"}
+
+        message = parts[1]
+        broadcast = models.ChatMessage(
+            sender="System",
+            message=f"[Admin] {message}",
+            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+            type="System"
+        )
+        db.add(broadcast)
+        db.commit()
+        return {"success": True, "message": "Broadcast sent."}
+
+    elif command_text.startswith("/kick"):
+        parts = command_text.split()
+        if len(parts) < 2:
+            return {"success": False, "error": "Usage: /kick <character_name>"}
+
+        target_name = parts[1]
+        player = db.query(Player).filter_by(name=target_name, is_active=True).first()
+        if not player:
+            return {"success": False, "error": f"{target_name} not found or not active."}
+
+        player.is_active = False
+        account = db.query(Account).filter_by(id=player.account_id).first()
+        if account:
+            account.is_online = False
+            account.last_seen = datetime.datetime.now(datetime.UTC)
+
+        system_msg = models.ChatMessage(
+            sender="System",
+            message=f"{target_name} has been kicked by an admin.",
+            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+            type="System"
+        )
+        db.add(system_msg)
+        db.commit()
+        return {"success": True, "message": f"{target_name} kicked."}
+
+    elif command == "mute":
+        if len(parts) < 2:
+            return {"success": False, "error": "Usage: /mute <character_name>"}
+        target_name = parts[1]
+        player = db.query(Player).filter_by(name=target_name).first()
+        if not player:
+            return {"success": False, "error": f"Player {target_name} not found."}
+        player.is_muted = True
+        db.commit()
+        return {"success": True, "message": f"{target_name} has been muted."}
+
+    elif command == "unmute":
+        if len(parts) < 2:
+            return {"success": False, "error": "Usage: /unmute <character_name>"}
+        target_name = parts[1]
+        player = db.query(Player).filter_by(name=target_name).first()
+        if not player:
+            return {"success": False, "error": f"Player {target_name} not found."}
+        player.is_muted = False
+        db.commit()
+        return {"success": True, "message": f"{target_name} has been unmuted."}
+
+    elif command == "addcoins":
+        if len(parts) < 3:
+            return {"success": False, "error": "Usage: /addcoins <character_name> <amount>"}
+        target_name = parts[1]
+        try:
+            amount = int(parts[2])
+        except ValueError:
+            return {"success": False, "error": "Amount must be a number."}
+
+        player = db.query(Player).filter_by(name=target_name).first()
+        if not player:
+            return {"success": False, "error": f"Player {target_name} not found."}
+        player.gold += amount
+        db.commit()
+        return {"success": True, "message": f"Added {amount} gold to {target_name}."}
+
+    elif command == "spawnboss":
+        if len(parts) < 2:
+            return {"success": False, "error": "Usage: /spawnboss <zone>"}
+        zone = parts[1]
+        # TODO: Implement your boss logic here
+        return {"success": True, "message": f"Boss spawned in zone: {zone} (stubbed)"}
+
+    return {"success": False, "error": "Unknown command."}
 
 
 

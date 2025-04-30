@@ -476,6 +476,15 @@ class ChatWindow:
 
         elif command == "gms":
             self.check_online_gms()
+            return
+
+        elif command == "staff":
+            self.check_online_staff()
+            return
+
+        elif command == "report":
+            self.send_report(" ".join(args))
+            return
 
         elif command in self.admin_commands:
             self.send_admin_command(f"/{command} {' '.join(args)}")
@@ -607,6 +616,40 @@ class ChatWindow:
                 self.log_message("[Error] Failed to fetch GM list.", "System")
         except Exception as e:
             self.log_message("[Error] Could not contact server.", "System")
+
+    def check_online_staff(self):
+        try:
+            response = requests.get(f"{SERVER_URL}/online_staff", timeout=5)
+            data = response.json()
+            if data.get("success"):
+                staff = data.get("staff", [])
+                if staff:
+                    listing = ", ".join(staff)
+                    self.log_message(f"Online Staff: {listing}", "System")
+                else:
+                    self.log_message("No GMs or Devs are currently online.", "System")
+            else:
+                self.log_message("[Error] Failed to fetch staff list.", "System")
+        except Exception as e:
+            self.log_message("[Error] Could not contact server.", "System")
+
+    def send_report(self, message):
+        if not message:
+            self.log_message("[Error] Usage: /report <your message>", "System")
+            return
+        try:
+            response = requests.post(f"{SERVER_URL}/report", json={
+                "sender": self.player.name,
+                "message": message
+            }, timeout=5)
+            data = response.json()
+            if data.get("success"):
+                self.log_message("Your report has been sent to online staff.", "System")
+            else:
+                self.log_message(f"[Error] {data.get('error', 'Report failed.')}", "System")
+        except Exception as e:
+            self.log_message("[Error] Could not send report.", "System")
+
 
 
 
