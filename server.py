@@ -39,8 +39,8 @@ ROLE_HIERARCHY = {
 }
 ROLE_COMMANDS = {
     "player": [],
-    "gm": ["broadcast", "kick", "mute"],
-    "dev": ["broadcast", "kick", "mute", "createitem", "addcoins", "spawnboss"]
+    "gm": ["broadcast", "kick", "mute", "unmute"],
+    "dev": ["broadcast", "kick", "mute", "unmute, ""createitem", "addcoins", "spawnboss"]
 }
 
 
@@ -317,7 +317,7 @@ def update_player(request: UpdatePlayerRequest, db: Session = Depends(get_db)):
 def send_chat_message(chat: ChatMessage):
     db = SessionLocal()
 
-    player = db.query(Player).filter_by(name=sender_name, is_active=True).first()
+    player = db.query(Player).filter_by(name=chat.sender, is_active=True).first()
     if not player or player.is_muted:
         return {"success": False, "error": "You are muted and cannot speak."}
 
@@ -433,6 +433,17 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
         player.is_muted = True
         db.commit()
         return {"success": True, "message": f"{target_name} has been muted."}
+
+    elif command == "unmute":
+        if len(parts) < 2:
+            return {"success": False, "error": "Usage: /unmute <character_name>"}
+        target_name = parts[1]
+        player = db.query(Player).filter_by(name=target_name).first()
+        if not player:
+            return {"success": False, "error": f"Player {target_name} not found."}
+        player.is_muted = False
+        db.commit()
+        return {"success": True, "message": f"{target_name} has been unmuted."}
 
     elif command == "addcoins":
         if len(parts) < 3:
