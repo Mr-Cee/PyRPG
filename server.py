@@ -304,7 +304,11 @@ def send_whisper(payload: dict, db: Session = Depends(get_db)):
     message = payload.get("message")
 
     # Check if recipient is online
-    recipient_account = db.query(Account).filter_by(username=recipient_name).first()
+    recipient_player = db.query(models.Player).filter_by(name=recipient_name, is_active=True).first()
+    if not recipient_player:
+        return {"success": False, "error": f"{recipient_name} is not online."}
+
+    recipient_account = db.query(models.Account).filter_by(id=recipient_player.account_id).first()
     if not recipient_account or not recipient_account.is_online:
         return {"success": False, "error": f"{recipient_name} is not online."}
 
