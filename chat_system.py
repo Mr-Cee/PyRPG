@@ -7,6 +7,10 @@ import pygame
 import pygame_gui
 import datetime
 
+import items
+from items import create_item
+
+
 ROLE_HIERARCHY = {
     "player": 0,
     "gm": 1,
@@ -177,6 +181,12 @@ class ChatWindow:
                 "min_role": "dev",
                 "aliases": ["ac"],
                 "help": "Usage: /addcoins <amount> <type>\nAdds coins to player."
+            },
+            "createItem": {
+                "func": items.create_item,
+                "min_role": "dev",
+                "aliases": ["ci"],
+                "help": "Usage: /createItem <slot type> <Character Class> <Rarity (optional)>"
             }
         }
 
