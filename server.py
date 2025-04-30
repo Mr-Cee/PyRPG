@@ -5,7 +5,7 @@ import time
 from fastapi import FastAPI, HTTPException, Depends, Body, Security, Query, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, or_, and_
 from passlib.context import CryptContext
 from jose import jwt
 import datetime
@@ -297,6 +297,29 @@ def send_chat_message(chat: ChatMessage):
     db.commit()
     return {"success": True}
 
+@app.post("/whisper")
+def send_whisper(payload: dict, db: Session = Depends(get_db)):
+    sender_name = payload.get("sender")
+    recipient_name = payload.get("recipient")
+    message = payload.get("message")
+
+    # Check if recipient is online
+    recipient_account = db.query(Account).filter_by(username=recipient_name).first()
+    if not recipient_account or not recipient_account.is_online:
+        return {"success": False, "error": f"{recipient_name} is not online."}
+
+    # Store message as a private ChatMessage (or handle separately if needed)
+    whisper_message = models.ChatMessage(
+        sender=sender_name,
+        recipient=recipient_name,
+        message=message,
+        type="whisper"
+    )
+    db.add(whisper_message)
+    db.commit()
+
+    return {"success": True}
+
 @app.get("/required_version")
 def get_required_version():
     return {"required_version": REQUIRED_VERSION}
@@ -327,12 +350,31 @@ def get_players(username: str, token: str = Depends(oauth2_scheme), db: Session 
     return player_list
 
 @app.get("/chat/fetch")
-def fetch_chat_messages(since: float = Query(0.0), db: Session = Depends(get_db)):
-    messages = db.query(models.ChatMessage).filter(models.ChatMessage.timestamp > since).order_by(models.ChatMessage.timestamp).all()
+def fetch_chat_messages(since: float = Query(0.0), player_name: str = Query(...), db: Session = Depends(get_db)):
+    messages = (
+        db.query(models.ChatMessage)
+        .filter(models.ChatMessage.timestamp > since)
+        .filter(
+            or_(
+                models.ChatMessage.type == "Chat",
+                and_(
+                    models.ChatMessage.type == "whisper",
+                    models.ChatMessage.sender == player_name
+                ),
+                and_(
+                    models.ChatMessage.type == "whisper",
+                    models.ChatMessage.recipient == player_name
+                )
+            )
+        )
+        .order_by(models.ChatMessage.timestamp)
+        .all()
+    )
     return {
         "messages": [
             {
                 "sender": msg.sender,
+                "recipient": getattr(msg, "recipient", None),
                 "message": msg.message,
                 "timestamp": msg.timestamp,
                 "type": msg.type

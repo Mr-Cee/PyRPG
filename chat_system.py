@@ -122,20 +122,35 @@ class ChatWindow:
     def poll_server_for_messages(self):
         while self.running:
             try:
-                response = requests.get(f"{SERVER_URL}/chat/fetch?since={self.last_fetch_time}", timeout=2)
+                response = requests.get(
+                    f"{SERVER_URL}/chat/fetch",
+                    params={"since": self.last_fetch_time, "player_name": self.player.name},
+                    timeout=2
+                )
                 if response.status_code == 200:
                     data = response.json()
                     for msg in data.get("messages", []):
                         self.last_fetch_time = max(self.last_fetch_time, msg["timestamp"])
-                        display = f"{msg['sender']}: {msg['message']}" if msg[
-                                                                              'type'] == "Chat" else f"[{msg['timestamp']}] {msg['message']}"
-                        self.messages[msg['type']].append((msg['timestamp'], msg['message'], msg['type']))
-                        self.messages["All"].append((msg['timestamp'], msg['message'], msg['type']))
+                        msg_type = msg['type']
+                        timestamp = msg["timestamp"]
 
-                        if self.active_tab == msg['type'] or self.active_tab == "All":
-                            self._create_label(display, msg['type'])
+                        if msg_type == "whisper":
+                            if msg['sender'] == self.player.name:
+                                display = f"[To {msg['recipient']}] {msg['message']}"
+                            else:
+                                display = f"[From {msg['sender']}] {msg['message']}"
+                            tab = "Chat"  # or use a separate "Whispers" tab if you want
                         else:
-                            self.flashing_tabs.add(msg['type'])
+                            display = f"{msg['sender']}: {msg['message']}"
+                            tab = msg_type
+
+                        self.messages[tab].append((timestamp, msg["message"], tab))
+                        self.messages["All"].append((timestamp, msg["message"], tab))
+
+                        if self.active_tab == tab or self.active_tab == "All":
+                            self._create_label(display, tab)
+                        else:
+                            self.flashing_tabs.add(tab)
             except:
                 pass
             time.sleep(2)
@@ -290,6 +305,26 @@ class ChatWindow:
         self.scroll_container.set_scrollable_area_dimensions((label_width - 20, self.y_offset + 5))
         self.scroll_container.vert_scroll_bar.set_scroll_from_start_percentage(100)
 
+    def send_whisper(self, target_name, message):
+        try:
+            response = requests.post(
+                f"{SERVER_URL}/whisper",
+                json={
+                    "sender": self.player.name,
+                    "recipient": target_name,
+                    "message": message
+                },
+                timeout=5
+            )
+            data = response.json()
+            print(data)
+            if data.get("success"):
+                self.log_message(f"[To {target_name}] {message}", "Whisper")
+            else:
+                self.log_message(f"[System] {data.get('error', 'Failed to send whisper.')}", "System")
+        except Exception as e:
+            self.log_message(f"[Error] Whisper failed: {e}", "System")
+
     def switch_tab(self, new_tab):
         if new_tab not in self.tabs:
             return
@@ -407,6 +442,12 @@ class ChatWindow:
                     if self.has_permission(min_role):
                         help_line = self.commands[help_target].get("help")
                         self.log_message(f"{help_line}", "System")
+            return
+
+        elif command == "w" and len(args) >= 2:
+            target_name = args[0]
+            message = ' '.join(args[1:])
+            self.send_whisper(target_name, message)
             return
 
         resolved_command = self.alias_map.get(command, command)
