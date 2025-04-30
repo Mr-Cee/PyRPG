@@ -296,6 +296,14 @@ class CharacterSelectScreen(BaseScreen):
             elif event.ui_element == self.logout_button:
                 login_screen_class = ScreenRegistry.get("login")
                 if login_screen_class:
+                    try:
+                        requests.post(
+                            f"{SERVER_URL}/logout",
+                            json={"username": self.screen_manager.current_account},
+                            timeout=3
+                        )
+                    except Exception as e:
+                        print(f"[Logout] Failed to notify server: {e}")
                     self.screen_manager.auth_token = None
                     self.screen_manager.current_account = None
                     self.screen_manager.set_screen(login_screen_class(self.manager, self.screen_manager))

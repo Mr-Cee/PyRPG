@@ -135,6 +135,18 @@ async def login(request: Request, db: Session = Depends(get_db)):
         "role": user.role
     }
 
+@app.post("/logout")
+def logout(username: str = Body(...), db: Session = Depends(get_db)):
+    account = db.query(models.Account).filter_by(username=username).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    account.is_online = False
+    account.last_seen = datetime.datetime.now(datetime.UTC)
+    db.commit()
+
+    return {"msg": f"{username} logged out successfully."}
+
 @app.post("/set_active_character")
 def set_active_character(username: str = Body(...), character_name: str = Body(...), db: Session = Depends(get_db)):
     account = db.query(Account).filter_by(username=username).first()
