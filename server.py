@@ -2,9 +2,8 @@
 import threading
 import time
 
-from fastapi import FastAPI, HTTPException, Depends, Body, Security, Query
+from fastapi import FastAPI, HTTPException, Depends, Body, Security, Query, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from requests import Request
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy import create_engine
 from passlib.context import CryptContext
