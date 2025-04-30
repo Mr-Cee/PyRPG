@@ -150,6 +150,10 @@ def set_active_character(username: str = Body(...), character_name: str = Body(.
         raise HTTPException(status_code=404, detail="Character not found.")
 
     character.is_active = True
+    character.last_seen = datetime.datetime.now(datetime.UTC)  # ✅ mark character seen
+    account.is_online = True  # ✅ mark account as online
+    account.last_seen = datetime.datetime.now(datetime.UTC)  # ✅ set last_seen immediately
+
     db.commit()
 
     return {"msg": f"Character '{character_name}' set as active for user '{username}'."}
