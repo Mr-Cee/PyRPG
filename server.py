@@ -82,7 +82,7 @@ def background_cleanup_thread():
     while True:
         db = SessionLocal()
         try:
-            cutoff = datetime.utcnow() - datetime.timedelta(minutes=2)
+            cutoff = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=2)
             stale_users = db.query(Account).filter(Account.is_online == True, Account.last_seen < cutoff).all()
             for user in stale_users:
                 user.is_online = False
