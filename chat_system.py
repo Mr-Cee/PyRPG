@@ -281,7 +281,7 @@ class ChatWindow:
 
     def _create_label(self, text, msg_type="Chat"):
         object_id = f"#chat_message_{msg_type.lower()}"
-        print(object_id)
+
         font = self.manager.get_theme().get_font([object_id])
         container_width = self.scroll_container.get_relative_rect().width
         label_width = container_width - 10

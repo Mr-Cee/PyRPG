@@ -208,7 +208,8 @@ class Player:
             }
             response = requests.post(f"{SERVER_URL}/update_player", json=payload, headers=headers)
             if response.status_code == 200:
-                print("[Server Sync] Player saved successfully.")
+                pass
+                # print("[Server Sync] Player saved successfully.")
             else:
                 print(f"[Server Sync] Failed to save player. {response.status_code}: {response.text}")
         except Exception as e:
