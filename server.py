@@ -316,6 +316,11 @@ def update_player(request: UpdatePlayerRequest, db: Session = Depends(get_db)):
 @app.post("/chat/send")
 def send_chat_message(chat: ChatMessage):
     db = SessionLocal()
+
+    player = db.query(Player).filter_by(name=sender_name, is_active=True).first()
+    if not player or player.is_muted:
+        return {"success": False, "error": "You are muted and cannot speak."}
+
     new_msg = models.ChatMessage(
         sender=chat.sender,
         message=chat.message,
@@ -417,6 +422,40 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
         db.add(system_msg)
         db.commit()
         return {"success": True, "message": f"{target_name} kicked."}
+
+    elif command == "mute":
+        if len(parts) < 2:
+            return {"success": False, "error": "Usage: /mute <character_name>"}
+        target_name = parts[1]
+        player = db.query(Player).filter_by(name=target_name).first()
+        if not player:
+            return {"success": False, "error": f"Player {target_name} not found."}
+        player.is_muted = True
+        db.commit()
+        return {"success": True, "message": f"{target_name} has been muted."}
+
+    elif command == "addcoins":
+        if len(parts) < 3:
+            return {"success": False, "error": "Usage: /addcoins <character_name> <amount>"}
+        target_name = parts[1]
+        try:
+            amount = int(parts[2])
+        except ValueError:
+            return {"success": False, "error": "Amount must be a number."}
+
+        player = db.query(Player).filter_by(name=target_name).first()
+        if not player:
+            return {"success": False, "error": f"Player {target_name} not found."}
+        player.gold += amount
+        db.commit()
+        return {"success": True, "message": f"Added {amount} gold to {target_name}."}
+
+    elif command == "spawnboss":
+        if len(parts) < 2:
+            return {"success": False, "error": "Usage: /spawnboss <zone>"}
+        zone = parts[1]
+        # TODO: Implement your boss logic here
+        return {"success": True, "message": f"Boss spawned in zone: {zone} (stubbed)"}
 
     return {"success": False, "error": "Unknown command."}
 
