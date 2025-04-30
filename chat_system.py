@@ -28,7 +28,7 @@ class ChatWindow:
         self.container = container
 
         self.tabs = ["All", "Chat", "System", "Combat"]
-        if self.player.account_role in ("gm", "dev"):
+        if self.player.role in ("gm", "dev"):
             self.tabs.append("Admin")
         self.active_tab = "All"
 
@@ -133,9 +133,13 @@ class ChatWindow:
                 if response.status_code == 200:
                     data = response.json()
                     for msg in data.get("messages", []):
+
                         self.last_fetch_time = max(self.last_fetch_time, msg["timestamp"])
                         msg_type = msg['type']
                         timestamp = msg["timestamp"]
+
+                        if msg_type == "admin" and self.player.role not in ("gm", "dev"):
+                            continue
 
                         if msg_type == "whisper":
                             if msg['sender'] == self.player.name:
@@ -147,12 +151,18 @@ class ChatWindow:
                             display = f"{msg['sender']}: {msg['message']}"
                             tab = msg_type
 
+                        valid_tabs = {"chat", "system", "combat", "admin"}
+                        tab = msg_type.capitalize() if msg_type.lower() in valid_tabs else "Chat"
+
                         self.messages[tab].append((timestamp, msg["message"], msg_type))
                         self.messages["All"].append((timestamp, msg["message"], msg_type))
 
-                        if self.active_tab == tab or self.active_tab == "All":
-                            self._create_label(display, msg_type)
-                        else:
+                        # Always display in current tab (All, Chat, etc.)
+                        self._create_label(display,
+                                           tab if self.active_tab == tab or self.active_tab == "All" else self.active_tab)
+
+                        # Flash target tab if not actively viewed
+                        if tab != self.active_tab:
                             self.flashing_tabs.add(tab)
             except:
                 pass
@@ -166,7 +176,7 @@ class ChatWindow:
                 for msg in data.get("messages", []):
 
                     msg_type = msg["type"]
-                    if msg_type == "whisper" or "system":
+                    if msg_type.lower() in ("whisper",):
                         continue  # ✅ Skip whispers entirely in recent load
 
                     # Insert into local memory
@@ -215,6 +225,12 @@ class ChatWindow:
                 "min_role": "gm",
                 "aliases": [],
                 "help": "Usage: /admin\nToggles admin mode (GM only)."
+            },
+            "adminlog": {
+                "func": self.cmd_adminlog,
+                "min_role": "gm",
+                "aliases": ["alog"],
+                "help": "Usage: /adminlog\nShows all persistent admin reports."
             }
         }
 
@@ -299,13 +315,11 @@ class ChatWindow:
         self.messages[msg_type].append((timestamp, message, msg_type))
         self.messages["All"].append((timestamp, message, msg_type))
 
-        if message["type"] == "admin" and self.player.account_role not in ("gm", "dev"):
-            return
+
+        if self.active_tab == msg_type or self.active_tab == "All":
+            self._create_label(display_text, msg_type)
         else:
-            if self.active_tab == msg_type or self.active_tab == "All":
-                self._create_label(display_text, msg_type)
-            else:
-                self.flashing_tabs.add(msg_type)
+            self.flashing_tabs.add(msg_type)
 
     def _create_label(self, text, msg_type="Chat"):
         object_id = f"#chat_message_{msg_type.lower()}"
@@ -607,9 +621,9 @@ class ChatWindow:
     def check_online_gms(self):
         try:
             response = requests.get(f"{SERVER_URL}/online_gms", timeout=5)
-            print(response.text)
+
             data = response.json()
-            print(data)
+
             if data.get("success"):
                 gms = data.get("gms", [])
                 if gms:
@@ -654,6 +668,35 @@ class ChatWindow:
                 self.log_message(f"[Error] {data.get('error', 'Report failed.')}", "System")
         except Exception as e:
             self.log_message("[Error] Could not send report.", "System")
+
+    def cmd_adminlog(self):
+        try:
+            response = requests.get(f"{SERVER_URL}/adminlog", timeout=5)
+            data = response.json()
+            if data.get("success"):
+                messages = data.get("messages", [])
+                if not messages:
+                    self.log_message("No unresolved reports found.", "Admin")
+                    return
+
+                for msg in messages:
+                    timestamp = msg["timestamp"]
+                    sender = msg.get("sender", "System")
+                    message = msg.get("message", "")
+                    display_text = f"[{timestamp}] {sender}: {message}"
+
+                    self.messages["Admin"].append((timestamp, message, "Admin"))
+                    self.messages["All"].append((timestamp, message, "Admin"))
+
+                    # Display if active, else flash
+                    if self.active_tab == "Admin" or self.active_tab == "All":
+                        self._create_label(display_text, "Admin")
+                    else:
+                        self.flashing_tabs.add("Admin")
+            else:
+                self.log_message("[Admin] Failed to fetch admin log.", "System")
+        except Exception as e:
+            self.log_message("[Error] Could not fetch admin log.", "System")
 
 
 

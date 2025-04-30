@@ -535,6 +535,23 @@ def submit_report(payload: dict, db: Session = Depends(get_db)):
     db.commit()
     return {"success": True}
 
+@app.get("/adminlog")
+def get_admin_log(db: Session = Depends(get_db)):
+    try:
+        messages = db.query(models.ChatMessage).filter(models.ChatMessage.type == "admin").order_by(models.ChatMessage.timestamp.desc()).all()
+        return {
+            "success": True,
+            "messages": [
+                {
+                    "timestamp": msg.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                    "sender": msg.sender,
+                    "message": msg.message
+                } for msg in messages
+            ]
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 @app.delete("/player/{username}")
 def delete_player(username: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     account = db.query(Account).filter_by(username=username).first()
