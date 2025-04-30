@@ -237,7 +237,7 @@ class ChatWindow:
             response = requests.post(
                 f"{SERVER_URL}/admin_command",
                 json={
-                    "username": self.screen_manager.current_account,
+                    "username": self.player.username,
                     "command": command_text
                 },
                 timeout=5
@@ -474,8 +474,9 @@ class ChatWindow:
             self.send_whisper(target_name, message)
             return
 
-        elif command in ["broadcast", "kick"]:
+        elif command in self.admin_commands:
             self.send_admin_command(f"/{command} {' '.join(args)}")
+            return
 
         resolved_command = self.alias_map.get(command, command)
 

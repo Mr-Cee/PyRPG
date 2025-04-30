@@ -32,6 +32,17 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 chat_messages = []
 online_users = set()
+ROLE_HIERARCHY = {
+    "player": 0,
+    "gm": 1,
+    "dev": 2
+}
+ROLE_COMMANDS = {
+    "player": [],
+    "gm": ["broadcast", "kick", "mute"],
+    "dev": ["broadcast", "kick", "mute", "createitem", "addcoins", "spawnboss"]
+}
+
 
 class RegisterRequest(BaseModel):
     username: str
@@ -347,11 +358,22 @@ def send_whisper(payload: dict, db: Session = Depends(get_db)):
 def admin_command(payload: dict, db: Session = Depends(get_db)):
     username = payload.get("username")
     command_text = payload.get("command", "").strip()
-
-    # ✅ Step 1: Check permission
     account = db.query(Account).filter_by(username=username).first()
-    if not account or not account.is_admin:
-        return {"success": False, "error": "Unauthorized."}
+
+    if not account:
+        return {"success": False, "error": "Account not found."}
+
+    # Extract actual command word (e.g., "kick" from "/kick ...")
+    parts = command_text.split()
+    if not parts:
+        return {"success": False, "error": "Empty command."}
+    command = parts[0].lstrip("/")
+
+    # Permission check
+    allowed_commands = ROLE_COMMANDS.get(account.role, [])
+    if command not in allowed_commands:
+        return {"success": False, "error": f"Permission denied for command: /{command}"}
+
 
     # ✅ Step 2: Parse command
     if command_text.startswith("/broadcast"):
