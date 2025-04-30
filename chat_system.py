@@ -27,7 +27,9 @@ class ChatWindow:
         self.manager = manager
         self.container = container
 
-        self.tabs = ["All", "Chat", "System", "Combat", "Admin", "Debug"]
+        self.tabs = ["All", "Chat", "System", "Combat"]
+        if self.player.account_role in ("gm", "dev"):
+            self.tabs.append("Admin")
         self.active_tab = "All"
 
         self.flashing_tabs = set()
@@ -297,10 +299,13 @@ class ChatWindow:
         self.messages[msg_type].append((timestamp, message, msg_type))
         self.messages["All"].append((timestamp, message, msg_type))
 
-        if self.active_tab == msg_type or self.active_tab == "All":
-            self._create_label(display_text, msg_type)
+        if message["type"] == "admin" and self.player.account_role not in ("gm", "dev"):
+            return
         else:
-            self.flashing_tabs.add(msg_type)
+            if self.active_tab == msg_type or self.active_tab == "All":
+                self._create_label(display_text, msg_type)
+            else:
+                self.flashing_tabs.add(msg_type)
 
     def _create_label(self, text, msg_type="Chat"):
         object_id = f"#chat_message_{msg_type.lower()}"

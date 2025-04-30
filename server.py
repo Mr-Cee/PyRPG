@@ -409,6 +409,7 @@ def fetch_chat_messages(since: float = Query(0.0), player_name: str = Query(...)
             or_(
                 models.ChatMessage.type == "Chat",
                 models.ChatMessage.type == "System",
+                models.ChatMessage.type == "Admin",
                 and_(
                     models.ChatMessage.type == "whisper",
                     models.ChatMessage.sender == player_name
@@ -528,7 +529,7 @@ def submit_report(payload: dict, db: Session = Depends(get_db)):
             recipient=recipient,
             message=f"[Report] from {sender}: {message}",
             timestamp=timestamp,
-            type="System"
+            type="Admin"
         ))
 
     db.commit()
