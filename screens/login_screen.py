@@ -4,6 +4,7 @@ from screen_registry import ScreenRegistry
 import pygame_gui
 import pygame
 import os
+import sys
 import json
 import requests
 import threading
@@ -160,14 +161,15 @@ class LoginScreen(BaseScreen):
             manager=self.manager
         )
 
-        # self.email_entry = pygame_gui.elements.UITextEntryLine(
-        #     relative_rect=pygame.Rect((250, 310), (300, 50)),
-        #     manager=self.manager
-        # )
-
         self.forgot_password_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((250, 490), (300, 30)),
             text="Forgot Password?",
+            manager=self.manager
+        )
+
+        self.update_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((GAME_WIDTH - 160, GAME_HEIGHT - 60), (150, 40)),
+            text="Update Client",
             manager=self.manager
         )
 
@@ -371,6 +373,11 @@ class LoginScreen(BaseScreen):
 
     def handle_event(self, event):
 
+        if event.type == pygame.USEREVENT + 99 and getattr(self, "restart_pending", False):
+            print("[Restart] Relaunching client...")
+            python = sys.executable
+            os.execl(python, python, *sys.argv)  # Relaunch the script using the same command
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_TAB:
                 if self.username_entry.is_focused:
@@ -442,6 +449,34 @@ class LoginScreen(BaseScreen):
 
             if self.new_password_popup and event.ui_element == self.new_password_popup.cancel_button:
                 self.new_password_popup.kill()
+
+            if event.ui_element == self.update_button:
+                try:
+                    response = requests.get(f"{SERVER_URL}/required_version", timeout=5)
+                    if response.status_code == 200:
+                        required = response.json()["required_version"]
+
+                        if required != CLIENT_VERSION:
+                            # Simulate updating version file
+                            with open("settings.py", "r") as f:
+                                lines = f.readlines()
+                            with open("settings.py", "w") as f:
+                                for line in lines:
+                                    if line.startswith("CLIENT_VERSION"):
+                                        f.write(f'CLIENT_VERSION = "{required}"\n')
+                                    else:
+                                        f.write(line)
+
+                            self.show_popup("Update Complete", f"Client updated to version {required}. Restarting...")
+                            pygame.time.set_timer(pygame.USEREVENT + 99, 1500)
+                            self.restart_pending = True
+                        else:
+                            self.show_popup("No Update Needed", "Client version already matches the server.")
+
+                    else:
+                        self.show_popup("Update Failed", "Could not fetch server version.")
+                except requests.exceptions.RequestException:
+                    self.show_popup("Connection Error", "Failed to connect to server.")
 
         elif event.type == pygame_gui.UI_CONFIRMATION_DIALOG_CONFIRMED:
 

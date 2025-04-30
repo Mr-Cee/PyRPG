@@ -297,6 +297,10 @@ def send_chat_message(chat: ChatMessage):
     db.commit()
     return {"success": True}
 
+@app.get("/required_version")
+def get_required_version():
+    return {"required_version": REQUIRED_VERSION}
+
 @app.get("/player/{username}")
 def get_players(username: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     account = db.query(Account).filter_by(username=username).first()
