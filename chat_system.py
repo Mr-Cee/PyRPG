@@ -81,7 +81,7 @@ class ChatWindow:
         self.commands.update(self._load_player_commands())
         self.commands.update(self._load_gm_commands())
         self.commands.update(self._load_dev_commands())
-        self.admin_commands = ["broadcast", "kick"]
+        self.admin_commands = ["broadcast", "kick", "mute", "unmute", "addcoins", "createitem"]
 
         self.alias_map = {}
         for cmd_name, data in self.commands.items():

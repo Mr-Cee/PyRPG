@@ -40,7 +40,7 @@ ROLE_HIERARCHY = {
 ROLE_COMMANDS = {
     "player": [],
     "gm": ["broadcast", "kick", "mute", "unmute"],
-    "dev": ["broadcast", "kick", "mute", "unmute, ""createitem", "addcoins", "spawnboss"]
+    "dev": ["broadcast", "kick", "mute", "unmute", "createitem", "addcoins", "spawnboss"]
 }
 
 
