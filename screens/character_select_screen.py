@@ -1,4 +1,5 @@
 from player import Player
+from settings import *
 from player_registry import register_player
 from screen_manager import *
 import pygame
@@ -138,7 +139,22 @@ class CharacterSelectScreen(BaseScreen):
             manager=self.manager
         )
 
+        self.logout_button = pygame_gui.elements.UIButton(
+            relative_rect=pygame.Rect((GAME_WIDTH - 160, GAME_HEIGHT - 60), (150, 40)),
+            text="Logout",
+            manager=self.manager
+        )
+
         self.load_character_from_server()
+
+    def teardown(self):
+        self.character_list.kill()
+        self.new_character_button.kill()
+        self.select_character_button.kill()
+        self.delete_character_button.kill()
+        self.message_label.kill()
+        self.delete_account_button.kill()
+        self.logout_button.kill()
 
     def load_character_from_server(self):
         headers = {"Authorization": f"Bearer {self.screen_manager.auth_token}"}
@@ -223,14 +239,6 @@ class CharacterSelectScreen(BaseScreen):
     def cancel_delete(self):
         self.confirm_popup = None
 
-    def teardown(self):
-        self.character_list.kill()
-        self.new_character_button.kill()
-        self.select_character_button.kill()
-        self.delete_character_button.kill()
-        self.message_label.kill()
-        self.delete_account_button.kill()
-
     def handle_event(self, event):
         if self.confirm_popup:
             self.confirm_popup.process_event(event)
@@ -284,6 +292,13 @@ class CharacterSelectScreen(BaseScreen):
                         self.confirm_delete_account,
                         self.cancel_delete
                     )
+#Logout Button
+            elif event.ui_element == self.logout_button:
+                login_screen_class = ScreenRegistry.get("login")
+                if login_screen_class:
+                    self.screen_manager.auth_token = None
+                    self.screen_manager.current_account = None
+                    self.screen_manager.set_screen(login_screen_class(self.manager, self.screen_manager))
 
     def update(self, time_delta):
         self.manager.update(time_delta)
