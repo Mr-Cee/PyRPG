@@ -108,15 +108,24 @@ def start_background_cleanup():
     print("[Startup] Background cleanup thread started.")
 
 @app.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(Account).filter_by(username=form_data.username).first()
+async def login(request: Request, db: Session = Depends(get_db)):
+    body = await request.json()
+    username = body.get("username")
+    password = body.get("password")
+    client_version = body.get("client_version", "unknown")
 
-    if not user or not pwd_context.verify(form_data.password, user.password_hash):
+    # ✅ Enforce version
+    if client_version != REQUIRED_VERSION:
+        raise HTTPException(
+            status_code=426,  # Upgrade Required
+            detail=f"Client version '{client_version}' is outdated. Please update to '{REQUIRED_VERSION}'."
+        )
+
+    user = db.query(Account).filter_by(username=username).first()
+    if not user or not pwd_context.verify(password, user.password_hash):
         raise HTTPException(status_code=400, detail="Incorrect username or password.")
 
-    access_token = create_access_token(data={"sub": user.username})
-
-    # ✅ Register as online
+    access_token = create_access_token(data={"sub": username})
     user.is_online = True
     db.commit()
 

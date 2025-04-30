@@ -8,7 +8,7 @@ import json
 import requests
 import threading
 
-from settings import SERVER_URL  # or wherever your server runs
+from settings import SERVER_URL, CLIENT_VERSION  # or wherever your server runs
 
 
 
@@ -16,7 +16,11 @@ def attempt_login(username, password):
     try:
         response = requests.post(
             f"{SERVER_URL}/login",
-            data={"username": username, "password": password}
+            json={
+                "username": username,
+                "password": password,
+                "client_version": CLIENT_VERSION  # ✅ add this
+            }
         )
 
         if response.status_code == 200:
