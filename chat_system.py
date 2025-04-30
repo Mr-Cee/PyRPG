@@ -81,6 +81,7 @@ class ChatWindow:
         self.commands.update(self._load_player_commands())
         self.commands.update(self._load_gm_commands())
         self.commands.update(self._load_dev_commands())
+        self.admin_commands = ["broadcast", "kick"]
 
         self.alias_map = {}
         for cmd_name, data in self.commands.items():
@@ -163,7 +164,7 @@ class ChatWindow:
                 for msg in data.get("messages", []):
 
                     msg_type = msg["type"]
-                    if msg_type == "whisper":
+                    if msg_type == "whisper" or "system":
                         continue  # ✅ Skip whispers entirely in recent load
 
                     # Insert into local memory
@@ -230,6 +231,24 @@ class ChatWindow:
                 "help": "Usage: /createitem <slot_type> [char_class] [rarity] [player_name]\nCreates an item and gives it to a player."
 }
         }
+
+    def send_admin_command(self, command_text):
+        try:
+            response = requests.post(
+                f"{SERVER_URL}/admin_command",
+                json={
+                    "username": self.screen_manager.current_account,
+                    "command": command_text
+                },
+                timeout=5
+            )
+            data = response.json()
+            if data.get("success"):
+                self.log_message(f"[Admin] {data.get('message')}", "System")
+            else:
+                self.log_message(f"[Error] {data.get('error')}", "System")
+        except Exception as e:
+            self.log_message(f"[Error] Admin command failed: {e}", "System")
 
     def wrap_text(self, text, font, max_width):
         if isinstance(text, tuple):
@@ -454,6 +473,9 @@ class ChatWindow:
             message = ' '.join(args[1:])
             self.send_whisper(target_name, message)
             return
+
+        elif command in ["broadcast", "kick"]:
+            self.send_admin_command(f"/{command} {' '.join(args)}")
 
         resolved_command = self.alias_map.get(command, command)
 

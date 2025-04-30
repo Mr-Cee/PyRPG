@@ -343,6 +343,61 @@ def send_whisper(payload: dict, db: Session = Depends(get_db)):
 
     return {"success": True}
 
+@app.post("/admin_command")
+def admin_command(payload: dict, db: Session = Depends(get_db)):
+    username = payload.get("username")
+    command_text = payload.get("command", "").strip()
+
+    # ✅ Step 1: Check permission
+    account = db.query(Account).filter_by(username=username).first()
+    if not account or not account.is_admin:
+        return {"success": False, "error": "Unauthorized."}
+
+    # ✅ Step 2: Parse command
+    if command_text.startswith("/broadcast"):
+        parts = command_text.split(maxsplit=1)
+        if len(parts) < 2:
+            return {"success": False, "error": "Usage: /broadcast <message>"}
+
+        message = parts[1]
+        broadcast = models.ChatMessage(
+            sender="System",
+            message=f"[Admin] {message}",
+            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+            type="System"
+        )
+        db.add(broadcast)
+        db.commit()
+        return {"success": True, "message": "Broadcast sent."}
+
+    elif command_text.startswith("/kick"):
+        parts = command_text.split()
+        if len(parts) < 2:
+            return {"success": False, "error": "Usage: /kick <character_name>"}
+
+        target_name = parts[1]
+        player = db.query(Player).filter_by(name=target_name, is_active=True).first()
+        if not player:
+            return {"success": False, "error": f"{target_name} not found or not active."}
+
+        player.is_active = False
+        account = db.query(Account).filter_by(id=player.account_id).first()
+        if account:
+            account.is_online = False
+            account.last_seen = datetime.datetime.now(datetime.UTC)
+
+        system_msg = models.ChatMessage(
+            sender="System",
+            message=f"{target_name} has been kicked by an admin.",
+            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+            type="System"
+        )
+        db.add(system_msg)
+        db.commit()
+        return {"success": True, "message": f"{target_name} kicked."}
+
+    return {"success": False, "error": "Unknown command."}
+
 @app.get("/required_version")
 def get_required_version():
     return {"required_version": REQUIRED_VERSION}
