@@ -64,6 +64,9 @@ class HeartbeatRequest(BaseModel):
     character_name: str
     client_version: str
 
+class LogoutRequest(BaseModel):
+    username: str
+
 def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
     to_encode = data.copy()
     expire = datetime.datetime.utcnow() + (expires_delta or datetime.timedelta(minutes=15))
@@ -136,8 +139,8 @@ async def login(request: Request, db: Session = Depends(get_db)):
     }
 
 @app.post("/logout")
-def logout(username: str = Body(...), db: Session = Depends(get_db)):
-    account = db.query(models.Account).filter_by(username=username).first()
+def logout(payload: LogoutRequest, db: Session = Depends(get_db)):
+    account = payload.username
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
