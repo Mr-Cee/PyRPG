@@ -161,15 +161,19 @@ class ChatWindow:
             if response.status_code == 200:
                 data = response.json()
                 for msg in data.get("messages", []):
+
+                    msg_type = msg["type"]
+                    if msg_type == "whisper":
+                        continue  # ✅ Skip whispers entirely in recent load
+
                     # Insert into local memory
-                    self.messages[msg["type"]].append((msg["timestamp"], msg["message"], msg["type"]))
-                    self.messages["All"].append((msg["timestamp"], msg["message"], msg["type"]))
+                    self.messages[msg["type"]].append((msg["timestamp"], msg["message"], msg_type))
+                    self.messages["All"].append((msg["timestamp"], msg["message"], msg_type))
 
                     # Also display if it matches active tab
-                    display = f"{msg['sender']}: {msg['message']}" if msg[
-                                                                          'type'] == "Chat" else f"[{msg['timestamp']}] {msg['message']}"
-                    if self.active_tab == msg["type"] or self.active_tab == "All":
-                        self._create_label(display, msg["type"])
+                    display = f"{msg['sender']}: {msg['message']}" if msg_type == "Chat" else f"[{msg['timestamp']}] {msg['message']}"
+                    if self.active_tab == msg_type or self.active_tab == "All":
+                        self._create_label(display, msg_type)
         except Exception as e:
             self.log_message(f"[Error] Failed to load recent chat: {e}", "System")
 
