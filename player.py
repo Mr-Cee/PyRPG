@@ -159,10 +159,16 @@ class Player:
         self._heartbeat_last_time += time_delta
         if self._heartbeat_last_time >= self._heartbeat_interval:
             self._heartbeat_last_time = 0
+
+
+            print(f"[Heartbeat] Sending for {self._heartbeat_username}")
             try:
                 requests.post(
                     f"{SERVER_URL}/heartbeat",
-                    json={"username": self._heartbeat_username},
+                    json={
+                        "username": self._heartbeat_username,
+                        "character_name": self.name
+                    },
                     timeout=2
                 )
             except Exception as e:

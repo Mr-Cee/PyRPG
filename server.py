@@ -4,7 +4,7 @@ import time
 
 from fastapi import FastAPI, HTTPException, Depends, Body, Security, Query
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from requests import Session
+from requests import Session, Request
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from passlib.context import CryptContext
@@ -57,6 +57,10 @@ class UpdatePlayerRequest(BaseModel):
     experience: int
     gold: int
     last_logout_time: str  # ISO 8601 string format
+
+class HeartbeatRequest(BaseModel):
+    username: str
+    character_name: str
 
 def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
     to_encode = data.copy()
@@ -140,15 +144,23 @@ def set_active_character(username: str = Body(...), character_name: str = Body(.
     return {"msg": f"Character '{character_name}' set as active for user '{username}'."}
 
 @app.post("/heartbeat")
-def heartbeat(username: str = Body(...), db: Session = Depends(get_db)):
-    account = db.query(Account).filter_by(username=username).first()
+def heartbeat(data: HeartbeatRequest, db: Session = Depends(get_db)):
+    account = db.query(Account).filter_by(username=data.username).first()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
     account.last_seen = datetime.datetime.now(datetime.UTC)
     account.is_online = True
+
+    # Update the character's last seen as well
+    player = db.query(Player).filter_by(account_id=account.id, name=data.character_name).first()
+    if player:
+        player.last_seen = datetime.datetime.now(datetime.UTC)  # Optional: add this column
+    else:
+        print(f"[Heartbeat] Warning: Character {data.character_name} not found for {data.username}")
+
     db.commit()
-    return {"msg": f"Heartbeat received for {username}"}
+    return {"msg": f"Heartbeat received for {data.username} as {data.character_name}"}
 
 @app.post("/logout/{username}")
 def logout(username: str, db: Session = Depends(get_db)):
