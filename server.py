@@ -317,6 +317,7 @@ def send_whisper(payload: dict, db: Session = Depends(get_db)):
         sender=sender_name,
         recipient=recipient_name,
         message=message,
+        timestamp=time.time(),
         type="whisper"
     )
     db.add(whisper_message)
