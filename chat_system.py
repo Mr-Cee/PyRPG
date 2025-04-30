@@ -317,9 +317,9 @@ class ChatWindow:
                 timeout=5
             )
             data = response.json()
-            print(data)
             if data.get("success"):
-                self.log_message(f"[To {target_name}] {message}", "Whisper")
+                # self.log_message(f"[To {target_name}] {message}", "Whisper")
+                pass
             else:
                 self.log_message(f"[System] {data.get('error', 'Failed to send whisper.')}", "System")
         except Exception as e:

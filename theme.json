@@ -1,0 +1,116 @@
+{
+   "#chat_message":
+   {
+     "misc":
+     {
+       "text_horiz_alignment": "left",
+       "text_vert_alignment": "top",
+       "padding": "2, 2"
+     }
+   },
+  "#chat_message_system":
+  {
+    "colours":
+    {
+      "normal_text": "#999999"
+    },
+    "font":
+    {
+      "size": 14
+    },
+    "misc":
+    {
+      "text_horiz_alignment": "left",
+      "text_vert_alignment": "top",
+      "text_horiz_alignment_padding": "2",
+      "text_vert_alignment_padding": "2"
+    }
+  },
+  "#chat_message_chat":
+  {
+    "colours":
+    {
+      "normal_text": "#ffffff"
+    },
+    "font":
+    {
+      "size": 14
+    },
+    "misc":
+    {
+      "text_horiz_alignment": "left",
+      "text_vert_alignment": "top",
+      "text_horiz_alignment_padding": "2",
+      "text_vert_alignment_padding": "2"
+    }
+  },
+  "#chat_message_combat":
+  {
+    "colours":
+    {
+      "normal_text": "#ff6666"
+    },
+    "font":
+    {
+      "size": 14
+    },
+    "misc":
+    {
+      "text_horiz_alignment": "left",
+      "text_vert_alignment": "top",
+      "text_horiz_alignment_padding": "2",
+      "text_vert_alignment_padding": "2"
+    }
+  },
+  "#chat_message_admin":
+  {
+    "colours":
+    {
+      "normal_text": "#00ffff"
+    },
+    "font":
+    {
+      "size": 14
+    },
+    "misc":
+    {
+      "text_horiz_alignment": "left",
+      "text_vert_alignment": "top",
+      "text_horiz_alignment_padding": "2",
+      "text_vert_alignment_padding": "2"
+    }
+  },
+  "#chat_message_debug":
+  {
+    "colours":
+    {
+      "normal_text": "#c800ff"
+    },
+    "font":
+    {
+      "size": 14
+    },
+    "misc":
+    {
+      "text_horiz_alignment": "left",
+      "text_vert_alignment": "top",
+      "text_horiz_alignment_padding": "2",
+      "text_vert_alignment_padding": "2"
+    }
+  },
+  "#chat_message_whisper": {
+    "colours": {
+      "normal_text": "#b266ff"
+    },
+    "font": {
+      "size": 14
+    },
+    "misc": {
+      "text_horiz_alignment": "left",
+      "text_vert_alignment": "top",
+      "text_horiz_alignment_padding": "2",
+      "text_vert_alignment_padding": "2"
+    }
+  }
+}
+

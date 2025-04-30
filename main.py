@@ -18,7 +18,7 @@ GAME_HEIGHT = 720
 # Screen setup
 pygame.display.set_caption("Test RPG")
 window_surface = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
-ui_manager = pygame_gui.UIManager((GAME_WIDTH, GAME_HEIGHT), 'Assets/theme.json')
+ui_manager = pygame_gui.UIManager((GAME_WIDTH, GAME_HEIGHT), 'theme.json')
 
 clock = pygame.time.Clock()
 

@@ -159,9 +159,6 @@ class Player:
         self._heartbeat_last_time += time_delta
         if self._heartbeat_last_time >= self._heartbeat_interval:
             self._heartbeat_last_time = 0
-
-
-            print(f"[Heartbeat] Sending for {self._heartbeat_username}")
             try:
                 requests.post(
                     f"{SERVER_URL}/heartbeat",
