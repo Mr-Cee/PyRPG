@@ -458,9 +458,10 @@ class LoginScreen(BaseScreen):
 
                         if required != CLIENT_VERSION:
                             # Simulate updating version file
-                            with open("settings.py", "r") as f:
+                            with open("settings.py", "r", encoding="utf-8") as f:
                                 lines = f.readlines()
-                            with open("settings.py", "w") as f:
+
+                            with open("settings.py", "w", encoding="utf-8") as f:
                                 for line in lines:
                                     if line.startswith("CLIENT_VERSION"):
                                         f.write(f'CLIENT_VERSION = "{required}"\n')
