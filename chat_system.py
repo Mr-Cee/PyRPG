@@ -136,19 +136,19 @@ class ChatWindow:
 
                         if msg_type == "whisper":
                             if msg['sender'] == self.player.name:
-                                display = f"[To {msg['recipient']}] {msg['message']}"
+                                display = f"[To: {msg['recipient']}] {msg['message']}"
                             else:
-                                display = f"[From {msg['sender']}] {msg['message']}"
+                                display = f"[From: {msg['sender']}] {msg['message']}"
                             tab = "Chat"  # or use a separate "Whispers" tab if you want
                         else:
                             display = f"{msg['sender']}: {msg['message']}"
                             tab = msg_type
 
-                        self.messages[tab].append((timestamp, msg["message"], tab))
-                        self.messages["All"].append((timestamp, msg["message"], tab))
+                        self.messages[tab].append((timestamp, msg["message"], msg_type))
+                        self.messages["All"].append((timestamp, msg["message"], msg_type))
 
                         if self.active_tab == tab or self.active_tab == "All":
-                            self._create_label(display, tab)
+                            self._create_label(display, msg_type)
                         else:
                             self.flashing_tabs.add(tab)
             except:
@@ -281,6 +281,7 @@ class ChatWindow:
 
     def _create_label(self, text, msg_type="Chat"):
         object_id = f"#chat_message_{msg_type.lower()}"
+        print(object_id)
         font = self.manager.get_theme().get_font([object_id])
         container_width = self.scroll_container.get_relative_rect().width
         label_width = container_width - 10
