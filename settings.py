@@ -3,13 +3,15 @@ DEBUG_ACCOUNT = "debug"
 GAME_WIDTH = 1280
 GAME_HEIGHT = 720
 
+PUBLIC_IP = "75.119.187.81"
+
 # ⚙️ Server Settings (FastAPI)
-SERVER_HOST = "209.209.209.105"  # change to your server's LAN IP
+SERVER_HOST = "75.119.187.81"  # change to your server's LAN IP
 SERVER_PORT = 8000
 SERVER_URL = f"http://{SERVER_HOST}:{SERVER_PORT}"
 
 # ⚙️ PostgreSQL Settings (used by server only)
-DATABASE_HOST = "209.209.209.105"  # same as SERVER_HOST
+DATABASE_HOST = "75.119.187.81"  # same as SERVER_HOST
 DATABASE_NAME = "PyRPG"
 DATABASE_USER = "PyRPG_Admin"
 DATABASE_PASSWORD = "Christie91!"

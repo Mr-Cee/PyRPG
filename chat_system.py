@@ -6,6 +6,8 @@ import requests
 import pygame
 import pygame_gui
 import datetime
+from player_registry import get_player
+from settings import *
 
 import items
 from items import create_item
@@ -99,14 +101,15 @@ class ChatWindow:
             "type": "Chat"
         }
         try:
-            requests.post("http://localhost:8000/chat/send", json=payload, timeout=1)
+            requests.post(f"{SERVER_URL}/chat/send", json=payload, timeout=1)
         except Exception as e:
             self.log_message(f"[Error] Failed to send message: {e}", "System")
+            print(f"[Error] Failed to send message: {e}", "System")
 
     def poll_server_for_messages(self):
         while True:
             try:
-                response = requests.get(f"http://localhost:8000/chat/fetch?since={self.last_fetch_time}", timeout=2)
+                response = requests.get(f"{SERVER_URL}/chat/fetch?since={self.last_fetch_time}", timeout=2)
                 if response.status_code == 200:
                     data = response.json()
                     for msg in data.get("messages", []):
@@ -161,6 +164,12 @@ class ChatWindow:
                 "min_role": "player",
                 "aliases": [],
                 "help": "Usage: /status\nShow your current role."
+            },
+            "online": {
+                "func": self.cmd_online,
+                "min_role": "player",
+                "aliases": [],
+                "help": "Usage: /online\nShow who's currently online."
             }
         }
 
@@ -182,12 +191,12 @@ class ChatWindow:
                 "aliases": ["ac"],
                 "help": "Usage: /addcoins <amount> <type>\nAdds coins to player."
             },
-            "createItem": {
-                "func": items.create_item,
+            "createitem": {
+                "func": self.cmd_createitem,
                 "min_role": "dev",
                 "aliases": ["ci"],
-                "help": "Usage: /createItem <slot type> <Character Class> <Rarity (optional)>"
-            }
+                "help": "Usage: /createitem <slot_type> [char_class] [rarity] [player_name]\nCreates an item and gives it to a player."
+}
         }
 
     def wrap_text(self, text, font, max_width):
@@ -462,3 +471,30 @@ class ChatWindow:
         except ValueError:
             print("error")
             self.log_message("[Error] Invalid amount.", "System")
+
+    def cmd_createitem(self, slot_type, char_class=None, rarity=None, target_player_name=None):
+        target = self.player
+        if target_player_name:
+            target_lookup = get_player(target_player_name)
+            if not target_lookup:
+                self.log_message(f"[Dev] Player '{target_player_name}' not found.", "Debug")
+                return
+            target = target_lookup
+
+        char_class = char_class or target.char_class
+        item = create_item(slot_type=slot_type, char_class=char_class, rarity=rarity)
+
+        success = target.add_to_inventory(item)
+        if success:
+            if target is self.player:
+                self.log_message(f"[Dev] Created {item['rarity']} {slot_type.title()} for yourself.", "Debug")
+            else:
+                self.log_message(f"[Dev] Created {item['rarity']} {slot_type.title()} for {target.name}.", "Debug")
+        else:
+            self.log_message(f"[Dev] Failed to add item to {target.name}'s inventory (Full?).", "Debug")
+
+    def cmd_online(self):
+        from player_registry import list_online_names
+        names = list_online_names()
+        self.log_message(f"[Online] {len(names)} player(s): {', '.join(names)}", "System")
+

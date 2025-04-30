@@ -3,6 +3,7 @@ import pygame
 import pygame_gui
 
 from player import Player
+from player_registry import unregister_player
 from screen_manager import ScreenManager
 from screen_registry import ScreenRegistry
 from autoload_screens import autoload_screens
@@ -40,6 +41,9 @@ while running:
 
     for event in events:
         if event.type == pygame.QUIT:
+            # When the game is quitting or logging out
+            if screen_manager.player:
+                unregister_player(screen_manager.player.name)
             running = False
 
         ui_manager.process_events(event)   # <<< Must always process first

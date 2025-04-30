@@ -1,4 +1,5 @@
 from player import Player
+from player_registry import register_player
 from screen_manager import *
 import pygame
 import pygame_gui
@@ -250,6 +251,7 @@ class CharacterSelectScreen(BaseScreen):
                     for char in self.character_data:
                         if char["name"] == selected_name:
                             self.screen_manager.player = Player.from_server_data(char)
+                            register_player(Player.from_server_data(char))
                             break
 
                     main_game_screen_class = ScreenRegistry.get("main_game")
