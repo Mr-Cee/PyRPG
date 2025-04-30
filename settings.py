@@ -3,6 +3,8 @@ DEBUG_ACCOUNT = "debug"
 GAME_WIDTH = 1280
 GAME_HEIGHT = 720
 
+CLIENT_VERSION = "v0.0.1"
+
 PUBLIC_IP = "75.119.187.81"
 
 # ⚙️ Server Settings (FastAPI)

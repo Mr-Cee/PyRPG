@@ -3,7 +3,7 @@ import json
 import os
 import requests
 from items import create_item, EQUIP_SLOTS
-from settings import SERVER_URL  # or wherever your server runs
+from settings import SERVER_URL, CLIENT_VERSION  # or wherever your server runs
 
 class Player:
     def __init__(self, name, char_class, level=1, experience=0, inventory=None, equipment=None, skills=None, username=None, role="player"):
@@ -167,7 +167,8 @@ class Player:
                     f"{SERVER_URL}/heartbeat",
                     json={
                         "username": self._heartbeat_username,
-                        "character_name": self.name
+                        "character_name": self.name,
+                        "client_version": CLIENT_VERSION
                     },
                     timeout=2
                 )

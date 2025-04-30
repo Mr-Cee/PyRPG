@@ -17,6 +17,8 @@ from models import Base, Account, Player
 
 from settings import DATABASE_URL
 
+REQUIRED_VERSION = "v0.0.2"
+
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
@@ -61,6 +63,7 @@ class UpdatePlayerRequest(BaseModel):
 class HeartbeatRequest(BaseModel):
     username: str
     character_name: str
+    client_version: str
 
 def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
     to_encode = data.copy()
@@ -145,6 +148,12 @@ def set_active_character(username: str = Body(...), character_name: str = Body(.
 
 @app.post("/heartbeat")
 def heartbeat(data: HeartbeatRequest, db: Session = Depends(get_db)):
+    if data.client_version != REQUIRED_VERSION:
+        raise HTTPException(
+            status_code=426,  # Upgrade Required
+            detail=f"Client version '{data.client_version}' is outdated. Please update to '{REQUIRED_VERSION}'."
+        )
+
     account = db.query(Account).filter_by(username=data.username).first()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
@@ -152,15 +161,12 @@ def heartbeat(data: HeartbeatRequest, db: Session = Depends(get_db)):
     account.last_seen = datetime.datetime.now(datetime.UTC)
     account.is_online = True
 
-    # Update the character's last seen as well
     player = db.query(Player).filter_by(account_id=account.id, name=data.character_name).first()
     if player:
-        player.last_seen = datetime.datetime.now(datetime.UTC)  # Optional: add this column
-    else:
-        print(f"[Heartbeat] Warning: Character {data.character_name} not found for {data.username}")
+        player.last_seen = datetime.datetime.now(datetime.UTC)
 
     db.commit()
-    return {"msg": f"Heartbeat received for {data.username} as {data.character_name}"}
+    return {"msg": f"Heartbeat OK: {data.username} on {data.client_version}"}
 
 @app.post("/logout/{username}")
 def logout(username: str, db: Session = Depends(get_db)):
