@@ -668,7 +668,7 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
         db.commit()
         return {"success": True, "message": "Broadcast sent."}
 
-    elif command_text.startswith("/kick"):
+    elif command == "kick":
         parts = command_text.split()
         if len(parts) < 2:
             return {"success": False, "error": "Usage: /kick <character_name>"}
@@ -678,20 +678,25 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
         if not player:
             return {"success": False, "error": f"{target_name} not found or not active."}
 
-        player.is_active = False
         account = db.query(Account).filter_by(id=player.account_id).first()
         if account:
             account.is_online = False
             account.last_seen = datetime.datetime.now(datetime.UTC)
 
-        system_msg = models.ChatMessage(
+        player.is_active = False
+
+        # ✅ Send private system message with a special tag
+        kick_msg = models.ChatMessage(
             sender="System",
-            message=f"{target_name} has been kicked by an admin.",
+            recipient=player.name,
+            message="You have been kicked by an admin.",
             timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
             type="System"
         )
-        db.add(system_msg)
+        db.add(kick_msg)
+
         db.commit()
+
         return {"success": True, "message": f"{target_name} kicked."}
 
     elif command == "mute":

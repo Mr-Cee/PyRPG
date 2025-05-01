@@ -6,7 +6,7 @@ import requests
 import pygame
 import pygame_gui
 import datetime
-
+from screens.login_screen import LoginScreen
 from pyexpat.errors import messages
 
 from my_reports_window import MyReportsWindow
@@ -160,6 +160,21 @@ class ChatWindow:
                                 self.last_whisper_from = msg["sender"]
                             tab = "Chat"
                             label_type = "Whisper"  # Ensure purple formatting
+                        elif msg_type == "System" and msg.get("recipient") == self.player.name:
+                            if "kicked by an admin" in msg["message"].lower():
+                                # ✅ Force logout to login screen
+                                print("[Kick] You were kicked. Disconnecting.")
+                                if hasattr(self.player, "stop_heartbeat"):
+                                    self.player.stop_heartbeat()
+                                try:
+                                    self.player.save_to_server(self.player.username)  # Save character if needed
+                                except Exception as e:
+                                    print(f"[Kick] Failed to save player: {e}")
+
+                                # Clear screen and return to login
+
+                                self.manager.clear_and_reset()
+                                self.screen_manager.set_screen(LoginScreen(self.manager, self.screen_manager))
                         else:
                             if msg_type in ("admin", "Admin"):
                                 display = f"[Admin] {msg['message']}"
