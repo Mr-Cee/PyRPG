@@ -178,6 +178,12 @@ class LoginScreen(BaseScreen):
             manager=self.manager
         )
 
+        self.version_label = pygame_gui.elements.UILabel(
+            relative_rect=pygame.Rect((GAME_WIDTH - 160, GAME_HEIGHT - 25), (150, 20)),
+            text=f"Version: {CLIENT_VERSION}",
+            manager=self.manager
+        )
+
         self.load_remembered_login() #Make sure this is at the end of setup
 
     def teardown(self):
@@ -460,7 +466,7 @@ class LoginScreen(BaseScreen):
                 try:
                     version_response = requests.get(f"{SERVER_URL}/required_version", timeout=5)
                     if version_response.status_code == 200:
-                        required = version_response.json()["required_version"]
+                        required = version_response.json()["version"]
                         if required != CLIENT_VERSION:
                             # Example GitHub release ZIP URL (customize for your project)
                             zip_url = version_response.json()["download_url"]
