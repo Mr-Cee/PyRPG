@@ -55,3 +55,13 @@ class ReportCase(Base):
     resolution = Column(Text, nullable=True)  # ✅ New column for resolution message
     timestamp = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
 
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "sender": self.sender,
+            "message": self.message,
+            "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S") if self.timestamp else None,
+            "resolved": self.resolved,
+            "resolution_message": self.resolution_message
+        }
+
