@@ -10,6 +10,7 @@ import datetime
 from pyexpat.errors import messages
 
 from player_registry import get_player
+from reports_window import ReportsWindow
 from settings import *
 
 import items
@@ -520,7 +521,7 @@ class ChatWindow:
             self.send_whisper(target, message)
             return
 
-        elif command == "r":
+        elif command in ("r", "reply"):
             if not self.last_whisper_from:
                 self.log_message("[System] No one to reply to.", "System")
                 return
@@ -540,6 +541,22 @@ class ChatWindow:
 
         elif command == "report":
             self.send_report(" ".join(args))
+            return
+
+        elif command == "reports-view":
+            if self.player.role not in ("gm", "dev"):
+                self.log_message("[System] You do not have permission to use this command.", "System")
+                return
+            try:
+                response = requests.get(f"{SERVER_URL}/reports_view")
+                if response.status_code == 200:
+                    reports = response.json().get("reports", [])
+                    ReportsWindow(self.manager, reports)
+                else:
+                    self.log_message("[Error] Failed to fetch reports from server.", "System")
+            except Exception as e:
+                self.log_message("[Error] Could not connect to server for reports.", "System")
+                print(f"[Reports Error] {e}")
             return
 
         elif command in self.admin_commands:
@@ -719,13 +736,17 @@ class ChatWindow:
             self.log_message("[Error] Could not reach server.", "System")
 
     def cmd_report_resolve(self, *args):
-        if not args:
-            self.log_message("Usage: /report-resolve <case number>", "System")
+        if len(args) < 2:
+            self.log_message("Usage: /report-resolve <case number> <resolution message>", "System")
             return
 
         try:
             case_id = int(args[0])
-            res = requests.post(f"{SERVER_URL}/report_resolve", json={"case_id": case_id}, timeout=5)
+            resolution = " ".join(args[1:])
+            res = requests.post(f"{SERVER_URL}/report_resolve", json={
+                "case_id": case_id,
+                "resolution": resolution
+            }, timeout=5)
             data = res.json()
             if data.get("success"):
                 self.log_message(f"✅ {data.get('message')}", "Admin")

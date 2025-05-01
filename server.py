@@ -557,6 +557,7 @@ def reports_view(db: Session = Depends(get_db)):
 @app.post("/report_resolve")
 def resolve_report(payload: dict, db: Session = Depends(get_db)):
     case_id = payload.get("case_id")
+    resolution = payload.get("resolution", "")
 
     case = db.query(models.ReportCase).filter(models.ReportCase.id == case_id).first()
     if not case:
@@ -565,8 +566,10 @@ def resolve_report(payload: dict, db: Session = Depends(get_db)):
         return {"success": False, "error": "Report already resolved."}
 
     case.status = "closed"
+    case.resolution = resolution
     db.commit()
-    return {"success": True, "message": f"Report Case #{case_id} marked as resolved."}
+
+    return {"success": True, "message": f"Report Case #{case_id} resolved with message: {resolution}"}
 
 @app.get("/adminlog")
 def get_admin_log(db: Session = Depends(get_db)):

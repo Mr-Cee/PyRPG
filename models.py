@@ -1,7 +1,7 @@
 # models.py
 import datetime
 import uuid
-from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean, DateTime
+from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean, DateTime, Text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -51,5 +51,7 @@ class ReportCase(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     sender = Column(String, nullable=False)
     message = Column(String, nullable=False)
-    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
     status = Column(String, default="open")  # "open" or "closed"
+    resolution = Column(Text, nullable=True)  # ✅ New column for resolution message
+    timestamp = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
+
