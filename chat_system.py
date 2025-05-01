@@ -27,9 +27,10 @@ ROLE_HIERARCHY = {
 from settings import SERVER_URL
 
 class ChatWindow:
-    def __init__(self, manager, player, container=None):
+    def __init__(self, manager, player, screen_manager, container=None):
         self.player = player
         self.manager = manager
+        self.screen_manager = screen_manager
         self.container = container
 
         self.tabs = ["All", "Chat", "System", "Combat"]

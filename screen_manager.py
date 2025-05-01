@@ -2,9 +2,10 @@
 
 
 class ScreenManager:
-    def __init__(self):
+    def __init__(self, manager):
         self.current_screen = None
         self.player = None
+        self.manager = manager
 
     def force_logout(self, reason="Disconnected"):
         """Cleanly logs the player out and returns to the login screen."""

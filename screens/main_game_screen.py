@@ -23,7 +23,7 @@ class MainGameScreen(BaseScreen):
         self.player.last_logout_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=10)
         self.player.calculate_idle_rewards()
 
-        self.chat_window = ChatWindow(self.manager, self.player)
+        self.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
         self.chat_window.panel.set_relative_position((10, 480))
         self.chat_window.panel.set_dimensions((400, 220))
 

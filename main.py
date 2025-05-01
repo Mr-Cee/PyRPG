@@ -26,7 +26,7 @@ clock = pygame.time.Clock()
 autoload_screens()
 
 # 🚀 Create a screen manager and start on the login screen
-screen_manager = ScreenManager()
+screen_manager = ScreenManager(ui_manager)
 
 # Normal login flow
 login_class = ScreenRegistry.get("login")
