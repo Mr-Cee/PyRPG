@@ -536,17 +536,13 @@ def submit_report(payload: dict, db: Session = Depends(get_db)):
         type="Admin"  # So it only shows in admin tab
     )
     db.add(new_msg)
-    # for (recipient,) in staff:
-    #     db.add(models.ChatMessage(
-    #         sender="Report",
-    #         recipient=recipient,
-    #         message=f"[Report Case #{report.id}] from {sender}: {message}",
-    #         timestamp=timestamp,
-    #         type="admin"
-    #     ))
-
     db.commit()
     return {"success": True}
+
+@app.get("/my_reports")
+def get_my_reports(player_name: str, db: Session = Depends(get_db)):
+    reports = db.query(models.ReportCase).filter_by(player_name=player_name).order_by(models.ReportCase.timestamp.asc()).all()
+    return [r.to_dict() for r in reports]
 
 @app.get("/reports_view")
 def reports_view(db: Session = Depends(get_db)):
@@ -580,24 +576,6 @@ def resolve_report(payload: dict, db: Session = Depends(get_db)):
     db.commit()
 
     return {"success": True, "message": f"Report Case #{case_id} resolved with message: {resolution}"}
-
-#
-# @app.get("/adminlog")
-# def get_admin_log(db: Session = Depends(get_db)):
-#     try:
-#         messages = db.query(models.ChatMessage).filter(models.ChatMessage.type == "admin").order_by(models.ChatMessage.timestamp.desc()).all()
-#         return {
-#             "success": True,
-#             "messages": [
-#                 {
-#                     "timestamp": msg.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-#                     "sender": msg.sender,
-#                     "message": msg.message
-#                 } for msg in messages
-#             ]
-#         }
-#     except Exception as e:
-#         return {"success": False, "error": str(e)}
 
 @app.delete("/player/{username}")
 def delete_player(username: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):

@@ -9,6 +9,7 @@ import datetime
 
 from pyexpat.errors import messages
 
+from my_reports_window import MyReportsWindow
 from player_registry import get_player
 from reports_window import ReportsWindow
 from settings import *
@@ -341,7 +342,6 @@ class ChatWindow:
             self.flashing_tabs.add(msg_type)
 
     def _create_label(self, text, msg_type="Chat"):
-        print("\nSTART LABEL CREATION=========")
         object_id = f"#chat_message_{msg_type.lower()}"
 
         font = self.manager.get_theme().get_font([object_id])
@@ -363,11 +363,6 @@ class ChatWindow:
                 anchors={"top": "top", "left": "left"}
             )
             self.labels.append(label)
-
-            print(f"label create scroll height: {self.scroll_container.scrolling_height}")
-            print(f"Scroll Rect: {self.scroll_container.rect}")
-            print(f"Panel rect: {self.panel.rect}")
-            print(f"Labels: {len(self.labels)}")
             self.y_offset += 25
 
         self.scroll_container.set_scrollable_area_dimensions((label_width - 20, self.y_offset))
@@ -403,7 +398,6 @@ class ChatWindow:
             self.log_message(f"[Error] Whisper failed: {e}", "System")
 
     def switch_tab(self, new_tab):
-        print(f"\nSTART TAB SWITCH =============")
         if new_tab not in self.tabs:
             return
 
@@ -441,31 +435,6 @@ class ChatWindow:
         self.scroll_container.rebuild()
         self.scroll_container.vert_scroll_bar.reset_scroll_position()
         self.scroll_container.vert_scroll_bar.set_scroll_from_start_percentage(100)
-
-        print(f"scrolling height: {self.scroll_container.scrolling_height}")
-        print("END TAB SWITCH ==============")
-
-
-
-        # self.scroll_container.set_scrollable_area_dimensions((
-        #     self.scroll_container.get_relative_rect().width - 30,
-        #     self.y_offset
-        # ))
-
-
-
-
-        # Ensure scroll bar bounds are recalculated
-
-
-
-        # Force scroll to bottom after a short delay
-        # pygame.time.set_timer(pygame.USEREVENT + 3, 50)
-        # self.scroll_container.set_scrollable_area_dimensions((self.scroll_container.get_relative_rect().width - 30, self.y_offset))
-        # self.scroll_container.rebuild()
-        # self.scroll_container.vert_scroll_bar.set_scroll_from_start_percentage(100)
-
-
 
     def toggle_input(self):
         if self.input_active:
@@ -605,7 +574,15 @@ class ChatWindow:
             self.send_report(" ".join(args))
             return
 
-        elif command == "reports-view":
+        elif command == "myreports":
+            try:
+                response = requests.get(f"{SERVER_URL}/my_reports", params={"player_name": self.player.name})
+                reports = response.json()
+                MyReportsWindow(self.manager, reports, self.player.name)
+            except Exception as e:
+                self.log_message(f"[Error] Could not fetch your reports: {e}", "System")
+
+        elif command in ("reports-view", "reports"):
             if self.player.role not in ("gm", "dev"):
                 self.log_message("[System] You do not have permission to use this command.", "System")
                 return
@@ -659,10 +636,7 @@ class ChatWindow:
                 self.log_message("No Command Found", "System")
         else:
             self.log_message("No Command Found", "System")
-
-
-    # --- Command functions ---
-
+# --- Command functions ---
     def cmd_help(self, *args):
         self.log_message("[Help] Available commands:", "System")
         for cmd_name, cmd_data in self.commands.items():
