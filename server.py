@@ -1,6 +1,7 @@
 # server.py
 import threading
 import time
+import uuid
 
 from fastapi import FastAPI, HTTPException, Depends, Body, Security, Query, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -526,14 +527,23 @@ def submit_report(payload: dict, db: Session = Depends(get_db)):
         .all()
     )
 
-    for (recipient,) in staff:
-        db.add(models.ChatMessage(
-            sender="Report",
-            recipient=recipient,
-            message=f"[Report Case #{report.id}] from {sender}: {message}",
-            timestamp=timestamp,
-            type="admin"
-        ))
+    new_msg = models.ChatMessage(
+        id=str(uuid.uuid4()),
+        sender="Report",
+        recipient="Admin",  # Not targeting a player, but tagged as admin
+        message=f"[Report] from {sender}: {message}",
+        timestamp=time.time(),
+        type="Admin"  # So it only shows in admin tab
+    )
+    db.add(new_msg)
+    # for (recipient,) in staff:
+    #     db.add(models.ChatMessage(
+    #         sender="Report",
+    #         recipient=recipient,
+    #         message=f"[Report Case #{report.id}] from {sender}: {message}",
+    #         timestamp=timestamp,
+    #         type="admin"
+    #     ))
 
     db.commit()
     return {"success": True}
@@ -571,22 +581,23 @@ def resolve_report(payload: dict, db: Session = Depends(get_db)):
 
     return {"success": True, "message": f"Report Case #{case_id} resolved with message: {resolution}"}
 
-@app.get("/adminlog")
-def get_admin_log(db: Session = Depends(get_db)):
-    try:
-        messages = db.query(models.ChatMessage).filter(models.ChatMessage.type == "admin").order_by(models.ChatMessage.timestamp.desc()).all()
-        return {
-            "success": True,
-            "messages": [
-                {
-                    "timestamp": msg.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                    "sender": msg.sender,
-                    "message": msg.message
-                } for msg in messages
-            ]
-        }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+#
+# @app.get("/adminlog")
+# def get_admin_log(db: Session = Depends(get_db)):
+#     try:
+#         messages = db.query(models.ChatMessage).filter(models.ChatMessage.type == "admin").order_by(models.ChatMessage.timestamp.desc()).all()
+#         return {
+#             "success": True,
+#             "messages": [
+#                 {
+#                     "timestamp": msg.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+#                     "sender": msg.sender,
+#                     "message": msg.message
+#                 } for msg in messages
+#             ]
+#         }
+#     except Exception as e:
+#         return {"success": False, "error": str(e)}
 
 @app.delete("/player/{username}")
 def delete_player(username: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):

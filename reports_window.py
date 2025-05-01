@@ -15,10 +15,13 @@ class ReportsWindow(UIWindow):
         self.manager = manager
         self.panel = UIContainer(Rect(10, 10, 580, 380), manager=manager, container=self)
         self.reports = reports
+        self.reports = sorted(reports, key=lambda r: r.get("timestamp", 0))  # oldest first
         self.y_offset = 0
 
         for report in reports:
             self.add_report_entry(report)
+
+
 
     def add_report_entry(self, report):
         report_id = report.get("id", "?")
@@ -30,31 +33,25 @@ class ReportsWindow(UIWindow):
 
         UITextBox(
             html_text=report_text,
-            relative_rect=Rect(10, self.y_offset, 450, 60),
+            relative_rect=Rect(10, self.y_offset, 450, 100),
             manager=self.manager,
             container=self.panel
         )
 
         resolve_button = UIButton(
-            relative_rect=Rect(470, self.y_offset + 15, 100, 30),
+            relative_rect=Rect(470, self.y_offset + 35, 100, 30),
             text="Resolve",
             manager=self.manager,
             container=self.panel,
             object_id=f"resolve_button_{report_id}"
         )
 
-        print(resolve_button.get_object_ids())
-
-        self.y_offset += 80
+        self.y_offset += 110
 
     def process_event(self, event):
 
         handled = super().process_event(event)
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
-
-            if event.ui_object_id == "resolution_submit":
-                print("test submit")
-
             for part in event.ui_object_id.split("."):
                 if part.startswith("resolve_button_"):
                     case_id = int(part.split("_")[-1])
