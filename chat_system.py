@@ -91,6 +91,9 @@ class ChatWindow:
         self.commands.update(self._load_dev_commands())
         self.admin_commands = ["broadcast", "kick", "mute", "unmute", "addcoins", "createitem"]
 
+        self.reports_window = None
+        self.resolution_popup = None
+
         self.alias_map = {}
         for cmd_name, data in self.commands.items():
             for alias in data.get("aliases", []):
@@ -232,12 +235,6 @@ class ChatWindow:
                 "min_role": "gm",
                 "aliases": [],
                 "help": "Usage: /admin\nToggles admin mode (GM only)."
-            },
-            "adminlog": {
-                "func": self.cmd_adminlog,
-                "min_role": "gm",
-                "aliases": ["alog"],
-                "help": "Usage: /adminlog\nShows all persistent admin reports."
             },
             "reports-view": {
                 "func": self.cmd_reports_view,
@@ -461,6 +458,14 @@ class ChatWindow:
                 else:
                     self.input_box.set_text("")
 
+        if self.reports_window:
+            self.reports_window.process_event(event)
+
+        if self.resolution_popup:
+            if self.resolution_popup.process_event(event):
+                return True
+
+
     def update(self, time_delta):
         if self.defer_text is not None and self.input_active:
             self.input_box.set_text(self.defer_text)
@@ -551,7 +556,7 @@ class ChatWindow:
                 response = requests.get(f"{SERVER_URL}/reports_view")
                 if response.status_code == 200:
                     reports = response.json().get("reports", [])
-                    ReportsWindow(self.manager, reports)
+                    self.reports_window = ReportsWindow(self.manager, reports, self)
                 else:
                     self.log_message("[Error] Failed to fetch reports from server.", "System")
             except Exception as e:
@@ -754,37 +759,4 @@ class ChatWindow:
                 self.log_message(f"[Admin] {data.get('error')}", "System")
         except Exception:
             self.log_message("[Error] Could not contact server.", "System")
-
-    def cmd_adminlog(self):
-        try:
-            response = requests.get(f"{SERVER_URL}/adminlog", timeout=5)
-            data = response.json()
-            if data.get("success"):
-                messages = data.get("messages", [])
-                if not messages:
-                    self.log_message("No unresolved reports found.", "Admin")
-                    return
-
-                for msg in messages:
-                    timestamp = msg["timestamp"]
-                    sender = msg.get("sender", "System")
-                    message = msg.get("message", "")
-                    display_text = f"[{timestamp}] {sender}: {message}"
-
-                    self.messages["Admin"].append((timestamp, message, "Admin"))
-                    self.messages["All"].append((timestamp, message, "Admin"))
-
-                    # Display if active, else flash
-                    if self.active_tab == "Admin" or self.active_tab == "All":
-                        self._create_label(display_text, "Admin")
-                    else:
-                        self.flashing_tabs.add("Admin")
-            else:
-                self.log_message("[Admin] Failed to fetch admin log.", "System")
-        except Exception as e:
-            self.log_message("[Error] Could not fetch admin log.", "System")
-
-
-
-
 
