@@ -179,7 +179,7 @@ class ChatWindow:
                 for msg in data.get("messages", []):
 
                     msg_type = msg["type"]
-                    if msg_type.lower() in ("whisper",):
+                    if msg_type.lower() in ("whisper", "system"):
                         continue  # ✅ Skip whispers entirely in recent load
 
                     # Insert into local memory
