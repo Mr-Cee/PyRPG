@@ -161,9 +161,9 @@ class ChatWindow:
                             tab = "Chat"
                             label_type = "Whisper"  # Ensure purple formatting
                         else:
-                            if msg_type == "admin":
+                            if msg_type in ("admin", "Admin"):
                                 display = f"[Admin] {msg['message']}"
-                            elif msg_type == "system":
+                            elif msg_type in ("system", "System"):
                                 display = f"[System] {msg['message']}"
                             else:
                                 display = f"{msg['sender']}: {msg['message']}"
@@ -207,7 +207,15 @@ class ChatWindow:
                     self.messages[msg_type].append((msg["timestamp"], msg["message"], msg_type))
                     self.messages["All"].append((msg["timestamp"], msg["message"], msg_type))
 
-                    display = f"{msg['sender']}: {msg['message']}" if msg_type == "Chat" else f"[{msg['timestamp']}] {msg['message']}"
+                    # display = f"{msg['sender']}: {msg['message']}" if msg_type == "Chat" else f"[{msg['timestamp']}] {msg['message']}"
+                    if msg_type.lower() == "chat":
+                        display = f"{msg['sender']}: {msg['message']}"
+                    elif msg_type.lower() == "admin":
+                        display = f"[Admin] {msg['message']}"
+                    elif msg_type.lower() == "system":
+                        display = f"[System] {msg['message']}"
+                    else:
+                        display = f"[{msg_type}] {msg['message']}"
                     if self.active_tab == msg_type or self.active_tab == "All":
                         self._create_label(display, msg_type)
         except Exception as e:
