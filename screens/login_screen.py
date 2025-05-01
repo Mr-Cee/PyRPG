@@ -199,6 +199,7 @@ class LoginScreen(BaseScreen):
         self.username_label.kill()
         self.password_label.kill()
         self.update_button.kill()
+        self.version_label.kill()
 
     def load_remembered_login(self):
         save_path = os.path.join('Save_Data', 'login_info.json')

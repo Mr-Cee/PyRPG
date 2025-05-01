@@ -691,6 +691,17 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
         if not player:
             return {"success": False, "error": f"Player {target_name} not found."}
         player.is_muted = True
+
+        # ✅ Send system whisper to muted player
+        system_msg = models.ChatMessage(
+            sender="System",
+            recipient=player.name,
+            message="You have been muted by a GM. You will not be able to chat until unmuted.",
+            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+            type="System"
+        )
+        db.add(system_msg)
+
         db.commit()
         return {"success": True, "message": f"{target_name} has been muted."}
 
@@ -702,6 +713,17 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
         if not player:
             return {"success": False, "error": f"Player {target_name} not found."}
         player.is_muted = False
+
+        # ✅ Send system whisper to unmuted player
+        system_msg = models.ChatMessage(
+            sender="System",
+            recipient=player.name,
+            message="You have been unmuted by a GM. You can now chat again.",
+            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+            type="System"
+        )
+        db.add(system_msg)
+
         db.commit()
         return {"success": True, "message": f"{target_name} has been unmuted."}
 
