@@ -1,7 +1,32 @@
+
+
+
 class ScreenManager:
     def __init__(self):
         self.current_screen = None
         self.player = None
+
+    def force_logout(self, reason="Disconnected"):
+        """Cleanly logs the player out and returns to the login screen."""
+        print(f"[Logout] Reason: {reason}")
+
+        if hasattr(self, "player") and self.player:
+            try:
+                self.player.stop_heartbeat()
+                if hasattr(self, "auth_token"):
+                    self.player.save_to_server(self.auth_token)
+            except Exception as e:
+                print(f"[Logout] Failed to stop/save player: {e}")
+            self.player = None
+
+        # Clear any remaining auth state
+        self.auth_token = None
+        self.current_account = None
+        self.player_role = None
+
+        # Switch screen
+        from screens.login_screen import LoginScreen
+        self.set_screen(LoginScreen(self.manager, self))
 
     def set_screen(self, new_screen):
         if self.current_screen:

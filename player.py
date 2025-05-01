@@ -170,6 +170,10 @@ class Player:
                     },
                     timeout=2
                 )
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 426:
+                    self.chat_window.log("[Update] Client version is outdated. Disconnecting.", "System")
+                    self.screen_manager.force_logout(reason="Outdated client version")
             except Exception as e:
                 print(f"[Heartbeat Error] {e}")
 
