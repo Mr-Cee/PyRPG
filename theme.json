@@ -1,6 +1,5 @@
 {
-   "#chat_message":
-   {
+  "#chat_message": {
      "misc":
      {
        "text_horiz_alignment": "left",
@@ -8,8 +7,7 @@
        "padding": "2, 2"
      }
    },
-  "#chat_message_system":
-  {
+  "#chat_message_system": {
     "colours":
     {
       "normal_text": "#999999"
@@ -26,8 +24,7 @@
       "text_vert_alignment_padding": "2"
     }
   },
-  "#chat_message_chat":
-  {
+  "#chat_message_chat": {
     "colours":
     {
       "normal_text": "#ffffff"
@@ -44,8 +41,7 @@
       "text_vert_alignment_padding": "2"
     }
   },
-  "#chat_message_combat":
-  {
+  "#chat_message_combat": {
     "colours":
     {
       "normal_text": "#ff6666"
@@ -62,8 +58,7 @@
       "text_vert_alignment_padding": "2"
     }
   },
-  "#chat_message_admin":
-  {
+  "#chat_message_admin": {
     "colours":
     {
       "normal_text": "#00ffff"
@@ -80,8 +75,7 @@
       "text_vert_alignment_padding": "2"
     }
   },
-  "#chat_message_debug":
-  {
+  "#chat_message_debug": {
     "colours":
     {
       "normal_text": "#c800ff"
@@ -110,6 +104,25 @@
     "misc":
     {
       "text_horiz_alignment": "left",
+      "text_vert_alignment": "top",
+      "text_horiz_alignment_padding": "2",
+      "text_vert_alignment_padding": "2"
+    }
+  },
+  "#error_label": {
+    "colours":
+    {
+      "normal_bg":"#8B0000",
+      "dark_bg":"#8B0000",
+      "normal_text": "#FFFFFF"
+    },
+    "font":
+    {
+      "size": 14
+    },
+    "misc":
+    {
+      "text_horiz_alignment": "center",
       "text_vert_alignment": "top",
       "text_horiz_alignment_padding": "2",
       "text_vert_alignment_padding": "2"

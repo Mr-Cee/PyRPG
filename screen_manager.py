@@ -24,7 +24,7 @@ class ScreenManager:
 
         # Switch screen
         from screens.login_screen import LoginScreen
-        self.set_screen(LoginScreen(self.manager, self))
+        self.set_screen(LoginScreen(self.manager, self, logout_reason=reason))
 
     def set_screen(self, new_screen):
         if self.current_screen:

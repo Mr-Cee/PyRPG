@@ -90,10 +90,11 @@ def attempt_reset_password(username, new_password):
         return False
 
 class LoginScreen(BaseScreen):
-    def __init__(self, manager, screen_manager):
+    def __init__(self, manager, screen_manager, logout_reason=None):
         super().__init__(manager, screen_manager)
         self.clicked_this_frame = False
-        self.remember_me_checked = False  # <<< Track checkbox state manually
+        self.remember_me_checked = False
+        self.logout_reason = logout_reason
         self.connecting = False
         self.login_thread = None
         self.login_result = None
@@ -183,6 +184,21 @@ class LoginScreen(BaseScreen):
             text=f"Version: {CLIENT_VERSION}",
             manager=self.manager
         )
+
+        if self.logout_reason:
+            from pygame_gui.windows import UIMessageWindow
+            UIMessageWindow(
+                rect=pygame.Rect((300, 200), (300, 150)),
+                window_title="Disconnected",
+                html_message=f"<b>{self.logout_reason}</b>",
+                manager=self.manager
+            )
+            pygame_gui.elements.UILabel(
+                relative_rect=pygame.Rect((10, 10), (400, 30)),
+                text=f"⚠ {self.logout_reason}",
+                manager=self.manager,
+                object_id="#error_label"
+            )
 
         self.load_remembered_login() #Make sure this is at the end of setup
 
