@@ -161,9 +161,15 @@ class ChatWindow:
                             tab = "Chat"
                             label_type = "Whisper"  # Ensure purple formatting
                         else:
-                            display = f"{msg['sender']}: {msg['message']}"
+                            if msg_type == "admin":
+                                display = f"[Admin] {msg['message']}"
+                            elif msg_type == "system":
+                                display = f"[System] {msg['message']}"
+                            else:
+                                display = f"{msg['sender']}: {msg['message']}"
                             tab = msg_type
                             label_type = msg_type.capitalize()
+
 
                         valid_tabs = {"Chat", "System", "Combat", "Admin"}
                         tab = tab.capitalize() if tab.capitalize() in valid_tabs else "Chat"
@@ -283,7 +289,17 @@ class ChatWindow:
             )
             data = response.json()
             if data.get("success"):
-                self.log_message(f"[Admin] {data.get('message')}", "System")
+                # ✅ Send to server chat as an admin message
+                payload = {
+                    "sender": self.player.name,
+                    "message": data.get("message"),
+                    "timestamp": time.time(),
+                    "type": "Admin"
+                }
+                try:
+                    requests.post(f"{SERVER_URL}/chat/send", json=payload, timeout=2)
+                except Exception as e:
+                    self.log_message(f"[Error] Failed to log admin message: {e}", "System")
             else:
                 self.log_message(f"[Error] {data.get('error')}", "System")
         except Exception as e:
@@ -336,6 +352,7 @@ class ChatWindow:
         self.messages[msg_type].append((timestamp, message, msg_type))
         self.messages["All"].append((timestamp, message, msg_type))
 
+        print(display_text)
 
         if self.active_tab == msg_type or self.active_tab == "All":
             self._create_label(display_text, msg_type)
@@ -708,7 +725,7 @@ class ChatWindow:
                 for p in players:
                     name = p["name"]
                     if p.get("is_muted"):
-                        name += " (🔇)"
+                        name += " (Muted)"
                     formatted.append(name)
                 self.log_message(f"[Online] {len(formatted)} player(s): {', '.join(formatted)}", "System")
             else:

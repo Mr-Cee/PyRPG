@@ -712,6 +712,15 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
             type="System"
         )
         db.add(system_msg)
+        # ✅ Send system whisper to muted player
+        admin_msg = models.ChatMessage(
+            sender="Admin",
+            recipient=player.name,
+            message=f"{target_name} has been muted.",
+            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+            type="Admin"
+        )
+        db.add(admin_msg)
 
         db.commit()
         return {"success": True, "message": f"{target_name} has been muted."}
