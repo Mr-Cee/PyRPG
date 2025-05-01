@@ -341,6 +341,7 @@ class ChatWindow:
             self.flashing_tabs.add(msg_type)
 
     def _create_label(self, text, msg_type="Chat"):
+        print("\nSTART LABEL CREATION=========")
         object_id = f"#chat_message_{msg_type.lower()}"
 
         font = self.manager.get_theme().get_font([object_id])
@@ -362,10 +363,17 @@ class ChatWindow:
                 anchors={"top": "top", "left": "left"}
             )
             self.labels.append(label)
+
+            print(f"label create scroll height: {self.scroll_container.scrolling_height}")
+            print(f"Scroll Rect: {self.scroll_container.rect}")
+            print(f"Panel rect: {self.panel.rect}")
+            print(f"Labels: {len(self.labels)}")
             self.y_offset += 25
 
-        self.scroll_container.set_scrollable_area_dimensions((label_width - 20, self.y_offset + 5))
+        self.scroll_container.set_scrollable_area_dimensions((label_width - 20, self.y_offset))
         self.scroll_container.vert_scroll_bar.set_scroll_from_start_percentage(100)
+
+        print("END LABEL CREATION=========")
 
     def send_whisper(self, target_name, message):
         try:
@@ -395,6 +403,7 @@ class ChatWindow:
             self.log_message(f"[Error] Whisper failed: {e}", "System")
 
     def switch_tab(self, new_tab):
+        print(f"\nSTART TAB SWITCH =============")
         if new_tab not in self.tabs:
             return
 
@@ -405,7 +414,14 @@ class ChatWindow:
             label.kill()
 
         self.labels = []
-        self.y_offset = 5
+        self.y_offset = 0
+
+        self.scroll_container.kill()
+        self.scroll_container = pygame_gui.elements.UIScrollingContainer(
+            relative_rect=pygame.Rect((5, 40), (380, 130)),
+            manager=self.manager,
+            container=self.panel
+        )
 
         for timestamp, message, msg_type in self.messages[new_tab] if new_tab != "All" else self.messages["All"]:
             if msg_type == "Chat":
@@ -421,8 +437,35 @@ class ChatWindow:
 
             self._create_label(display_text, msg_type)
 
-        self.scroll_container.set_scrollable_area_dimensions((self.scroll_container.get_relative_rect().width - 30, self.y_offset + 5))
+
+        self.scroll_container.rebuild()
+        self.scroll_container.vert_scroll_bar.reset_scroll_position()
         self.scroll_container.vert_scroll_bar.set_scroll_from_start_percentage(100)
+
+        print(f"scrolling height: {self.scroll_container.scrolling_height}")
+        print("END TAB SWITCH ==============")
+
+
+
+        # self.scroll_container.set_scrollable_area_dimensions((
+        #     self.scroll_container.get_relative_rect().width - 30,
+        #     self.y_offset
+        # ))
+
+
+
+
+        # Ensure scroll bar bounds are recalculated
+
+
+
+        # Force scroll to bottom after a short delay
+        # pygame.time.set_timer(pygame.USEREVENT + 3, 50)
+        # self.scroll_container.set_scrollable_area_dimensions((self.scroll_container.get_relative_rect().width - 30, self.y_offset))
+        # self.scroll_container.rebuild()
+        # self.scroll_container.vert_scroll_bar.set_scroll_from_start_percentage(100)
+
+
 
     def toggle_input(self):
         if self.input_active:
@@ -497,6 +540,7 @@ class ChatWindow:
                         button.select()
                     else:
                         button.unselect()
+
 
         # --- Command handling ---
 
