@@ -28,24 +28,6 @@ autoload_screens()
 # 🚀 Create a screen manager and start on the login screen
 screen_manager = ScreenManager()
 
-
-def check_version():
-    print("Checking Version")
-    try:
-        response = requests.get(f"{SERVER_URL}/required_version", timeout=5)
-        data = response.json()
-        print(data["version"])
-        if data["version"] != CLIENT_VERSION:
-            return False, data["download_url"]
-        return True, None
-    except Exception:
-        return None, None  # Fail silently
-
-is_up_to_date, download_url = check_version()
-if is_up_to_date is False:
-    print("Starting UPDATE")
-
-
 # Normal login flow
 login_class = ScreenRegistry.get("login")
 if login_class:
