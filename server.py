@@ -474,7 +474,10 @@ def get_online_players(db: Session = Depends(get_db)):
     for account in accounts:
         character = db.query(Player).filter_by(account_id=account.id, is_active=True).first()
         if character:
-            result.append(character.name)
+            result.append({
+                "name": character.name,
+                "is_muted": character.is_muted
+            })
         else:
             result.append(f"[No Active Character for {account.username}]")
 

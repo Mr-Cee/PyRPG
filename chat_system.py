@@ -660,7 +660,7 @@ class ChatWindow:
     def cmd_status(self):
         status_line = f"[Status] Your current role is: {self.player.role}"
         if getattr(self.player, "is_muted", False):
-            status_line += " (🔇 Muted)"
+            status_line += " (Muted)"
         self.log_message(status_line, "System")
 
     def cmd_addcoins(self, amount, cointype):
@@ -702,9 +702,15 @@ class ChatWindow:
         try:
             response = requests.get(f"{SERVER_URL}/online_players", timeout=2)
             data = response.json()
-            names = data.get("online", [])
-            if names:
-                self.log_message(f"[Online] {len(names)} player(s): {', '.join(names)}", "System")
+            players = data.get("online", [])
+            if players:
+                formatted = []
+                for p in players:
+                    name = p["name"]
+                    if p.get("is_muted"):
+                        name += " (🔇)"
+                    formatted.append(name)
+                self.log_message(f"[Online] {len(formatted)} player(s): {', '.join(formatted)}", "System")
             else:
                 self.log_message("[Online] No players are currently online.", "System")
         except Exception as e:
