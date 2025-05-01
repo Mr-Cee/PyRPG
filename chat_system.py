@@ -184,16 +184,20 @@ class ChatWindow:
             if response.status_code == 200:
                 data = response.json()
                 for msg in data.get("messages", []):
-
                     msg_type = msg["type"]
                     if msg_type.lower() in ("whisper", "system"):
-                        continue  # ✅ Skip whispers entirely in recent load
+                        continue  # ✅ Skip whispers & system for history
 
-                    # Insert into local memory
-                    self.messages[msg["type"]].append((msg["timestamp"], msg["message"], msg_type))
+                    # ✅ Skip admin messages unless player has access
+                    if msg_type.lower() == "admin" and self.player.role not in ("gm", "dev"):
+                        continue
+
+                    if msg_type not in self.messages:
+                        continue  # Skip types we don't support
+
+                    self.messages[msg_type].append((msg["timestamp"], msg["message"], msg_type))
                     self.messages["All"].append((msg["timestamp"], msg["message"], msg_type))
 
-                    # Also display if it matches active tab
                     display = f"{msg['sender']}: {msg['message']}" if msg_type == "Chat" else f"[{msg['timestamp']}] {msg['message']}"
                     if self.active_tab == msg_type or self.active_tab == "All":
                         self._create_label(display, msg_type)
@@ -404,7 +408,17 @@ class ChatWindow:
         self.y_offset = 5
 
         for timestamp, message, msg_type in self.messages[new_tab] if new_tab != "All" else self.messages["All"]:
-            display_text = f"{self.player.name}: {message}" if msg_type == "Chat" else f"[{timestamp}] {message}"
+            if msg_type == "Chat":
+                display_text = f"{self.player.name}: {message}"
+            elif msg_type == "Whisper":
+                display_text = message  # already formatted like [To: X] msg or [From: X] msg
+            elif msg_type == "Admin":
+                display_text = f"[Admin] {message}"
+            elif msg_type == "System":
+                display_text = f"[System] {message}"
+            else:
+                display_text = f"[{msg_type}] {message}"
+
             self._create_label(display_text, msg_type)
 
         self.scroll_container.set_scrollable_area_dimensions((self.scroll_container.get_relative_rect().width - 30, self.y_offset + 5))
@@ -464,7 +478,6 @@ class ChatWindow:
         if self.resolution_popup:
             if self.resolution_popup.process_event(event):
                 return True
-
 
     def update(self, time_delta):
         if self.defer_text is not None and self.input_active:
