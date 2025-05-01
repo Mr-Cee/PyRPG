@@ -6,6 +6,9 @@ import requests
 import pygame
 import pygame_gui
 import datetime
+
+from pyexpat.errors import messages
+
 from player_registry import get_player
 from settings import *
 
@@ -146,21 +149,21 @@ class ChatWindow:
                                 display = f"[To: {msg['recipient']}] {msg['message']}"
                             else:
                                 display = f"[From: {msg['sender']}] {msg['message']}"
-                            tab = "Chat"  # or use a separate "Whispers" tab if you want
+                            tab = "Chat"
+                            label_type = "Whisper"  # Ensure purple formatting
                         else:
                             display = f"{msg['sender']}: {msg['message']}"
                             tab = msg_type
+                            label_type = msg_type.capitalize()
 
-                        valid_tabs = {"chat", "system", "combat", "admin"}
-                        tab = msg_type.capitalize() if msg_type.lower() in valid_tabs else "Chat"
+                        valid_tabs = {"Chat", "System", "Combat", "Admin"}
+                        tab = tab.capitalize() if tab.capitalize() in valid_tabs else "Chat"
 
-                        self.messages[tab].append((timestamp, msg["message"], msg_type))
-                        self.messages["All"].append((timestamp, msg["message"], msg_type))
+                        self.messages[tab].append((timestamp, msg["message"], label_type))
+                        self.messages["All"].append((timestamp, msg["message"], label_type))
 
                         # Always display in current tab (All, Chat, etc.)
-                        self._create_label(display,
-                                           tab if self.active_tab == tab or self.active_tab == "All" else self.active_tab)
-
+                        self._create_label(display, label_type)
                         # Flash target tab if not actively viewed
                         if tab != self.active_tab:
                             self.flashing_tabs.add(tab)
@@ -372,8 +375,15 @@ class ChatWindow:
             )
             data = response.json()
             if data.get("success"):
-                # self.log_message(f"[To {target_name}] {message}", "Whisper")
                 pass
+                # display_text = f"[To: {target_name}] {message}"
+                # timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+                # self.messages["Chat"].append((timestamp, display_text, "Whisper"))
+                # self.messages["All"].append((timestamp, display_text, "Whisper"))
+                # if self.active_tab in ("All", "Chat"):
+                #     self._create_label(display_text, "Whisper")
+                # else:
+                #     self.flashing_tabs.add("Chat")
             else:
                 self.log_message(f"[System] {data.get('error', 'Failed to send whisper.')}", "System")
         except Exception as e:
