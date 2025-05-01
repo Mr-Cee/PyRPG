@@ -744,8 +744,18 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
         )
         db.add(system_msg)
 
+        # ✅ Send system whisper to unmuted player
+        system_msg = models.ChatMessage(
+            sender="Admin",
+            recipient=player.name,
+            message=f"{target_name} has been unmuted.",
+            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+            type="Admin"
+        )
+        db.add(system_msg)
+
         db.commit()
-        return {"success": True, "message": f"{target_name} has been unmuted."}
+        return {"success": True}
 
     elif command == "addcoins":
         if len(parts) < 3:

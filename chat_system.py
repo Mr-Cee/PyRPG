@@ -167,10 +167,11 @@ class ChatWindow:
                                 display = f"[System] {msg['message']}"
                             else:
                                 display = f"{msg['sender']}: {msg['message']}"
+
                             tab = msg_type
                             label_type = msg_type.capitalize()
 
-
+                        print(label_type)
                         valid_tabs = {"Chat", "System", "Combat", "Admin"}
                         tab = tab.capitalize() if tab.capitalize() in valid_tabs else "Chat"
 
