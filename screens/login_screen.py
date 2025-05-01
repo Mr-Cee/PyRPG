@@ -1,4 +1,6 @@
 import io
+import shutil
+import tempfile
 import zipfile
 
 from screen_manager import BaseScreen
@@ -461,7 +463,7 @@ class LoginScreen(BaseScreen):
                         required = version_response.json()["required_version"]
                         if required != CLIENT_VERSION:
                             # Example GitHub release ZIP URL (customize for your project)
-                            zip_url = f"https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/v{required}/update_package.zip"
+                            zip_url = version_response.json()["download_url"]
                             threading.Thread(target=self.download_and_apply_update, args=(zip_url, required)).start()
                         else:
                             self.show_popup("No Update Needed", "Client version already matches the server.")
@@ -567,8 +569,9 @@ class LoginScreen(BaseScreen):
                     self.message_label.set_text(f"Downloading... {percent}%")
 
             buffer.seek(0)
-            with zipfile.ZipFile(buffer, 'r') as zip_ref:
-                zip_ref.extractall(".")  # Extract into current directory
+            safe_extract_and_apply(buffer, required_version)
+            # with zipfile.ZipFile(buffer, 'r') as zip_ref:
+            #     zip_ref.extractall(".")  # Extract into current directory
 
             # Update version in settings.py
             with open("settings.py", "r", encoding="utf-8") as f:
@@ -580,12 +583,44 @@ class LoginScreen(BaseScreen):
                     else:
                         f.write(line)
 
-            self.show_popup("Update Complete", f"Updated to v{required_version}. Restarting...")
+            self.show_popup("Update Complete", f"Updated to {required_version}. Restarting...")
             pygame.time.set_timer(pygame.USEREVENT + 99, 1500)
             self.restart_pending = True
 
         except Exception as e:
             self.show_popup("Update Failed", str(e))
+
+
+
+def safe_extract_and_apply(buffer, required_version):
+    temp_dir = tempfile.mkdtemp()
+
+    with zipfile.ZipFile(buffer, 'r') as zip_ref:
+        zip_ref.extractall(temp_dir)
+
+    # List of folders/files to skip (adjust as needed)
+    skip = {".git", "__pycache__", "saves", "config.json"}
+
+    for root, dirs, files in os.walk(temp_dir):
+        rel_path = os.path.relpath(root, temp_dir)
+        target_path = os.path.join(".", rel_path)
+
+        # Skip excluded folders
+        if any(part in skip for part in rel_path.split(os.sep)):
+            continue
+
+        os.makedirs(target_path, exist_ok=True)
+
+        for file in files:
+            src_file = os.path.join(root, file)
+            dst_file = os.path.join(target_path, file)
+
+            try:
+                shutil.copy2(src_file, dst_file)
+            except PermissionError:
+                print(f"[Update] Skipped {dst_file} due to permission error.")
+
+    shutil.rmtree(temp_dir)
 
 # 🚀 Register this screen
 ScreenRegistry.register("login", LoginScreen)
