@@ -289,17 +289,18 @@ class ChatWindow:
             )
             data = response.json()
             if data.get("success"):
-                # ✅ Send to server chat as an admin message
-                payload = {
-                    "sender": self.player.name,
-                    "message": data.get("message"),
-                    "timestamp": time.time(),
-                    "type": "Admin"
-                }
-                try:
-                    requests.post(f"{SERVER_URL}/chat/send", json=payload, timeout=2)
-                except Exception as e:
-                    self.log_message(f"[Error] Failed to log admin message: {e}", "System")
+                pass
+                # # ✅ Send to server chat as an admin message
+                # payload = {
+                #     "sender": self.player.name,
+                #     "message": data.get("message"),
+                #     "timestamp": time.time(),
+                #     "type": "Admin"
+                # }
+                # try:
+                #     requests.post(f"{SERVER_URL}/chat/send", json=payload, timeout=2)
+                # except Exception as e:
+                #     self.log_message(f"[Error] Failed to log admin message: {e}", "System")
             else:
                 self.log_message(f"[Error] {data.get('error')}", "System")
         except Exception as e:

@@ -723,7 +723,7 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
         db.add(admin_msg)
 
         db.commit()
-        return {"success": True, "message": f"{target_name} has been muted."}
+        return {"success": True}
 
     elif command == "unmute":
         if len(parts) < 2:
