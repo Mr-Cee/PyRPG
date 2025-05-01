@@ -10,37 +10,40 @@ class MyReportsWindow(UIWindow):
         self.player_name = player_name
 
         self.scroll_container = UIScrollingContainer(
-            pygame.Rect(10, 10, 580, 340), self, manager
-        )
+            pygame.Rect(10, 10, 580, 360),manager,container=self)
 
-        self.scroll_container.set_scrollable_area_dimensions((550, max(len(self.reports) * 120, 340)))
+        self.scroll_container.set_scrollable_area_dimensions((550, max(len(self.reports) * 120, 360)))
+
+        # self.close_button = UIButton(
+        #     relative_rect=pygame.Rect((500, 350), (80, 30)),
+        #     text='Close',
+        #     manager=manager,
+        #     container=self,
+        #     object_id="#close_my_reports")
 
         self.labels = []
         y = 0
         for report in self.reports:
-            timestamp_str = datetime.fromtimestamp(report['timestamp']).strftime("%Y-%m-%d %H:%M:%S")
-            status = "Resolved" if report['status'] == "resolved" else "Open"
-            resolution = report.get("resolution") or "(No resolution provided)"
+            if report['resolved'] != "closed":
+                print(report['resolved'])
+                timestamp_str = report['timestamp']
+                # timestamp_str = datetime.fromtimestamp(float(report['timestamp'])).strftime("%Y-%m-%d %H:%M:%S")
+                status = "Resolved" if report['resolved'] == "Closed" else "Open"
+                resolution = report.get("resolution_message") or "(No resolution provided)"
 
-            message = (
-                f"Case #{report['case_number']}\n"
-                f"Sent: {timestamp_str}\n"
-                f"Message: {report['message']}\n"
-                f"Status: {status}\n"
-                f"Resolution: {resolution}"
-            )
+                message = (
+                    f"Case #{report['id']}\n"
+                    f"Sent: {timestamp_str}\n"
+                    f"Message: {report['message']}\n"
+                    f"Status: {status}\n"
+                    f"Resolution: {resolution}"
+                )
 
-            label = UITextBox(message, pygame.Rect(0, y, 530, 110), self.scroll_container, manager)
-            self.labels.append(label)
-            y += 120
+                label = UITextBox(message, pygame.Rect(0, y, 530, 110), manager,container=self.scroll_container, )
+                self.labels.append(label)
+                y += 120
 
-        self.close_button = UIButton(
-            relative_rect=pygame.Rect((500, 360), (80, 30)),
-            text='Close',
-            manager=manager,
-            container=self,
-            object_id="#close_my_reports"
-        )
+
 
     def process_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
