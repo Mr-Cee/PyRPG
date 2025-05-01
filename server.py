@@ -435,6 +435,7 @@ def fetch_chat_messages(since: float = Query(0.0), player_name: str = Query(...)
         .order_by(models.ChatMessage.timestamp)
         .all()
     )
+
     return {
         "messages": [
             {

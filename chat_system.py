@@ -140,6 +140,7 @@ class ChatWindow:
                     params={"since": self.last_fetch_time, "player_name": self.player.name},
                     timeout=2
                 )
+
                 if response.status_code == 200:
                     data = response.json()
                     for msg in data.get("messages", []):
