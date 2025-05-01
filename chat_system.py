@@ -577,6 +577,7 @@ class ChatWindow:
                 response = requests.get(f"{SERVER_URL}/my_reports", params={"player_name": self.player.name})
                 reports = response.json()
                 MyReportsWindow(self.manager, reports, self.player.name)
+                return
             except Exception as e:
                 self.log_message(f"[Error] Could not fetch your reports: {e}", "System")
 

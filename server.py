@@ -414,8 +414,14 @@ def fetch_chat_messages(since: float = Query(0.0), player_name: str = Query(...)
         .filter(
             or_(
                 models.ChatMessage.type == "Chat",
-                models.ChatMessage.type == "System",
                 models.ChatMessage.type == "Admin",
+                and_(
+                    models.ChatMessage.type == "System",
+                    or_(
+                        models.ChatMessage.recipient == None,
+                        models.ChatMessage.recipient == player_name
+                    )
+                ),
                 and_(
                     models.ChatMessage.type == "whisper",
                     models.ChatMessage.sender == player_name
