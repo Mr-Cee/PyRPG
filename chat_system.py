@@ -81,6 +81,8 @@ class ChatWindow:
         self.history = []
         self.history_index = -1
 
+        self.last_whisper_from = None
+
         # Command setup
         self.commands = {}
         self.commands.update(self._load_player_commands())
@@ -149,6 +151,7 @@ class ChatWindow:
                                 display = f"[To: {msg['recipient']}] {msg['message']}"
                             else:
                                 display = f"[From: {msg['sender']}] {msg['message']}"
+                                self.last_whisper_from = msg["sender"]
                             tab = "Chat"
                             label_type = "Whisper"  # Ensure purple formatting
                         else:
@@ -508,10 +511,23 @@ class ChatWindow:
                         self.log_message(f"{help_line}", "System")
             return
 
-        elif command == "w" and len(args) >= 2:
-            target_name = args[0]
+        elif command in ("tell", "t", "w"):
+            if len(args) < 2:
+                self.log_message("[System] Usage: /tell <playername> <message>", "System")
+                return
+            target = args[0]
             message = ' '.join(args[1:])
-            self.send_whisper(target_name, message)
+            self.send_whisper(target, message)
+            return
+
+        elif command == "r":
+            if not self.last_whisper_from:
+                self.log_message("[System] No one to reply to.", "System")
+                return
+            if not args:
+                self.log_message("[System] Usage: /r <message>", "System")
+                return
+            self.send_whisper(self.last_whisper_from, ' '.join(args))
             return
 
         elif command == "gms":
