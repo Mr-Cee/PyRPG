@@ -62,6 +62,6 @@ class ReportCase(Base):
             "message": self.message,
             "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S") if self.timestamp else None,
             "resolved": self.status,
-            "resolution_message": self.resolution_message
+            "resolution_message": self.resolution
         }
 
