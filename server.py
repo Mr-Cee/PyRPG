@@ -541,7 +541,8 @@ def submit_report(payload: dict, db: Session = Depends(get_db)):
 
 @app.get("/my_reports")
 def get_my_reports(player_name: str, db: Session = Depends(get_db)):
-    reports = db.query(models.ReportCase).filter_by(player_name=player_name).order_by(models.ReportCase.timestamp.asc()).all()
+    reports = db.query(models.ReportCase).filter_by(sender=player_name).order_by(
+        models.ReportCase.timestamp.asc()).all()
     return [r.to_dict() for r in reports]
 
 @app.get("/reports_view")

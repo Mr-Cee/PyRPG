@@ -368,8 +368,6 @@ class ChatWindow:
         self.scroll_container.set_scrollable_area_dimensions((label_width - 20, self.y_offset))
         self.scroll_container.vert_scroll_bar.set_scroll_from_start_percentage(100)
 
-        print("END LABEL CREATION=========")
-
     def send_whisper(self, target_name, message):
         try:
             response = requests.post(
