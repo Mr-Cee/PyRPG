@@ -1,6 +1,3 @@
-
-
-
 class ScreenManager:
     def __init__(self, manager):
         self.current_screen = None
