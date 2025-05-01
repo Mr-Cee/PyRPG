@@ -461,7 +461,7 @@ class LoginScreen(BaseScreen):
                         required = version_response.json()["required_version"]
                         if required != CLIENT_VERSION:
                             # Example GitHub release ZIP URL (customize for your project)
-                            zip_url = f"https://github.com/Mr-Cee/PyRPG/releases/download/{required}/update_package.zip"
+                            zip_url = f"https://github.com/YOUR_USERNAME/YOUR_REPO/releases/download/v{required}/update_package.zip"
                             threading.Thread(target=self.download_and_apply_update, args=(zip_url, required)).start()
                         else:
                             self.show_popup("No Update Needed", "Client version already matches the server.")
