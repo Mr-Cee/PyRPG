@@ -658,7 +658,10 @@ class ChatWindow:
         self.log_message(f"[Admin] Your current role is: {self.player.role}", "System")
 
     def cmd_status(self):
-        self.log_message(f"[Status] Your current role is: {self.player.role}", "System")
+        status_line = f"[Status] Your current role is: {self.player.role}"
+        if getattr(self.player, "is_muted", False):
+            status_line += " (🔇 Muted)"
+        self.log_message(status_line, "System")
 
     def cmd_addcoins(self, amount, cointype):
         try:

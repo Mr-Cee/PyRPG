@@ -41,6 +41,7 @@ class Player:
 
         self.chat_window = None
 
+
         self.last_heartbeat_time = 0
         self.heartbeat_interval = 30  # seconds
 
@@ -187,6 +188,8 @@ class Player:
         )
         if data.get("last_logout_time"):
             player.last_logout_time = datetime.datetime.fromisoformat(data["last_logout_time"])
+        if data.get("is_muted"):
+            player.is_muted = data.get("is_muted", False)
 
 
         player.gold = data.get("gold", 0)

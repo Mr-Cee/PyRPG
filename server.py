@@ -401,7 +401,8 @@ def get_players(username: str, token: str = Depends(oauth2_scheme), db: Session 
             "equipment": p.equipment,
             "skills": p.skills,
             "username": account.username,
-            "role": account.role
+            "role": account.role,
+            "is_muted": p.is_muted
         })
 
     return player_list
