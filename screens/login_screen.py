@@ -1,3 +1,6 @@
+import io
+import zipfile
+
 from screen_manager import BaseScreen
 from account_manager import AccountManager
 from screen_registry import ScreenRegistry
@@ -453,28 +456,15 @@ class LoginScreen(BaseScreen):
 
             if event.ui_element == self.update_button:
                 try:
-                    response = requests.get(f"{SERVER_URL}/required_version", timeout=5)
-                    if response.status_code == 200:
-                        required = response.json()["required_version"]
-
+                    version_response = requests.get(f"{SERVER_URL}/required_version", timeout=5)
+                    if version_response.status_code == 200:
+                        required = version_response.json()["required_version"]
                         if required != CLIENT_VERSION:
-                            # Simulate updating version file
-                            with open("settings.py", "r", encoding="utf-8") as f:
-                                lines = f.readlines()
-
-                            with open("settings.py", "w", encoding="utf-8") as f:
-                                for line in lines:
-                                    if line.startswith("CLIENT_VERSION"):
-                                        f.write(f'CLIENT_VERSION = "{required}"\n')
-                                    else:
-                                        f.write(line)
-
-                            self.show_popup("Update Complete", f"Client updated to version {required}. Restarting...")
-                            pygame.time.set_timer(pygame.USEREVENT + 99, 1500)
-                            self.restart_pending = True
+                            # Example GitHub release ZIP URL (customize for your project)
+                            zip_url = f"https://github.com/Mr-Cee/PyRPG/releases/download/{required}/update_package.zip"
+                            threading.Thread(target=self.download_and_apply_update, args=(zip_url, required)).start()
                         else:
                             self.show_popup("No Update Needed", "Client version already matches the server.")
-
                     else:
                         self.show_popup("Update Failed", "Could not fetch server version.")
                 except requests.exceptions.RequestException:
@@ -554,6 +544,48 @@ class LoginScreen(BaseScreen):
 
     def draw(self, window_surface):
         self.manager.draw_ui(window_surface)
+
+    def download_and_apply_update(self, zip_url, required_version):
+        try:
+            response = requests.get(zip_url, stream=True)
+            response.raise_for_status()
+
+            total_length = response.headers.get('content-length')
+            if total_length is None:
+                self.show_popup("Update Failed", "Could not determine update size.")
+                return
+
+            total_length = int(total_length)
+            downloaded = 0
+            buffer = io.BytesIO()
+
+            for chunk in response.iter_content(chunk_size=4096):
+                if chunk:
+                    buffer.write(chunk)
+                    downloaded += len(chunk)
+                    percent = int(100 * downloaded / total_length)
+                    self.message_label.set_text(f"Downloading... {percent}%")
+
+            buffer.seek(0)
+            with zipfile.ZipFile(buffer, 'r') as zip_ref:
+                zip_ref.extractall(".")  # Extract into current directory
+
+            # Update version in settings.py
+            with open("settings.py", "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            with open("settings.py", "w", encoding="utf-8") as f:
+                for line in lines:
+                    if line.startswith("CLIENT_VERSION"):
+                        f.write(f'CLIENT_VERSION = "{required_version}"\n')
+                    else:
+                        f.write(line)
+
+            self.show_popup("Update Complete", f"Updated to v{required_version}. Restarting...")
+            pygame.time.set_timer(pygame.USEREVENT + 99, 1500)
+            self.restart_pending = True
+
+        except Exception as e:
+            self.show_popup("Update Failed", str(e))
 
 # 🚀 Register this screen
 ScreenRegistry.register("login", LoginScreen)

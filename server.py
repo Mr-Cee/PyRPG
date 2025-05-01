@@ -374,7 +374,7 @@ def send_whisper(payload: dict, db: Session = Depends(get_db)):
 
 @app.get("/required_version")
 def get_required_version():
-    return { "version": REQUIRED_VERSION, "download_url": "https://github.com/Mr-Cee/PyRPG/releases/download/v0.0.5/PyRPG_v0.0.5.zip" }
+    return { "required_version": REQUIRED_VERSION, "download_url": "https://github.com/Mr-Cee/PyRPG/releases/download/v0.0.5/PyRPG_v0.0.5.zip" }
 
 @app.get("/player/{username}")
 def get_players(username: str, token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
