@@ -685,11 +685,11 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
 
         player.is_active = False
 
-        # ✅ Send private system message with a special tag
+        # ✅ System whisper to the kicked player
         kick_msg = models.ChatMessage(
             sender="System",
             recipient=player.name,
-            message="You have been kicked by an admin.",
+            message="[kick] You have been kicked by an admin.",
             timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
             type="System"
         )

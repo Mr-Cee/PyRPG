@@ -163,10 +163,10 @@ class ChatWindow:
 
 
                         elif msg_type == "System" and msg.get("recipient") == self.player.name:
-                            if "kicked by an admin" in msg["message"].lower():
+                            message_lower = msg["message"].lower()
+                            if message_lower.startswith("[kick]"):
                                 self.screen_manager.force_logout(reason="Kicked by an admin")
-                            if "client version is outdated" in msg["message"].lower():
-                                self.screen_manager.force_logout(reason="Outdated client")
+                                continue  # Do not display kick message
 
                         else:
                             if msg_type in ("admin", "Admin"):
