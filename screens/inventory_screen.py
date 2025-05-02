@@ -28,6 +28,20 @@ class InventoryScreen(BaseScreen):
         self.hovered_slot_index = None
         self.tooltip = None
 
+        self.inventory_slots = []
+        self.inventory_rows = []
+        self.container_width = 314  # +8 pixels for right edge breathing room
+        self.grid_origin_x = 10
+        self.grid_origin_y = 60
+        self.row_width = 305
+        self.row_height = 52
+        self.columns = 6
+        self.slot_size = 46
+        self.slot_padding = 4
+        self.num_rows = 6  # Can later expand dynamically
+        # self.container_height = self.num_rows * 52
+        self.container_height = (self.num_rows * 56) + 10
+
     def setup(self):
         # Back button
         self.back_button = pygame_gui.elements.UIButton(
@@ -43,24 +57,14 @@ class InventoryScreen(BaseScreen):
             manager=self.manager
         )
 
-        self.setup_inventory()
+
         self.setup_character_sheet()
+        self.setup_inventory()
+
 
     def setup_inventory(self):
         # Setting up Grid
-        self.inventory_slots = []
-        self.inventory_rows = []
-        self.container_width = 314  # +8 pixels for right edge breathing room
-        self.grid_origin_x = 10
-        self.grid_origin_y = 60
-        self.row_width = 305
-        self.row_height = 52
-        self.columns = 6
-        self.slot_size = 46
-        self.slot_padding = 4
-        self.num_rows = 6  # Can later expand dynamically
-        # self.container_height = self.num_rows * 52
-        self.container_height = (self.num_rows * 56) + 10
+
 
         # Outer inventory container (frame)
         self.inventory_container = pygame_gui.elements.UIPanel(
@@ -101,13 +105,6 @@ class InventoryScreen(BaseScreen):
                     container=row_panel
                 )
                 self.inventory_slots.append(slot_panel)
-                # slot_button = pygame_gui.elements.UIButton(
-                #     relative_rect=pygame.Rect((slot_x, 3), (46, 46)),  # 3px top padding
-                #     text="",
-                #     manager=self.manager,
-                #     container=row_panel
-                # )
-                # self.inventory_slots.append(slot_button)
 
         self.slot_icons = []
 
@@ -122,50 +119,69 @@ class InventoryScreen(BaseScreen):
             print(f"[Inventory] Failed to load inventory: {e}")
             inventory_data = []  # fallback to empty
 
-        # Display items in UI
-        for item in inventory_data:
-            slot_index = item.get("slot")
-            if slot_index is None or not (0 <= slot_index < len(self.inventory_slots)):
-                print(f"[Inventory] Skipping item with invalid slot: {item}")
-                continue
-
-            slot_button = self.inventory_slots[slot_index]
-            if slot_button is None or not hasattr(slot_button, "rect"):
-                print(f"[Inventory] Slot {slot_index} has no valid container.")
-                continue
-
-            slot_index = item.get("slot")
-            item["slot"] = slot_index
-            if 0 <= slot_index < len(self.inventory_slots):
-                slot_button = self.inventory_slots[slot_index]
-
-                if "icon" in item and slot_button is not None:
-                    slot_container = self.inventory_slots[slot_index]
-
-                    # Load icon and place inside the slot panel
-                    try:
-                        icon_surface = pygame.image.load(item["icon"]).convert_alpha()
-                        icon_surface = pygame.transform.scale(icon_surface, (42, 42))
-                        icon = pygame_gui.elements.UIImage(
-                            relative_rect=pygame.Rect((2, 2), (42, 42)),
-                            image_surface=icon_surface,
-                            manager=self.manager,
-                            container=slot_container,
-                        )
-                        icon.slot_index = slot_index
-                        self.slot_icons.append(icon)
-
-                    except Exception as e:
-                        print(f"[Inventory] Failed to load icon for slot {slot_index}: {e}")
-                else:
-                    label = pygame_gui.elements.UILabel(
-                        relative_rect=pygame.Rect((0, 0), (46, 46)),
-                        text=item.get("name", "?"),
-                        manager=self.manager,
-                        container=slot_button
-                    )
-                    icon.slot_index = slot_index
-                    self.slot_icons.append(label)
+        self.render_inventory_icons()
+        # # Display items in UI
+        # for item in inventory_data:
+        #     slot_index = item.get("slot")
+        #
+        #     if slot_index is None:
+        #         print(f"[Inventory] Skipping item with missing slot: {item}")
+        #         continue
+        #
+        #     # Inventory slot must be a valid integer index
+        #     if isinstance(slot_index, int):
+        #         if not (0 <= slot_index < len(self.inventory_slots)):
+        #             print(f"[Inventory] Skipping item with out-of-bounds slot: {item}")
+        #             continue
+        #
+        #     # Equipped slot must match a valid equipment slot_type
+        #     elif isinstance(slot_index, str) and slot_index.startswith("equipped:"):
+        #         slot_type = slot_index.split(":")[1]
+        #         if slot_type not in [slot.slot_type for slot in self.equipment_slots]:
+        #             print(f"[Inventory] Skipping item with invalid equipped slot: {item}")
+        #             continue
+        #
+        #     else:
+        #         print(f"[Inventory] Skipping item with unrecognized slot: {item}")
+        #         continue
+        #
+        #     slot_button = self.inventory_slots[slot_index]
+        #     if slot_button is None or not hasattr(slot_button, "rect"):
+        #         print(f"[Inventory] Slot {slot_index} has no valid container.")
+        #         continue
+        #
+        #     slot_index = item.get("slot")
+        #     item["slot"] = slot_index
+        #     if 0 <= slot_index < len(self.inventory_slots):
+        #         slot_button = self.inventory_slots[slot_index]
+        #
+        #         if "icon" in item and slot_button is not None:
+        #             slot_container = self.inventory_slots[slot_index]
+        #
+        #             # Load icon and place inside the slot panel
+        #             try:
+        #                 icon_surface = pygame.image.load(item["icon"]).convert_alpha()
+        #                 icon_surface = pygame.transform.scale(icon_surface, (42, 42))
+        #                 icon = pygame_gui.elements.UIImage(
+        #                     relative_rect=pygame.Rect((2, 2), (42, 42)),
+        #                     image_surface=icon_surface,
+        #                     manager=self.manager,
+        #                     container=slot_container,
+        #                 )
+        #                 icon.slot_index = slot_index
+        #                 self.slot_icons.append(icon)
+        #
+        #             except Exception as e:
+        #                 print(f"[Inventory] Failed to load icon for slot {slot_index}: {e}")
+        #         else:
+        #             label = pygame_gui.elements.UILabel(
+        #                 relative_rect=pygame.Rect((0, 0), (46, 46)),
+        #                 text=item.get("name", "?"),
+        #                 manager=self.manager,
+        #                 container=slot_button
+        #             )
+        #             icon.slot_index = slot_index
+        #             self.slot_icons.append(label)
 
         self.hover_tooltip_box = pygame_gui.elements.UITextBox(
             html_text="",
@@ -242,6 +258,41 @@ class InventoryScreen(BaseScreen):
             slot_panel.slot_type = slot_names[i + 6]
             self.equipment_slots.append(slot_panel)
 
+    def render_inventory_icons(self):
+        # Clear existing icons first
+        for icon in self.slot_icons:
+            icon.kill()
+        self.slot_icons = []
+
+        for item in self.inventory_data:
+            slot = item.get("slot")
+
+            # Determine target container
+            if isinstance(slot, int) and 0 <= slot < len(self.inventory_slots):
+                container = self.inventory_slots[slot]
+            elif isinstance(slot, str) and slot.startswith("equipped:"):
+                slot_type = slot.split(":")[1]
+                container = next((p for p in self.equipment_slots if p.slot_type == slot_type), None)
+                if container is None:
+                    continue
+            else:
+                continue
+
+            # Render icon
+            try:
+                icon_surface = pygame.image.load(item["icon"]).convert_alpha()
+                icon_surface = pygame.transform.scale(icon_surface, (42, 42))
+                icon = pygame_gui.elements.UIImage(
+                    relative_rect=pygame.Rect((1, 1), (42, 42)),
+                    image_surface=icon_surface,
+                    manager=self.manager,
+                    container=container,
+                )
+                icon.slot_index = slot
+                self.slot_icons.append(icon)
+            except Exception as e:
+                print(f"[Inventory] Failed to render icon for {item['name']}: {e}")
+
     def teardown(self):
         self.back_button.kill()
         self.title_label.kill()
@@ -299,60 +350,84 @@ class InventoryScreen(BaseScreen):
 
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             if self.dragging_item:
-                # Determine where the item was dropped
+                mouse_pos = pygame.mouse.get_pos()
                 drop_index = None
+
+                # First, check if dropped onto an inventory slot
                 for i, slot in enumerate(self.inventory_slots):
-                    slot_rect = slot.get_abs_rect()
-                    if slot_rect.collidepoint(pygame.mouse.get_pos()):
+                    if slot.get_abs_rect().collidepoint(mouse_pos):
                         drop_index = i
                         break
 
-                # If dropped outside, return to original slot
+                # Then, check if dropped onto an equipment slot
+                if drop_index is None:
+                    for slot_panel in self.equipment_slots:
+                        if slot_panel.get_abs_rect().collidepoint(mouse_pos):
+                            drop_index = f"equipped:{slot_panel.slot_type}"
+                            break
+
+                # If dropped outside both, return to original
                 if drop_index is None:
                     drop_index = self.dragging_index
 
-                # Find any item already in the drop slot
-                existing_item = None
-                for item in self.inventory_data:
-                    if item.get("slot") == drop_index:
-                        existing_item = item
-                        break
+                # Find dragged item
+                dragged_item = next((item for item in self.inventory_data if item.get("slot") == self.dragging_index),
+                                    None)
 
-                # Swap the slots in the data
-                for item in self.inventory_data:
-                    if item.get("slot") == self.dragging_index:
-                        item["slot"] = drop_index
-                        break
+                # Check slot validity for equipment
+                if isinstance(drop_index, str) and drop_index.startswith("equipped:"):
+                    slot_type = drop_index.split(":")[1]
+                    if dragged_item.get("subtype") != slot_type:
+                        print(f"[Equip] Invalid: {dragged_item['subtype']} can't go into {slot_type}")
+                        drop_index = self.dragging_index  # Cancel
+
+                # Find item already in the drop slot (if any)
+                existing_item = next((item for item in self.inventory_data if item.get("slot") == drop_index), None)
+
+                # Swap slots
+                if dragged_item:
+                    dragged_item["slot"] = drop_index
                 if existing_item:
                     existing_item["slot"] = self.dragging_index
 
-                # Remove any icons in both involved slots
+                # Remove existing icons in both slots (inventory or equipment)
                 slots_to_clear = (drop_index, self.dragging_index)
                 icons_to_kill = [icon for icon in self.slot_icons if
                                  getattr(icon, "slot_index", None) in slots_to_clear]
-                for icon in icons_to_kill:
-                    icon.kill()
-                    self.slot_icons.remove(icon)
 
-                # Re-render updated icons
-                for item in self.inventory_data:
-                    slot = item.get("slot")
-                    if slot is not None and 0 <= slot < len(self.inventory_slots):
-                        try:
-                            icon_surface = pygame.image.load(item["icon"]).convert_alpha()
-                            icon_surface = pygame.transform.scale(icon_surface, (42, 42))
-                            icon = pygame_gui.elements.UIImage(
-                                relative_rect=pygame.Rect((2, 2), (42, 42)),
-                                image_surface=icon_surface,
-                                manager=self.manager,
-                                container=self.inventory_slots[slot],
-                            )
-                            icon.slot_index = slot
-                            self.slot_icons.append(icon)
-                        except Exception as e:
-                            print(f"[Inventory] Failed to re-render icon: {e}")
+                self.render_inventory_icons()
+                # for icon in icons_to_kill:
+                #     icon.kill()
+                #     self.slot_icons.remove(icon)
+                #
+                # # Re-render all items
+                # for item in self.inventory_data:
+                #     slot = item.get("slot")
+                #     if isinstance(slot, int) and 0 <= slot < len(self.inventory_slots):
+                #         container = self.inventory_slots[slot]
+                #     elif isinstance(slot, str) and slot.startswith("equipped:"):
+                #         slot_type = slot.split(":")[1]
+                #         container = next((p for p in self.equipment_slots if p.slot_type == slot_type), None)
+                #         if container is None:
+                #             continue
+                #     else:
+                #         continue
+                #
+                #     try:
+                #         icon_surface = pygame.image.load(item["icon"]).convert_alpha()
+                #         icon_surface = pygame.transform.scale(icon_surface, (42, 42))
+                #         icon = pygame_gui.elements.UIImage(
+                #             relative_rect=pygame.Rect((1, 1), (42, 42)),
+                #             image_surface=icon_surface,
+                #             manager=self.manager,
+                #             container=container,
+                #         )
+                #         icon.slot_index = slot
+                #         self.slot_icons.append(icon)
+                #     except Exception as e:
+                #         print(f"[Inventory] Failed to re-render icon: {e}")
 
-                # Save to server
+                # Save changes to server
                 try:
                     payload = {
                         "character_name": self.screen_manager.player.name,
@@ -363,7 +438,6 @@ class InventoryScreen(BaseScreen):
                 except Exception as e:
                     print(f"[Inventory] Failed to update inventory: {e}")
 
-                # Reset drag state
                 self.dragging_item = None
                 self.dragging_index = None
 
