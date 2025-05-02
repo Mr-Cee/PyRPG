@@ -2,7 +2,7 @@ import pygame
 import pygame_gui
 from pygame import Rect
 import requests
-from settings import SERVER_URL
+from settings import SERVER_URL, rarity_colors
 from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
 
@@ -141,10 +141,11 @@ class InventoryScreen(BaseScreen):
                             relative_rect=pygame.Rect((2, 2), (42, 42)),
                             image_surface=icon_surface,
                             manager=self.manager,
-                            container=slot_container
+                            container=slot_container,
                         )
                         icon.slot_index = slot_index
                         self.slot_icons.append(icon)
+
                     except Exception as e:
                         print(f"[Inventory] Failed to load icon for slot {slot_index}: {e}")
                 else:
@@ -157,6 +158,12 @@ class InventoryScreen(BaseScreen):
                     icon.slot_index = slot_index
                     self.slot_icons.append(label)
 
+        self.hover_tooltip_box = pygame_gui.elements.UITextBox(
+            html_text="",
+            relative_rect=pygame.Rect((330, 60), (200, 200)),  # Adjust position/size as needed
+            manager=self.manager
+        )
+        self.hover_tooltip_box.hide()
 
     def teardown(self):
         self.back_button.kill()
@@ -250,7 +257,7 @@ class InventoryScreen(BaseScreen):
                                 relative_rect=pygame.Rect((2, 2), (42, 42)),
                                 image_surface=icon_surface,
                                 manager=self.manager,
-                                container=self.inventory_slots[slot]
+                                container=self.inventory_slots[slot],
                             )
                             icon.slot_index = slot
                             self.slot_icons.append(icon)
@@ -273,7 +280,32 @@ class InventoryScreen(BaseScreen):
                 self.dragging_index = None
 
     def update(self, time_delta):
-        pass
+        mouse_pos = pygame.mouse.get_pos()
+        hovered_index = None
+
+        for i, slot in enumerate(self.inventory_slots):
+            if slot.get_abs_rect().collidepoint(mouse_pos):
+                hovered_index = i
+                break
+
+        if hovered_index is not None:
+            for item in self.inventory_data:
+                if item.get("slot") == hovered_index:
+                    rarity = item.get("rarity", "Common")
+                    color = rarity_colors.get(rarity, "#ffffff")
+                    tooltip_text = f"<b>{item['name']}</b><br><i><font color='{color}'>{item['rarity']}</font></i>"
+                    for stat, val in item.get("stats", {}).items():
+                        tooltip_text += f"<br>{stat.title()}: {val}"
+
+                    self.hover_tooltip_box.set_text(tooltip_text)
+                    self.hover_tooltip_box.show()
+                    break
+        else:
+            self.hover_tooltip_box.hide()
+
+
+
+
 
     def draw(self, window_surface):
         self.manager.draw_ui(window_surface)
