@@ -47,7 +47,7 @@ def pick_rarity(rng=None, rarity_override=None):
     return "Common"  # fallback
 
 
-def create_item(slot_type, char_class="Warrior", rarity=None):
+def create_item(slot_type, char_class="Warrior", rarity=None, slot=None):
     rarity = pick_rarity() if rarity is None else rarity
     multiplier = RARITY_MULTIPLIERS[rarity]
     main_stat = PLAYER_CLASSES.get(char_class, "Strength")
@@ -57,7 +57,9 @@ def create_item(slot_type, char_class="Warrior", rarity=None):
         "type": get_type_from_slot(slot_type),
         "subtype": slot_type,
         "rarity": rarity,
-        "stats": {}
+        "stats": {},
+        "slot": slot,  # ✅ Add this
+        "icon": f"Assets/Items/{slot_type}.png"  # ✅ Simple default icon path
     }
 
     # Shared stat distribution logic

@@ -11,3 +11,4 @@ def autoload_screens():
         if filename.endswith('.py') and not filename.startswith('__'):
             module_name = f"screens.{filename[:-3]}"  # Remove '.py'
             importlib.import_module(module_name)
+            print(f"Imported {module_name}")

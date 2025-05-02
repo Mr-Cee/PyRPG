@@ -84,6 +84,10 @@ class HeartbeatRequest(BaseModel):
 class LogoutRequest(BaseModel):
     username: str
 
+class InventoryUpdateRequest(BaseModel):
+    character_name: str
+    inventory: list
+
 def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
     to_encode = data.copy()
     expire = datetime.datetime.utcnow() + (expires_delta or datetime.timedelta(minutes=15))
@@ -318,6 +322,17 @@ def update_player(request: UpdatePlayerRequest, db: Session = Depends(get_db)):
     db.refresh(character)
 
     return {"msg": "Player updated successfully!"}
+
+@app.post("/inventory/update")
+def update_inventory(request: InventoryUpdateRequest, db: Session = Depends(get_db)):
+    player = db.query(Player).filter_by(name=request.character_name).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Character not found.")
+
+    player.inventory = request.inventory
+    db.commit()
+
+    return {"success": True, "message": f"Inventory updated for {request.character_name}."}
 
 @app.post("/chat/send")
 def send_chat_message(chat: ChatMessage):
@@ -576,6 +591,14 @@ def reports_view(db: Session = Depends(get_db)):
             } for case in cases
         ]
     }
+
+@app.get("/inventory/{character_name}")
+def get_inventory(character_name: str, db: Session = Depends(get_db)):
+    player = db.query(Player).filter_by(name=character_name).first()
+    if not player:
+        return []
+
+    return player.inventory  # This assumes it's a JSON-serializable list
 
 @app.post("/report_resolve")
 def resolve_report(payload: dict, db: Session = Depends(get_db)):

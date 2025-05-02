@@ -27,36 +27,28 @@ class MainGameScreen(BaseScreen):
         self.chat_window.panel.set_relative_position((10, 480))
         self.chat_window.panel.set_dimensions((400, 220))
 
-        self.background_panel = pygame_gui.elements.UIPanel(
-            relative_rect=pygame.Rect((10, 10), (400, 450)),
-            manager=self.manager
-        )
-
-        self.player_info_label = pygame_gui.elements.UITextBox(
-            html_text=f"<b>{self.player.name}</b><br>Class: {self.player.char_class}<br>Level: {self.player.level}<br>Experience: {self.player.experience}",
-            relative_rect=pygame.Rect((20, 20), (360, 100)),
-            manager=self.manager,
-            container=self.background_panel
-        )
-
-        self.gold_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((20, 140), (360, 30)),
-            text=f"Gold: {self.player.gold}",
-            manager=self.manager,
-            container=self.background_panel
-        )
-
-        self.idle_status_label = pygame_gui.elements.UILabel(
-            relative_rect=pygame.Rect((10, 430), (400, 30)),
-            text="You are idling in town...",
-            manager=self.manager
-        )
-
         self.logout_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((1050, 650), (200, 50)),
             text="Logout to Main Menu",
             manager=self.manager
         )
+        # Main Menu Panel
+        self.menu_panel = pygame_gui.elements.UIPanel(
+            relative_rect=pygame.Rect((10, 10), (150, 250)),  # x, y, width, height
+            manager=self.manager
+        )
+        # Main Menu Buttons
+        button_labels = ["Inventory", "Equipment", "Quests", "Skills", "World Map", "Logout"]
+        self.menu_buttons = []
+
+        for i, label in enumerate(button_labels):
+            btn = pygame_gui.elements.UIButton(
+                relative_rect=pygame.Rect((10, 10 + i * 40), (130, 30)),
+                text=label,
+                manager=self.manager,
+                container=self.menu_panel
+            )
+            self.menu_buttons.append(btn)
 
         self.chest_icon = pygame.image.load("Assets/GUI/Icons/treasureChest.png").convert_alpha()
         self.chest_icon = pygame.transform.scale(self.chest_icon, (64, 64))  # Resize if needed
@@ -65,11 +57,7 @@ class MainGameScreen(BaseScreen):
         self.idle_timer = 0
 
     def teardown(self):
-        self.background_panel.kill()
-        self.player_info_label.kill()
-        self.idle_status_label.kill()
         self.logout_button.kill()
-        self.gold_label.kill()
         if self.idle_chest_window:
             self.idle_chest_window.kill()
         if self.chat_window:
@@ -77,11 +65,9 @@ class MainGameScreen(BaseScreen):
             self.chat_window = None
         if self.player:
             self.player.stop_heartbeat()
-
-
-    def update_gold_label(self):
-        if self.gold_label:
-            self.gold_label.set_text(f"Gold: {self.player.gold}")
+        self.menu_panel.kill()
+        if self.idle_chest_button:
+            self.idle_chest_button.kill()
 
     def handle_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
@@ -98,6 +84,19 @@ class MainGameScreen(BaseScreen):
                 self.player.last_logout_time = datetime.datetime.now(datetime.UTC)
                 self.player.save_to_server(self.screen_manager.auth_token)  # Add this line
                 self.screen_manager.set_screen(CharacterSelectScreen(self.manager, self.screen_manager))
+
+            for btn in self.menu_buttons:
+                if event.ui_element == btn:
+                    label = btn.text
+                    if label == "Inventory":
+                        inventory_screen = ScreenRegistry.get("inventory")
+                        if inventory_screen:
+                            self.screen_manager.set_screen(inventory_screen(self.manager, self.screen_manager))
+                        # self.screen_manager.set_screen(InventoryScreen(self.manager, self.screen_manager))
+                    elif label == "Logout":
+                        self.screen_manager.force_logout("Logged out.")
+                    else:
+                        print(f"[UI] '{label}' button clicked (hook up later)")
 
             if self.idle_chest_popup_open and event.ui_element == self.idle_chest_button:
                 self.claim_idle_rewards()
@@ -119,7 +118,6 @@ class MainGameScreen(BaseScreen):
         if self.idle_timer >= 5.0:
             self.player.gold += 1  # ✅ Add to real player gold
             self.idle_timer = 0
-            self.update_gold_label()  # ✅ New method to update the gold display
 
 
         if self.player.pending_idle_rewards and not self.idle_chest_popup_open:
@@ -137,10 +135,9 @@ class MainGameScreen(BaseScreen):
         self.idle_chest_popup_open = True
 
         self.idle_chest_button = pygame_gui.elements.UIButton(
-            relative_rect=pygame.Rect((500, 300), (64, 64)),
+            relative_rect=pygame.Rect((10, 410), (64, 64)),
             text="",
             manager=self.manager,
-            container=self.background_panel,
             tool_tip_text="Click to claim Idle Rewards!",
             object_id="#idle_chest_button"
         )
@@ -156,8 +153,19 @@ class MainGameScreen(BaseScreen):
         if self.player.pending_idle_rewards:
             self.player.experience += self.player.pending_idle_rewards['xp']
             self.player.gold += self.player.pending_idle_rewards['gold']
+            # Calculate offline duration
+            offline_seconds = (datetime.datetime.now(datetime.UTC) - self.player.last_logout_time).total_seconds()
+            minutes = int(offline_seconds // 60)
+            seconds = int(offline_seconds % 60)
+
+            xp = self.player.pending_idle_rewards['xp']
+            gold = self.player.pending_idle_rewards['gold']
+
+            # Log to chat (client-side only)
+            reward_summary = f"[Idle Rewards] You were offline for {minutes}m {seconds}s and earned {xp} XP and {gold} Gold."
+            self.chat_window.log_message(reward_summary, "System")
             self.player.pending_idle_rewards = None
-            self.update_gold_label()
+
 
         if hasattr(self, "idle_chest_button") and self.idle_chest_button:
             self.idle_chest_button.kill()

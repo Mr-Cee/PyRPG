@@ -366,7 +366,12 @@ class ChatWindow:
             msg_type = "Chat"
 
         # Display with name prefix for Chat, timestamp otherwise
-        display_text = f"{self.player.name}: {message}" if msg_type == "Chat" else f"[{timestamp}] {message}"
+        if msg_type == "Chat":
+            display_text = f"{self.player.name}: {message}"
+        elif msg_type == "System":
+            display_text = message  # No timestamp for System messages
+        else:
+            display_text = f"[{timestamp}] {message}"
 
         self.messages[msg_type].append((timestamp, message, msg_type))
         self.messages["All"].append((timestamp, message, msg_type))
@@ -726,6 +731,28 @@ class ChatWindow:
         item = create_item(slot_type=slot_type, char_class=char_class, rarity=rarity)
 
         success = target.add_to_inventory(item)
+
+        # Automatically assign to first empty slot
+        if item.get("slot") is None:
+            occupied_slots = {i.get("slot") for i in target.inventory if i.get("slot") is not None}
+            for i in range(target.INVENTORY_SIZE):
+                if i not in occupied_slots:
+                    item["slot"] = i
+                    break
+        try:
+            payload = {
+                "character_name": target.name,
+                "inventory": target.inventory
+            }
+            response = requests.post(f"{SERVER_URL}/inventory/update", json=payload, timeout=5)
+            if response.status_code == 200:
+                self.log_message(f"[Dev] Saved {target.name}'s updated inventory to server.", "Debug")
+            else:
+                self.log_message(f"[Error] Failed to save inventory: {response.text}", "System")
+        except Exception as e:
+            self.log_message(f"[Error] Exception while saving inventory: {e}", "System")
+
+
         if success:
             if target is self.player:
                 self.log_message(f"[Dev] Created {item['rarity']} {slot_type.title()} for yourself.", "Debug")
