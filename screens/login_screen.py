@@ -187,13 +187,14 @@ class LoginScreen(BaseScreen):
 
         if self.logout_reason:
             from pygame_gui.windows import UIMessageWindow
-            UIMessageWindow(
+            self.MessageWindow = UIMessageWindow(
                 rect=pygame.Rect((300, 200), (300, 150)),
                 window_title="Disconnected",
                 html_message=f"<b>{self.logout_reason}</b>",
-                manager=self.manager
+                manager=self.manager,
+                object_id="#Error_Window"
             )
-            pygame_gui.elements.UILabel(
+            self.Message_Label = pygame_gui.elements.UILabel(
                 relative_rect=pygame.Rect((10, 10), (400, 30)),
                 text=f"⚠ {self.logout_reason}",
                 manager=self.manager,
@@ -216,6 +217,10 @@ class LoginScreen(BaseScreen):
         self.password_label.kill()
         self.update_button.kill()
         self.version_label.kill()
+        if hasattr(self, "Message_Label"):
+            self.Message_Label.kill()
+        if hasattr(self, "MessageWindow"):
+            self.MessageWindow.kill()
 
     def load_remembered_login(self):
         save_path = os.path.join('Save_Data', 'login_info.json')
