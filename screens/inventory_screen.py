@@ -280,6 +280,17 @@ class InventoryScreen(BaseScreen):
         if hasattr(self, "equip_tooltip_box"):
             self.equip_tooltip_box.kill()
 
+    def _save_inventory(self):
+        try:
+            payload = {
+                "character_name": self.screen_manager.player.name,
+                "inventory": self.inventory_data
+            }
+            response = requests.post(f"{SERVER_URL}/inventory/update", json=payload, timeout=5)
+            response.raise_for_status()
+        except Exception as e:
+            print(f"[Inventory] Failed to update inventory: {e}")
+
     def handle_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.back_button:
@@ -305,13 +316,23 @@ class InventoryScreen(BaseScreen):
                 if slot.get_abs_rect().collidepoint(mouse_pos):
                     slot_type = slot.slot_type
                     equipped_key = f"equipped:{slot_type}"
+
+                    # Check if inventory has at least one free slot
+                    used_slots = {item.get("slot") for item in self.inventory_data if isinstance(item.get("slot"), int)}
+                    all_slots = set(range(len(self.inventory_slots)))
+                    free_slots = all_slots - used_slots
+
+                    if not free_slots:
+                        print("[Equip] Cannot drag item — inventory is full.")
+                        return  # Don't allow drag if inventory is full
+
                     for icon in self.slot_icons:
                         if getattr(icon, "slot_index", None) == equipped_key:
                             self.dragging_item = icon
                             self.dragging_index = equipped_key
                             self.slot_icons.remove(icon)
                             icon.kill()
-                            return  # Exit early
+                            return
 
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             if self.dragging_item:
@@ -375,6 +396,54 @@ class InventoryScreen(BaseScreen):
 
                 self.dragging_item = None
                 self.dragging_index = None
+
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+            mouse_pos = pygame.mouse.get_pos()
+
+            ####### Right-click Inventory Item to Equip ########
+            for i, slot in enumerate(self.inventory_slots):
+                if slot.get_abs_rect().collidepoint(mouse_pos):
+                    item = next((item for item in self.inventory_data if item.get("slot") == i), None)
+                    if item:
+                        subtype = item.get("subtype")
+                        if subtype:
+                            equip_key = f"equipped:{subtype}"
+                            equipped_item = next((itm for itm in self.inventory_data if itm.get("slot") == equip_key),
+                                                 None)
+
+                            # Equip current item
+                            item["slot"] = equip_key
+
+                            # If something is already equipped, move it BACK to the same inventory slot
+                            if equipped_item:
+                                equipped_item["slot"] = i
+
+                            self.render_inventory_icons()
+                            self._save_inventory()
+                    return
+
+            ####### Right-click Equipped Item to Unequip ########
+            for slot_panel in self.equipment_slots:
+                if slot_panel.get_abs_rect().collidepoint(mouse_pos):
+                    equip_key = f"equipped:{slot_panel.slot_type}"
+                    equipped_item = next((itm for itm in self.inventory_data if itm.get("slot") == equip_key), None)
+
+                    if equipped_item:
+                        # Try to put it in the first open inventory slot
+                        used_slots = {itm.get("slot") for itm in self.inventory_data if
+                                      isinstance(itm.get("slot"), int)}
+                        all_slots = set(range(len(self.inventory_slots)))
+                        free_slots = list(all_slots - used_slots)
+
+                        if not free_slots:
+                            print("[Right-click] Cannot unequip — inventory is full.")
+                            return
+
+                        equipped_item["slot"] = free_slots[0]  # Move back to inventory
+                        self.render_inventory_icons()
+                        self._save_inventory()
+                    return
+
         if self.chat_window:
             self.chat_window.process_event(event)
 
