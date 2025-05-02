@@ -1,12 +1,7 @@
 import random
+from settings import *
 
-RARITY_TIERS = {
-    "Common": 60,
-    "Uncommon": 25,
-    "Rare": 10,
-    "Legendary": 3,
-    "Mythical": 2
-}
+
 
 EQUIP_SLOTS = {
     "armor": ["head", "shoulders", "chest", "gloves", "legs", "boots"],
@@ -24,16 +19,6 @@ PLAYER_CLASSES = {
     "Mage": "Intelligence",
     "Rogue": "Agility"
 }
-
-# Base stat ranges per rarity
-RARITY_MULTIPLIERS = {
-    "Common": 1.0,
-    "Uncommon": 1.25,
-    "Rare": 1.5,
-    "Legendary": 2.0,
-    "Mythical": 3.0
-}
-
 
 def pick_rarity(rng=None, rarity_override=None):
     if rarity_override:

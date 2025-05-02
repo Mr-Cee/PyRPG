@@ -12,6 +12,12 @@ INVENTORY_BG_IMAGE = pygame.transform.scale(INVENTORY_BG_IMAGE, (302, 309))  # M
 ROW_IMAGE = pygame.image.load("Assets/GUI/Inventory/row_slot.png").convert_alpha()
 
 
+CHAR_FRAME_IMAGE = pygame.image.load("Assets/GUI/Inventory/character_sheet_frame.png").convert_alpha()
+CHAR_FRAME_IMAGE = pygame.transform.scale(CHAR_FRAME_IMAGE, (327, 444))
+CHAR_VERTICAL_SLOTS = pygame.image.load("Assets/GUI/Inventory/Character_Sheet_Vertical_Slots.png").convert_alpha()
+CHAR_VERTICAL_SLOTS = pygame.transform.scale(CHAR_VERTICAL_SLOTS, (52, 292))
+
+
 
 class InventoryScreen(BaseScreen):
     def __init__(self, manager, screen_manager):
@@ -37,8 +43,11 @@ class InventoryScreen(BaseScreen):
             manager=self.manager
         )
 
+        self.setup_inventory()
+        self.setup_character_sheet()
 
-        #Setting up Grid
+    def setup_inventory(self):
+        # Setting up Grid
         self.inventory_slots = []
         self.inventory_rows = []
         self.container_width = 314  # +8 pixels for right edge breathing room
@@ -165,26 +174,105 @@ class InventoryScreen(BaseScreen):
         )
         self.hover_tooltip_box.hide()
 
+    def setup_character_sheet(self):
+        self.equip_slot_size = 44
+        self.equip_slot_padding = 0
+        self.equip_slot_origin_y = (444 - (6 * 44 + 5 * 4)) // 2  # = 90
+        self.equipment_slots = []
+        slot_size = 46
+        slot_padding = 4
+        slot_names = [
+            "head", "shoulders", "chest", "gloves", "legs", "boots",
+            "amulet", "ring", "bracelet", "belt", "primary", "secondary"
+        ]
+
+        window_width = pygame.display.get_surface().get_width()
+        panel_x = window_width - 327 - 10  # 10px margin from right
+        panel_y = self.grid_origin_y  # Same vertical origin as inventory
+
+        self.char_panel = pygame_gui.elements.UIPanel(
+            relative_rect=pygame.Rect((panel_x, panel_y), (327, 444)),
+            manager=self.manager
+        )
+
+        # Frame background
+        self.char_frame_bg = pygame_gui.elements.UIImage(
+            relative_rect=pygame.Rect((0, 0), (327, 444)),
+            image_surface=CHAR_FRAME_IMAGE,
+            manager=self.manager,
+            container=self.char_panel
+        )
+
+        vertical_slot_y = (444 - 292) // 2  # == 76
+        # Left slots background
+        self.left_slots_bg = pygame_gui.elements.UIImage(
+            relative_rect=pygame.Rect((4, self.equip_slot_origin_y), (52, 264)),
+            image_surface=pygame.transform.scale(CHAR_VERTICAL_SLOTS, (52, 264)),
+            manager=self.manager,
+            container=self.char_panel
+        )
+        #Right slots background
+        self.right_slots_bg = pygame_gui.elements.UIImage(
+            relative_rect=pygame.Rect((327 - 52 - 4, self.equip_slot_origin_y), (52, 264)),
+            image_surface=pygame.transform.scale(CHAR_VERTICAL_SLOTS, (52, 264)),
+            manager=self.manager,
+            container=self.char_panel
+        )
+
+        # Left column (first 6 slots)
+        for i in range(6):
+            y = self.equip_slot_origin_y + (i * (self.equip_slot_size + self.equip_slot_padding))
+            slot_panel = pygame_gui.elements.UIPanel(
+                relative_rect=pygame.Rect((8, y), (44, 44)),
+                manager=self.manager,
+                container=self.char_panel
+            )
+            slot_panel.slot_type = slot_names[i]
+            self.equipment_slots.append(slot_panel)
+
+        # Right column (last 6 slots)
+        for i in range(6):
+            y = self.equip_slot_origin_y + i * (self.equip_slot_size + self.equip_slot_padding)
+            x = 327 - 52
+            slot_panel = pygame_gui.elements.UIPanel(
+                relative_rect=pygame.Rect((x, y), (44, 44)),
+                manager=self.manager,
+                container=self.char_panel
+            )
+            slot_panel.slot_type = slot_names[i + 6]
+            self.equipment_slots.append(slot_panel)
+
     def teardown(self):
         self.back_button.kill()
         self.title_label.kill()
 
+        ####### Inventory #######
         for btn in self.inventory_slots:
             btn.kill()
         self.inventory_slots = []
-
         for row in self.inventory_rows:
             row.kill()
         self.inventory_rows = []
-
         if hasattr(self, "bg_image"):
             self.bg_image.kill()
         if hasattr(self, "inventory_container"):
             self.inventory_container.kill()
-
         for icon in self.slot_icons:
             icon.kill()
         self.slot_icons = []
+
+        ####### Character Sheet #######
+        if hasattr(self, "char_panel"):
+            self.char_panel.kill()
+        if hasattr(self, "char_frame_bg"):
+            self.char_frame_bg.kill()
+        if hasattr(self, "left_slots_bg"):
+            self.left_slots_bg.kill()
+        if hasattr(self, "right_slots_bg"):
+            self.right_slots_bg.kill()
+        for slot in getattr(self, "equipment_slots", []):
+            slot.kill()
+        self.equipment_slots = []
 
     def handle_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
