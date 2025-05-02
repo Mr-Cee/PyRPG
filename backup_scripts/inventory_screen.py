@@ -16,11 +16,6 @@ ROW_IMAGE = pygame.image.load("Assets/GUI/Inventory/row_slot.png").convert_alpha
 class InventoryScreen(BaseScreen):
     def __init__(self, manager, screen_manager):
         super().__init__(manager, screen_manager)
-        self.dragging_item = None
-        self.dragging_index = None
-        self.drag_icon = None
-        self.hovered_slot_index = None
-        self.tooltip = None
 
     def setup(self):
         # Back button
@@ -108,7 +103,6 @@ class InventoryScreen(BaseScreen):
             response = requests.get(f"{SERVER_URL}/inventory/{player_name}", timeout=5)
             response.raise_for_status()
             inventory_data = response.json()
-            self.inventory_data = inventory_data
         except Exception as e:
             print(f"[Inventory] Failed to load inventory: {e}")
             inventory_data = []  # fallback to empty
@@ -126,7 +120,6 @@ class InventoryScreen(BaseScreen):
                 continue
 
             slot_index = item.get("slot")
-            item["slot"] = slot_index
             if 0 <= slot_index < len(self.inventory_slots):
                 slot_button = self.inventory_slots[slot_index]
 
@@ -143,7 +136,6 @@ class InventoryScreen(BaseScreen):
                             manager=self.manager,
                             container=slot_container
                         )
-                        icon.slot_index = slot_index
                         self.slot_icons.append(icon)
                     except Exception as e:
                         print(f"[Inventory] Failed to load icon for slot {slot_index}: {e}")
@@ -154,8 +146,8 @@ class InventoryScreen(BaseScreen):
                         manager=self.manager,
                         container=slot_button
                     )
-                    icon.slot_index = slot_index
                     self.slot_icons.append(label)
+
 
 
     def teardown(self):
@@ -185,102 +177,20 @@ class InventoryScreen(BaseScreen):
                 from screens.main_game_screen import MainGameScreen
                 self.screen_manager.set_screen(MainGameScreen(self.manager, self.screen_manager))
 
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            mouse_pos = pygame.mouse.get_pos()
 
-            for i, slot in enumerate(self.inventory_slots):
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                mouse_pos = pygame.mouse.get_pos()
 
-                slot_rect = slot.get_abs_rect()
-                if slot_rect.collidepoint(mouse_pos):
-
-                    for icon in self.slot_icons:
-                        if getattr(icon, "slot_index", None) == i:
-
-                            self.dragging_item = icon
-                            self.dragging_index = i
-                            self.slot_icons.remove(icon)
-                            icon.kill()
-                            break
-
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            if self.dragging_item:
-                # Determine where the item was dropped
-                drop_index = None
                 for i, slot in enumerate(self.inventory_slots):
-                    slot_rect = slot.get_abs_rect()
-                    if slot_rect.collidepoint(pygame.mouse.get_pos()):
-                        drop_index = i
-                        break
-
-                # If dropped outside, return to original slot
-                if drop_index is None:
-                    drop_index = self.dragging_index
-
-                # Find any item already in the drop slot
-                existing_item = None
-                for item in self.inventory_data:
-                    if item.get("slot") == drop_index:
-                        existing_item = item
-                        break
-
-                # Swap the slots in the data
-                for item in self.inventory_data:
-                    if item.get("slot") == self.dragging_index:
-                        item["slot"] = drop_index
-                        break
-                if existing_item:
-                    existing_item["slot"] = self.dragging_index
-
-                # Remove any icons in both involved slots
-                slots_to_clear = (drop_index, self.dragging_index)
-                icons_to_kill = [icon for icon in self.slot_icons if
-                                 getattr(icon, "slot_index", None) in slots_to_clear]
-                for icon in icons_to_kill:
-                    icon.kill()
-                    self.slot_icons.remove(icon)
-
-                # Re-render updated icons
-                for item in self.inventory_data:
-                    slot = item.get("slot")
-                    if slot is not None and 0 <= slot < len(self.inventory_slots):
-                        try:
-                            icon_surface = pygame.image.load(item["icon"]).convert_alpha()
-                            icon_surface = pygame.transform.scale(icon_surface, (42, 42))
-                            icon = pygame_gui.elements.UIImage(
-                                relative_rect=pygame.Rect((2, 2), (42, 42)),
-                                image_surface=icon_surface,
-                                manager=self.manager,
-                                container=self.inventory_slots[slot]
-                            )
-                            icon.slot_index = slot
-                            self.slot_icons.append(icon)
-                        except Exception as e:
-                            print(f"[Inventory] Failed to re-render icon: {e}")
-
-                # Save to server
-                try:
-                    payload = {
-                        "character_name": self.screen_manager.player.name,
-                        "inventory": self.inventory_data
-                    }
-                    response = requests.post(f"{SERVER_URL}/inventory/update", json=payload, timeout=5)
-                    response.raise_for_status()
-                except Exception as e:
-                    print(f"[Inventory] Failed to update inventory: {e}")
-
-                # Reset drag state
-                self.dragging_item = None
-                self.dragging_index = None
+                    slot_rect = slot.get_abs_rect()  # Absolute screen-space rect
+                    if slot_rect.collidepoint(mouse_pos):
+                        print(f"[Inventory] Clicked slot #{i}")
 
     def update(self, time_delta):
         pass
 
     def draw(self, window_surface):
         self.manager.draw_ui(window_surface)
-
-        if self.dragging_item:
-            mx, my = pygame.mouse.get_pos()
-            window_surface.blit(self.dragging_item.image, (mx - 21, my - 21))  # Center under cursor
 
 
 ScreenRegistry.register("inventory", InventoryScreen)

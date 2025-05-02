@@ -91,7 +91,7 @@ class ChatWindow:
         self.commands.update(self._load_player_commands())
         self.commands.update(self._load_gm_commands())
         self.commands.update(self._load_dev_commands())
-        self.admin_commands = ["broadcast", "kick", "mute", "unmute", "addcoins", "createitem"]
+        self.admin_commands = ["broadcast", "kick", "mute", "unmute", "addcoins"]
 
         self.reports_window = None
         self.resolution_popup = None
@@ -639,6 +639,13 @@ class ChatWindow:
                 print(f"[Reports Error] {e}")
             return
 
+        elif command == "createitem":
+            min_role = "dev"
+            if self.has_permission(min_role):
+                self.cmd_createitem(args)
+
+            return
+
         elif command in self.admin_commands:
             self.send_admin_command(f"/{command} {' '.join(args)}")
             return
@@ -718,48 +725,62 @@ class ChatWindow:
             print("error")
             self.log_message("[Error] Invalid amount.", "System")
 
-    def cmd_createitem(self, slot_type, char_class=None, rarity=None, target_player_name=None):
-        target = self.player
-        if target_player_name:
-            target_lookup = get_player(target_player_name)
-            if not target_lookup:
-                self.log_message(f"[Dev] Player '{target_player_name}' not found.", "Debug")
-                return
-            target = target_lookup
+    def cmd_createitem(self, args):
+        """Dev command: /createitem chest Warrior Rare 5"""
+        if self.player.role not in ("dev", "gm"):
+            self.log_message("[Error] You do not have permission to use this command.", "System")
+            return
 
-        char_class = char_class or target.char_class
+        if len(args) < 1:
+            self.log_message("[Usage] /createitem <slot_type> [class] [rarity] [slot]", "System")
+            return
+
+        slot_type = args[0]
+
+        # Validate slot_type
+        from items import EQUIP_SLOTS
+        # Flatten all valid slot names
+        VALID_SLOTS = {slot for sublist in EQUIP_SLOTS.values() for slot in sublist}
+        if slot_type.lower() not in VALID_SLOTS:
+            self.log_message(f"[Error] Invalid slot_type '{slot_type}'. Valid types: {', '.join(VALID_SLOTS)}", "System")
+            return
+
+        char_class = args[1] if len(args) >= 2 else self.player.char_class
+        rarity = args[2] if len(args) >= 3 else None
+        slot_index = int(args[3]) if len(args) >= 4 and args[3].isdigit() else None
+
         item = create_item(slot_type=slot_type, char_class=char_class, rarity=rarity)
 
-        success = target.add_to_inventory(item)
-
-        # Automatically assign to first empty slot
-        if item.get("slot") is None:
-            occupied_slots = {i.get("slot") for i in target.inventory if i.get("slot") is not None}
-            for i in range(target.INVENTORY_SIZE):
-                if i not in occupied_slots:
-                    item["slot"] = i
+        # Find or assign inventory slot
+        occupied = {i.get("slot") for i in self.player.inventory if "slot" in i}
+        if slot_index is None:
+            for i in range(self.player.INVENTORY_SIZE):
+                if i not in occupied:
+                    slot_index = i
                     break
+        if slot_index is None or slot_index >= self.player.INVENTORY_SIZE:
+            self.log_message("[Error] Inventory is full or invalid slot.", "System")
+            return
+
+        item["slot"] = slot_index
+        self.player.inventory.append(item)
+
+        # Save to server
         try:
             payload = {
-                "character_name": target.name,
-                "inventory": target.inventory
+                "character_name": self.player.name,
+                "inventory": self.player.inventory
             }
             response = requests.post(f"{SERVER_URL}/inventory/update", json=payload, timeout=5)
-            if response.status_code == 200:
-                self.log_message(f"[Dev] Saved {target.name}'s updated inventory to server.", "Debug")
-            else:
-                self.log_message(f"[Error] Failed to save inventory: {response.text}", "System")
+            response.raise_for_status()
+            self.log_message(f"[Dev] Created {item['rarity']} {item['subtype']} in slot {slot_index}.", "Debug")
+            # Log item preview
+            preview_lines = [f"[Item Created] Slot {slot_index}: {item['name']} ({item['rarity']})"]
+            for stat, val in item.get("stats", {}).items():
+                preview_lines.append(f"  {stat.title()}: {val}")
+            self.log_message("\n".join(preview_lines), "System")
         except Exception as e:
-            self.log_message(f"[Error] Exception while saving inventory: {e}", "System")
-
-
-        if success:
-            if target is self.player:
-                self.log_message(f"[Dev] Created {item['rarity']} {slot_type.title()} for yourself.", "Debug")
-            else:
-                self.log_message(f"[Dev] Created {item['rarity']} {slot_type.title()} for {target.name}.", "Debug")
-        else:
-            self.log_message(f"[Dev] Failed to add item to {target.name}'s inventory (Full?).", "Debug")
+            self.log_message(f"[Error] Failed to save item: {e}", "System")
 
     def cmd_online(self):
         try:
