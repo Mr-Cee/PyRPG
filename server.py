@@ -461,15 +461,17 @@ def get_player_stats(requester_name: str, target_name: str = None, db: Session =
     # Derived stats
     strength = total_stats.get("Strength", 0)
     intelligence = total_stats.get("Intelligence", 0)
-    agility = total_stats.get("Dexterity", 0)
+    dexterity = total_stats.get("Dexterity", 0)
     vitality = total_stats.get("Vitality", 0)
 
     total_stats["Bonus Damage"] = strength // 5
     total_stats["Bonus Mana"] = intelligence // 5
     total_stats["Bonus Health"] = vitality // 5
-    total_stats["Avoidance"] = agility // 10
+    total_stats["Avoidance"] = dexterity // 10
     total_stats["Health"] = 10 + vitality // 5
     total_stats["Mana"] = 10 + intelligence // 5
+    total_stats["Avoidance"] = intelligence // 10
+    total_stats["Dodge"] = dexterity // 10
 
     return {
         "name": player.name,

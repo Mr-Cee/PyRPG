@@ -918,16 +918,37 @@ class ChatWindow:
             self.log_message(f"[Stats for {data['name']} - Level {data['level']} {data['char_class']}]", "System")
             self.log_message(f"Gold: {data['gold']}", "System")
 
-            base_stats = data.get("base_stats", {})
-            total_stats = data.get("total_stats", {})
+            stats = data.get("total_stats", {})
 
-            for stat, base_val in base_stats.items():
-                total_val = total_stats.get(stat, base_val)
-                diff = total_val - base_val
-                if diff > 0:
-                    self.log_message(f"  {stat}: {total_val} (+{diff})", "System")
-                else:
-                    self.log_message(f"  {stat}: {total_val}", "System")
+            # Custom display order
+            ordered_keys = [
+                "Health",
+                "Mana",
+                "Strength",
+                "Intelligence",
+                "Dexterity",
+                "Critical Chance",
+                "Critical Damage",
+                "Armor",
+                "Avoidance",
+                "Dodge",
+                "Block"
+            ]
+
+            for key in ordered_keys:
+                if key in stats:
+                    self.log_message(f"{key}: {stats[key]}", "System")
+
+            # base_stats = data.get("base_stats", {})
+            # total_stats = data.get("total_stats", {})
+            #
+            # for stat, base_val in base_stats.items():
+            #     total_val = total_stats.get(stat, base_val)
+            #     diff = total_val - base_val
+            #     if diff > 0:
+            #         self.log_message(f"  {stat}: {total_val} (+{diff})", "System")
+            #     else:
+            #         self.log_message(f"  {stat}: {total_val}", "System")
 
             equipment = data.get("equipment", {})
             if equipment:
