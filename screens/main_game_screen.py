@@ -123,7 +123,6 @@ class MainGameScreen(BaseScreen):
             print(self.player.format_coins())
             self.idle_timer = 0
 
-
         if self.player.pending_idle_rewards and not self.idle_chest_popup_open:
             self.open_idle_rewards_chest()
 
