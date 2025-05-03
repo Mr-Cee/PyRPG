@@ -299,7 +299,13 @@ class ChatWindow:
                 "min_role": "dev",
                 "aliases": ["ci"],
                 "help": "Usage: /createitem <slot_type> [char_class] [rarity] [player_name]\nCreates an item and gives it to a player."
-}
+            },
+            "addExperience": {
+                "func": self.cmd_addexperience,
+                "min_role": "dev",
+                "aliases": [""],
+                "help": "Usage: /addExperience <amount> [player]\nGives experience to self if no player is specified."
+            }
         }
 
     def send_admin_command(self, command_text):
@@ -655,6 +661,15 @@ class ChatWindow:
 
             return
 
+        elif command == "addexperience":
+            min_role = "dev"
+            if self.has_permission(min_role):
+                self.cmd_addexperience(args)
+            else:
+                self.log_message("No Command Found", "System")
+
+            return
+
         elif command == "stats":
             min_role = "gm"
             if self.has_permission(min_role):
@@ -798,6 +813,43 @@ class ChatWindow:
             self.log_message("\n".join(preview_lines), "System")
         except Exception as e:
             self.log_message(f"[Error] Failed to save item: {e}", "System")
+
+    def cmd_addexperience(self, *args):
+        if not args:
+            self.log_message("[Usage] /addexperience <amount> [player]", "System")
+            return
+
+        try:
+            amount = int(args[0])
+        except ValueError:
+            self.log_message("[Error] Amount must be a number.", "System")
+            return
+
+        target_name = args[1] if len(args) > 1 else self.player.name
+
+        if target_name == self.player.name:
+            # Local player
+            self.player.gain_experience(amount)
+            self.player.save_to_server(self.player.auth_token)
+            self.log_message(f"[Dev] You gained {amount} experience!", "System")
+        else:
+            try:
+                response = requests.post(
+                    f"{SERVER_URL}/add_experience",
+                    json={
+                        "requester": self.player.name,
+                        "target": target_name,
+                        "amount": amount
+                    },
+                    timeout=5
+                )
+                result = response.json()
+                if result.get("success"):
+                    self.log_message(f"[Dev] Gave {amount} XP to {target_name}.", "System")
+                else:
+                    self.log_message(f"[Error] {result.get('error')}", "System")
+            except Exception as e:
+                self.log_message(f"[Error] Failed to add experience: {e}", "System")
 
     def cmd_online(self):
         try:

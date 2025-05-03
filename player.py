@@ -64,16 +64,20 @@ class Player:
 
     def gain_experience(self, amount):
         self.experience += amount
-        if self.experience >= self.get_exp_to_next_level():
+
+        while self.experience >= self.get_exp_to_next_level():
+            self.experience -= self.get_exp_to_next_level()
             self.level_up()
 
     def get_exp_to_next_level(self):
-        return self.level * 100
+        return self.level * 25
 
     def level_up(self):
         self.level += 1
-        self.experience = 0
-        print(f"{self.name} leveled up to {self.level}!")
+        self.stats["Health"] += 5
+        self.stats["Mana"] += 5
+        if self.chat_window:
+            self.chat_window.log(f"[Level Up] {self.name} reached level {self.level}!", "System")
 
     def add_to_inventory(self, item):
         """Adds an item to the inventory if space is available."""

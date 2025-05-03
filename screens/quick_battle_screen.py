@@ -3,6 +3,7 @@ import pygame_gui
 from pygame import Rect
 from pygame_gui.elements import UIButton, UITextBox, UILabel
 
+from chat_system import ChatWindow
 from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
 import random
@@ -13,6 +14,10 @@ class QuickBattleScreen(BaseScreen):
         super().__init__(manager, screen_manager)
         self.player = self.screen_manager.player
         self.manager = manager
+
+        self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
+        self.player.chat_window.panel.set_relative_position((10, 480))
+        self.player.chat_window.panel.set_dimensions((400, 220))
 
         # UI elements
         self.title_label = UILabel(
@@ -116,6 +121,9 @@ class QuickBattleScreen(BaseScreen):
                 self.time_accumulator = 0
                 self.run_turn()
 
+        if self.player.chat_window:
+            self.player.chat_window.update(time_delta)
+
     def run_turn(self):
         # Player attacks
         dmg = self.player_damage
@@ -158,6 +166,9 @@ class QuickBattleScreen(BaseScreen):
                 from screens.battle_home_screen import BattleHomeScreen
                 self.screen_manager.set_screen(BattleHomeScreen(self.manager, self.screen_manager))
 
+        if self.player.chat_window:
+            self.player.chat_window.process_event(event)
+
     def draw(self, window_surface):
         # After manager.draw_ui(window_surface)
         # Enemy HP Bar
@@ -187,6 +198,9 @@ class QuickBattleScreen(BaseScreen):
         self.enemy_hp_label.kill()
         self.player_name_label.kill()
         self.player_hp_label.kill()
+        if self.player.chat_window:
+            self.player.chat_window.teardown()
+            self.player.chat_window = None
 
 
 ScreenRegistry.register("quick_battle", QuickBattleScreen)

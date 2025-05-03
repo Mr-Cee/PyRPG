@@ -134,6 +134,14 @@ def background_cleanup_thread():
 
         time.sleep(60)  # Run every 60 seconds
 
+def apply_experience_and_level_up(player: Player, xp_gain: int):
+    player.experience += xp_gain
+    while player.experience >= player.level * 25:
+        player.experience -= player.level * 25
+        player.level += 1
+        player.stats["Health"] += 5
+        player.stats["Mana"] += 5
+
 @app.on_event("startup")
 def start_background_cleanup():
     threading.Thread(target=background_cleanup_thread, daemon=True).start()
@@ -356,6 +364,29 @@ def update_stats_and_equipment(request: StatEquipUpdateRequest, db: Session = De
     player.equipment = request.equipment
     db.commit()
     return {"success": True, "message": f"Stats and equipment updated for {request.character_name}."}
+
+@app.post("/add_experience")
+def add_experience(payload: dict, db: Session = Depends(get_db)):
+    requester = payload.get("requester")
+    target = payload.get("target")
+    amount = payload.get("amount")
+
+    if not all([requester, target, amount]):
+        return {"success": False, "error": "Missing parameters."}
+
+    try:
+        amount = int(amount)
+    except ValueError:
+        return {"success": False, "error": "Amount must be an integer."}
+
+    target_player = db.query(Player).filter_by(name=target, is_active=True).first()
+    if not target_player:
+        return {"success": False, "error": f"{target} is not online or doesn't exist."}
+
+    apply_experience_and_level_up(target_player, amount)
+    db.commit()
+
+    return {"success": True, "message": f"{target} gained {amount} experience (level: {target_player.level})."}
 
 @app.post("/chat/send")
 def send_chat_message(chat: ChatMessage):
