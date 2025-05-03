@@ -13,7 +13,12 @@ class Player:
         self.char_class = char_class
         self.level = level
         self.experience = experience
-        self.gold = 0
+        self.coins = {
+            "copper": 0,
+            "silver": 0,
+            "gold": 0,
+            "platinum": 0
+        }
         self.inventory = inventory if inventory else []
         self.INVENTORY_SIZE = 49
         self.equipment = equipment if equipment else {
@@ -169,6 +174,73 @@ class Player:
         except Exception as e:
             print(f"[Sync] Error saving stats/equipment: {e}")
 
+    def condense_coins(self):
+        self.coins["silver"] = self.coins["copper"] // 100
+        self.coins["copper"] %= 100
+
+        self.coins["gold"] = self.coins["silver"] // 100
+        self.coins["silver"] %= 100
+
+        self.coins["platinum"] = self.coins["gold"] // 100
+        self.coins["gold"] %= 100
+
+    def add_coins(self, copper_amount, silver_amount=None, gold_amount=None, platinum_amount=None):
+        if copper_amount:
+            self.coins["copper"] += copper_amount
+        if silver_amount:
+            self.coins["silver"] += silver_amount
+        if gold_amount:
+            self.coins["gold"] += gold_amount
+        if platinum_amount:
+            self.coins["platinum"] += platinum_amount
+
+        self.condense_coins()
+
+    def check_coin_amount(self, copper_amount=None, silver_amount=None, gold_amount=None, platinum_amount=None):
+        total_have = 0
+        total_needed = 0
+        if copper_amount:
+            total_needed = copper_amount
+        if silver_amount:
+            total_needed += silver_amount * 100
+        if gold_amount:
+            total_needed += gold_amount * 10000
+        if platinum_amount:
+            total_needed += platinum_amount * 1000000
+
+        total_have += self.coins["copper"]
+        total_have += self.coins["silver"] * 100
+        total_have += self.coins["gold"] * 10000
+        total_have += self.coins["platinum"] * 1000000
+
+        if total_have >= total_needed:
+            return True
+        else:
+            return False
+
+    def purchase_with_coins(self, copper_amount=None, silver_amount=None, gold_amount=None, platinum_amount=None):
+        total_needed = 0
+        if copper_amount:
+            total_needed = copper_amount
+        if silver_amount:
+            total_needed += silver_amount * 100
+        if gold_amount:
+            total_needed += gold_amount * 10000
+        if platinum_amount:
+            total_needed += platinum_amount * 1000000
+
+        total_have =self.coins["copper"]
+        total_have += self.coins["silver"] * 100
+        total_have += self.coins["gold"] * 10000
+        total_have += self.coins["platinum"] * 1000000
+
+        total_have -= total_needed
+        self.coins["copper"] = total_have
+        self.condense_coins()
+
+    def format_coins(self):
+        return f"{self.coins['platinum']}p {self.coins['gold']}g {self.coins['silver']}s {self.coins['copper']}c"
+
     def list_inventory(self):
         """Debug: List all items in the inventory."""
         print("\n-- Inventory --")
@@ -237,8 +309,9 @@ class Player:
         if data.get("is_muted"):
             player.is_muted = data.get("is_muted", False)
 
-
-        player.gold = data.get("gold", 0)
+        player.coins = data.get("coins", {
+            "copper": 0, "silver": 0, "gold": 0, "platinum": 0
+        })
 
         return player
 
@@ -252,7 +325,10 @@ class Player:
                 "name": self.name,
                 "level": self.level,
                 "experience": self.experience,
-                "gold": getattr(self, 'gold', 0),  # default to 0 if no gold yet
+                "copper": self.coins["copper"],
+                "silver": self.coins["silver"],
+                "gold": self.coins["gold"],
+                "platinum": self.coins["platinum"],
                 "last_logout_time": self.last_logout_time.isoformat() if self.last_logout_time else datetime.datetime.utcnow().isoformat()
             }
             response = requests.post(f"{SERVER_URL}/update_player", json=payload, headers=headers)

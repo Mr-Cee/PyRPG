@@ -73,8 +73,11 @@ class UpdatePlayerRequest(BaseModel):
     name: str
     level: int
     experience: int
+    copper: int
+    silver: int
     gold: int
-    last_logout_time: str  # ISO 8601 string format
+    platinum: int
+    last_logout_time: str
 
 class HeartbeatRequest(BaseModel):
     username: str
@@ -321,7 +324,10 @@ def update_player(request: UpdatePlayerRequest, db: Session = Depends(get_db)):
 
     character.level = request.level
     character.experience = request.experience
+    character.copper = request.copper
+    character.silver = request.silver
     character.gold = request.gold
+    character.platinum = request.platinum
     character.last_logout_time = request.last_logout_time
 
     db.commit()
@@ -428,7 +434,12 @@ def get_players(username: str, token: str = Depends(oauth2_scheme), db: Session 
             "char_class": p.char_class,
             "level": p.level,
             "experience": p.experience,
-            "gold": p.gold,
+            "coins": {
+                "copper": p.copper,
+                "silver": p.silver,
+                "gold": p.gold,
+                "platinum": p.platinum
+            },
             "inventory": p.inventory,
             "equipment": p.equipment,
             "skills": p.skills,
@@ -478,14 +489,17 @@ def get_player_stats(requester_name: str, target_name: str = None, db: Session =
         "char_class": player.char_class,
         "level": player.level,
         "experience": player.experience,
-        "gold": player.gold,
+        "coins": {
+            "copper": player.copper,
+            "silver": player.silver,
+            "gold": player.gold,
+            "platinum": player.platinum
+        },
         "base_stats": player.stats if hasattr(player, "stats") else {},
         "total_stats": total_stats,
         "equipment": player.equipment,
         "is_muted": player.is_muted
     }
-
-
 
 @app.get("/chat/fetch")
 def fetch_chat_messages(since: float = Query(0.0), player_name: str = Query(...), db: Session = Depends(get_db)):

@@ -38,7 +38,7 @@ class MainGameScreen(BaseScreen):
             manager=self.manager
         )
         # Main Menu Buttons
-        button_labels = ["Inventory", "Equipment", "Quests", "Skills", "World Map", "Logout"]
+        button_labels = ["Inventory", "Battle", "Quests", "Skills", "World Map", "Logout"]
         self.menu_buttons = []
 
         for i, label in enumerate(button_labels):
@@ -92,7 +92,10 @@ class MainGameScreen(BaseScreen):
                         inventory_screen = ScreenRegistry.get("inventory")
                         if inventory_screen:
                             self.screen_manager.set_screen(inventory_screen(self.manager, self.screen_manager))
-                        # self.screen_manager.set_screen(InventoryScreen(self.manager, self.screen_manager))
+                    elif label == "Battle":
+                        battle_screen = ScreenRegistry.get("battle_home")
+                        if battle_screen:
+                            self.screen_manager.set_screen(battle_screen(self.manager, self.screen_manager))
                     elif label == "Logout":
                         self.screen_manager.force_logout("Logged out.")
                     else:
@@ -152,7 +155,8 @@ class MainGameScreen(BaseScreen):
     def claim_idle_rewards(self):
         if self.player.pending_idle_rewards:
             self.player.experience += self.player.pending_idle_rewards['xp']
-            self.player.gold += self.player.pending_idle_rewards['gold']
+            self.player.add_coins(0,0,self.player.pending_idle_rewards['gold'], 0)
+
             # Calculate offline duration
             offline_seconds = (datetime.datetime.now(datetime.UTC) - self.player.last_logout_time).total_seconds()
             minutes = int(offline_seconds // 60)

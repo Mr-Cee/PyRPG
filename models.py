@@ -27,7 +27,10 @@ class Player(Base):
     char_class = Column(String, nullable=False)
     level = Column(Integer, default=1)
     experience = Column(Integer, default=0)
-    gold = Column(Integer, default=0)  # ✅ Add this
+    copper = Column(Integer, default=0)
+    silver = Column(Integer, default=0)
+    gold = Column(Integer, default=0)
+    platinum = Column(Integer, default=0)
     last_logout_time = Column(String, nullable=True)  # ✅ Add this, store ISO string
     inventory = Column(JSONB, default=dict)
     equipment = Column(JSONB, default=dict)
