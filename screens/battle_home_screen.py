@@ -30,7 +30,6 @@ class BattleHomeScreen(BaseScreen):
             manager=manager
         )
 
-
         self.back_button = UIButton(
             relative_rect=Rect((100, 300), (200, 40)),
             text="Back",
