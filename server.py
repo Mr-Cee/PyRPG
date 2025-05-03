@@ -449,27 +449,27 @@ def get_player_stats(requester_name: str, target_name: str = None, db: Session =
         raise HTTPException(status_code=404, detail="Character not found.")
 
         # Build total_stats with gear bonuses
-        total_stats = player.stats.copy() if player.stats else {}
+    total_stats = player.stats.copy() if player.stats else {}
 
-        # Add equipment stat bonuses
-        if player.equipment:
-            for item in player.equipment.values():
-                if item and isinstance(item, dict):
-                    for stat, value in item.get("stats", {}).items():
-                        total_stats[stat] = total_stats.get(stat, 0) + value
+    # Add equipment stat bonuses
+    if player.equipment:
+        for item in player.equipment.values():
+            if item and isinstance(item, dict):
+                for stat, value in item.get("stats", {}).items():
+                    total_stats[stat] = total_stats.get(stat, 0) + value
 
-        # Derived stats
-        strength = total_stats.get("Strength", 0)
-        intelligence = total_stats.get("Intelligence", 0)
-        agility = total_stats.get("Dexterity", 0)
-        vitality = total_stats.get("Vitality", 0)
+    # Derived stats
+    strength = total_stats.get("Strength", 0)
+    intelligence = total_stats.get("Intelligence", 0)
+    agility = total_stats.get("Dexterity", 0)
+    vitality = total_stats.get("Vitality", 0)
 
-        total_stats["Bonus Damage"] = strength // 5
-        total_stats["Bonus Mana"] = intelligence // 5
-        total_stats["Bonus Health"] = vitality // 5
-        total_stats["Avoidance"] = agility // 10
-        total_stats["Health"] = 100 + vitality * 10
-        total_stats["Mana"] = 50 + intelligence * 5
+    total_stats["Bonus Damage"] = strength // 5
+    total_stats["Bonus Mana"] = intelligence // 5
+    total_stats["Bonus Health"] = vitality // 5
+    total_stats["Avoidance"] = agility // 10
+    total_stats["Health"] = 100 + vitality * 10
+    total_stats["Mana"] = 50 + intelligence * 5
 
     return {
         "name": player.name,
