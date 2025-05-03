@@ -255,13 +255,8 @@ class ChatWindow:
                 "min_role": "player",
                 "aliases": [],
                 "help": "Usage: /online\nShow who's currently online."
-            },
-            "stats": {
-                "func": self.cmd_stats,
-                "min_role": "player",
-                "aliases": [],
-                "help": "Usage: /stats [player_name]\nView your stats or another player's."
-            },
+            }
+
         }
 
     def _load_gm_commands(self):
@@ -282,6 +277,12 @@ class ChatWindow:
                 "min_role": "gm",
                 "help": "Usage: /report-resolve <case number>",
                 "params": ["case_id"]
+            },
+            "stats": {
+                "func": self.cmd_stats,
+                "min_role": "gm",
+                "aliases": [],
+                "help": "Usage: /stats [player_name]\nView your stats or another player's."
             }
         }
 
@@ -631,7 +632,7 @@ class ChatWindow:
 
         elif command in ("reports-view", "reports"):
             if self.player.role not in ("gm", "dev"):
-                self.log_message("[System] You do not have permission to use this command.", "System")
+                self.log_message("[System] You do not have permission to use this command.\nTry /report to generate a report or /myreports to see your reports", "System")
                 return
             try:
                 response = requests.get(f"{SERVER_URL}/reports_view")
@@ -649,7 +650,17 @@ class ChatWindow:
             min_role = "dev"
             if self.has_permission(min_role):
                 self.cmd_createitem(args)
+            else:
+                self.log_message("No Command Found", "System")
 
+            return
+
+        elif command == "stats":
+            min_role = "gm"
+            if self.has_permission(min_role):
+                self.cmd_stats(args)
+            else:
+                self.log_message("No Command Found", "System")
             return
 
         elif command in self.admin_commands:
