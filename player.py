@@ -89,6 +89,9 @@ class Player:
             self.chat_window.log(f"[Inventory] {item['name']} not found!", "Debug")
             return False
 
+    def recalculate_stats(self):
+        self.total_stats = self.calculate_total_stats()
+
     def calculate_total_stats(self):
         # Start with base stats
         total_stats = self.stats.copy()
@@ -98,6 +101,22 @@ class Player:
             if item and "stats" in item:
                 for stat, value in item["stats"].items():
                     total_stats[stat] = total_stats.get(stat, 0) + value
+
+        # Raw stats
+        strength = total_stats.get("Strength", 0)
+        intelligence = total_stats.get("Intelligence", 0)
+        agility = total_stats.get("Dexterity", 0)
+        vitality = total_stats.get("Vitality", 0)
+
+        # Derived bonuses
+        total_stats["Bonus Damage"] = strength // 5
+        total_stats["Bonus Mana"] = intelligence // 5
+        total_stats["Bonus Health"] = vitality // 5
+        total_stats["Avoidance"] = agility // 10
+
+        # Final calculated pools
+        total_stats["Health"] = 10 + vitality // 5  # Or however you want to base the starting HP
+        total_stats["Mana"] = 10 + intelligence // 5  # Similar logic
 
         return total_stats
 

@@ -228,6 +228,7 @@ class InventoryScreen(BaseScreen):
         )
 
     def refresh_stat_display(self):
+        print("test 1")
         self.player.recalculate_stats()
         stat_lines = []
         for stat, val in self.player.total_stats.items():
@@ -235,6 +236,7 @@ class InventoryScreen(BaseScreen):
             stat_lines.append(f"<b>{stat.title()}</b>: {val_display}")
         stats_html = "<br>".join(stat_lines)
         if hasattr(self, "stats_box"):
+            print("Test 2")
             self.stats_box.set_text(stats_html)
 
     def render_inventory_icons(self):
@@ -514,6 +516,7 @@ class InventoryScreen(BaseScreen):
                             self.render_inventory_icons()
                             self.sync_equipment_to_player()
                             self.player.save_stats_and_equipment()
+                            self.refresh_stat_display()
                             self._save_inventory()
                     return
 
@@ -538,6 +541,7 @@ class InventoryScreen(BaseScreen):
                         self.render_inventory_icons()
                         self.sync_equipment_to_player()
                         self.player.save_stats_and_equipment()
+                        self.refresh_stat_display()
                         self._save_inventory()
                     return
             self.refresh_stat_display()
