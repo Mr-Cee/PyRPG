@@ -41,10 +41,12 @@ class QuickBattleScreen(BaseScreen):
         # Setup combatants
         self.enemy = {
             "name": "Slime",
-            "hp": 50,
-            "max_hp": 50,
+            "hp": 25,
+            "max_hp": 25,
             "damage": 5,
-            "speed": 1.0
+            "speed": 1.0,
+            "reward_xp": 10,
+            "reward_copper": 50
         }
 
         self.player_hp = self.player.total_stats.get("Health", 100)
@@ -123,6 +125,20 @@ class QuickBattleScreen(BaseScreen):
         if self.enemy["hp"] <= 0:
             self.add_log(f"{self.enemy['name']} is defeated!")
             self.battle_running = False
+
+            # Apply rewards
+            xp = self.enemy.get("reward_xp", 0)
+            copper = self.enemy.get("reward_copper", 0)
+
+            self.player.gain_experience(xp)
+            self.player.add_coins(copper_amount=copper)
+
+            self.add_log(f"You gain {xp} XP and {copper} copper.")
+
+            # Sync to server
+            if self.player.auth_token:
+                self.player.sync_coins_to_server(self.player.auth_token)
+                self.player.save_to_server(self.player.auth_token)
             return
 
         # Enemy attacks
