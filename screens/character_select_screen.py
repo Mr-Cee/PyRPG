@@ -259,6 +259,8 @@ class CharacterSelectScreen(BaseScreen):
                     for char in self.character_data:
                         if char["name"] == selected_name:
                             self.screen_manager.player = Player.from_server_data(char)
+                            self.screen_manager.player.refresh_stats_and_level()
+                            self.screen_manager.player.recalculate_stats()
                             self.screen_manager.player.auth_token = self.screen_manager.auth_token
                             try:
                                 response = requests.post(

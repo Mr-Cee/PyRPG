@@ -6,6 +6,7 @@ import requests
 import pygame
 import pygame_gui
 import datetime
+
 from screens.login_screen import LoginScreen
 from pyexpat.errors import messages
 
@@ -27,11 +28,12 @@ ROLE_HIERARCHY = {
 from settings import SERVER_URL
 
 class ChatWindow:
-    def __init__(self, manager, player, screen_manager, container=None):
+    def __init__(self, manager, player, screen_manager, container=None, inventory_screen=None):
         self.player = player
         self.manager = manager
         self.screen_manager = screen_manager
         self.container = container
+        self.inventory_screen = inventory_screen
 
         self.tabs = ["All", "Chat", "System", "Combat"]
         if self.player.role in ("gm", "dev"):
@@ -666,6 +668,7 @@ class ChatWindow:
             if self.has_permission(min_role):
                 self.cmd_addexperience(*args)
                 self.player.refresh_stats_and_level()
+
             else:
                 self.log_message("No Command Found", "System")
 
@@ -833,6 +836,10 @@ class ChatWindow:
             self.player.gain_experience(amount)
             self.player.save_to_server(self.player.auth_token)
             self.log_message(f"[Dev] You gained {amount} experience!", "System")
+            # Refresh inventory stat display if visible
+            if self.inventory_screen and hasattr(self.inventory_screen, "refresh_stat_display"):
+                print("test")
+                self.inventory_screen.refresh_stat_display()
         else:
             try:
                 response = requests.post(

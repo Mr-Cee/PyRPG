@@ -20,6 +20,7 @@ class Player:
             "gold": 0,
             "platinum": 0
         }
+        self._coin_update_callbacks = []
         self.inventory = inventory if inventory else []
         self.INVENTORY_SIZE = 49
         self.equipment = equipment if equipment else {
@@ -80,7 +81,6 @@ class Player:
         self.level += 1
         self.stats["base_health"] += 5
         self.stats["base_mana"] += 5
-        print(f"HP: {self.stats["base_health"]}")
         self.recalculate_stats()
         self.save_stats_and_equipment()
         if self.chat_window:
@@ -218,6 +218,7 @@ class Player:
         self.coins["gold"] %= 100
 
         self.sync_coins_to_server(self.auth_token)
+        self._notify_coin_update()
 
     def add_coins(self, copper_amount, silver_amount=None, gold_amount=None, platinum_amount=None):
         if copper_amount:
@@ -297,6 +298,13 @@ class Player:
                 print(f"[Sync Coins] Failed to sync coins: {response.status_code} - {response.text}")
         except Exception as e:
             print(f"[Sync Coins] Error: {e}")
+
+    def register_coin_update_callback(self, callback_fn):
+        self._coin_update_callbacks.append(callback_fn)
+
+    def _notify_coin_update(self):
+        for callback in self._coin_update_callbacks:
+            callback()
 
     def list_inventory(self):
         """Debug: List all items in the inventory."""

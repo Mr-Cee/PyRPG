@@ -63,9 +63,9 @@ class InventoryScreen(BaseScreen):
             manager=self.manager
         )
 
-        self.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
-        self.chat_window.panel.set_relative_position((10, 480))
-        self.chat_window.panel.set_dimensions((400, 220))
+        self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager, container=None, inventory_screen=self)
+        self.player.chat_window.panel.set_relative_position((10, 480))
+        self.player.chat_window.panel.set_dimensions((400, 220))
 
 
         self.setup_character_sheet()
@@ -134,6 +134,12 @@ class InventoryScreen(BaseScreen):
             manager=self.manager
         )
         self.hover_tooltip_box.hide()
+
+        self.coin_label = pygame_gui.elements.UILabel(
+            relative_rect=Rect((self.grid_origin_x, self.grid_origin_y + self.container_height + 5), (180, 30)),
+            text=f"Coins: {self.player.format_coins()}",
+            manager=self.manager
+        )
 
     def setup_character_sheet(self):
         self.equip_slot_size = 44
@@ -226,9 +232,9 @@ class InventoryScreen(BaseScreen):
             manager=self.manager,
             container=self.char_panel
         )
+        self.refresh_stat_display()
 
     def refresh_stat_display(self):
-        print("test 1")
         self.player.recalculate_stats()
         stat_lines = []
         for stat, val in self.player.total_stats.items():
@@ -236,8 +242,11 @@ class InventoryScreen(BaseScreen):
             stat_lines.append(f"<b>{stat.title()}</b>: {val_display}")
         stats_html = "<br>".join(stat_lines)
         if hasattr(self, "stats_box"):
-            print("Test 2")
             self.stats_box.set_text(stats_html)
+
+    def refresh_coin_display(self):
+        if hasattr(self, "coin_label"):
+            self.coin_label.set_text(f"Coins: {self.player.format_coins()}")
 
     def render_inventory_icons(self):
         # Clear existing icons first
@@ -314,9 +323,11 @@ class InventoryScreen(BaseScreen):
     def teardown(self):
         self.back_button.kill()
         self.title_label.kill()
-        if self.chat_window:
-            self.chat_window.teardown()
-            self.chat_window = None
+        if self.player.chat_window:
+            self.player.chat_window.teardown()
+            self.player.chat_window = None
+        if hasattr(self, "coin_label"):
+            self.coin_label.kill()
 
         ####### Inventory #######
         for btn in self.inventory_slots:
@@ -546,8 +557,8 @@ class InventoryScreen(BaseScreen):
                     return
             self.refresh_stat_display()
 
-        if self.chat_window:
-            self.chat_window.process_event(event)
+        if self.player.chat_window:
+            self.player.chat_window.process_event(event)
 
     def update(self, time_delta):
         mouse_pos = pygame.mouse.get_pos()
@@ -632,8 +643,8 @@ class InventoryScreen(BaseScreen):
         else:
             self.equip_tooltip_box.hide()
 
-        if hasattr(self, "chat_window"):
-            self.chat_window.update(time_delta)
+        if self.player.chat_window:
+            self.player.chat_window.update(time_delta)
 
     def draw(self, window_surface):
 
