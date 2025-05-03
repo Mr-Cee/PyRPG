@@ -69,6 +69,8 @@ class Player:
             self.experience -= self.get_exp_to_next_level()
             self.level_up()
 
+        self.sync_coins_to_server(self.auth_token) # this function just saves everything
+
     def get_exp_to_next_level(self):
         return self.level * 25
 
@@ -78,6 +80,22 @@ class Player:
         self.stats["Mana"] += 5
         if self.chat_window:
             self.chat_window.log(f"[Level Up] {self.name} reached level {self.level}!", "System")
+
+    def refresh_stats_and_level(self):
+        try:
+            response = requests.get(
+                f"{SERVER_URL}/player_stats",
+                params={"requester_name": self.name},
+                timeout=5
+            )
+            if response.status_code == 200:
+                data = response.json()
+                self.level = data.get("level", self.level)
+                self.experience = data.get("experience", self.experience)
+                self.stats = data.get("base_stats", self.stats)
+                self.total_stats = data.get("total_stats", self.total_stats)
+        except Exception as e:
+            print(f"[Refresh Stats] Error: {e}")
 
     def add_to_inventory(self, item):
         """Adds an item to the inventory if space is available."""

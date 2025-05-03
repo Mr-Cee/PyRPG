@@ -134,13 +134,22 @@ def background_cleanup_thread():
 
         time.sleep(60)  # Run every 60 seconds
 
-def apply_experience_and_level_up(player: Player, xp_gain: int):
+def apply_experience_and_level_up(player: Player, xp_gain: int, db: Session = Depends(get_db)):
     player.experience += xp_gain
     while player.experience >= player.level * 25:
         player.experience -= player.level * 25
         player.level += 1
         player.stats["Health"] += 5
         player.stats["Mana"] += 5
+
+        system_msg = models.ChatMessage(
+            sender="System",
+            recipient=player.name,
+            message=f"You leveled up to {player.level}! (+5 Health, +5 Mana)",
+            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+            type="System"
+        )
+        db.add(system_msg)
 
 @app.on_event("startup")
 def start_background_cleanup():
@@ -386,7 +395,22 @@ def add_experience(payload: dict, db: Session = Depends(get_db)):
     apply_experience_and_level_up(target_player, amount)
     db.commit()
 
-    return {"success": True, "message": f"{target} gained {amount} experience (level: {target_player.level})."}
+    system_msg = models.ChatMessage(
+        sender="System",
+        recipient=target_player.name,
+        message=f"You gained {amount} XP! Your new level is {target_player.level}.",
+        timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+        type="System"
+    )
+    db.add(system_msg)
+
+    return {
+        "success": True,
+        "message": f"{target} gained {amount} XP (level: {target_player.level}).",
+        "level": target_player.level,
+        "experience": target_player.experience,
+        "stats": target_player.stats
+    }
 
 @app.post("/chat/send")
 def send_chat_message(chat: ChatMessage):

@@ -664,7 +664,8 @@ class ChatWindow:
         elif command == "addexperience":
             min_role = "dev"
             if self.has_permission(min_role):
-                self.cmd_addexperience(args)
+                self.cmd_addexperience(*args)
+                self.player.refresh_stats_and_level()
             else:
                 self.log_message("No Command Found", "System")
 
