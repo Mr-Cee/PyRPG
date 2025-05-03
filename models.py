@@ -31,6 +31,7 @@ class Player(Base):
     last_logout_time = Column(String, nullable=True)  # ✅ Add this, store ISO string
     inventory = Column(JSONB, default=dict)
     equipment = Column(JSONB, default=dict)
+    stats = Column(JSONB, default=dict)
     skills = Column(JSONB, default=dict)
     is_active = Column(Boolean, default=False)
     is_muted = Column(Boolean, default=False)

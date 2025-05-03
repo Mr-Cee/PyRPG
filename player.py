@@ -135,6 +135,19 @@ class Player:
                 return False
         return False
 
+    def save_stats_and_equipment(self):
+        try:
+            payload = {
+                "character_name": self.name,
+                "stats": self.stats,
+                "equipment": self.equipment
+            }
+            response = requests.post(f"{SERVER_URL}/stats_equipment/update", json=payload, timeout=5)
+            if response.status_code != 200:
+                print(f"[Sync] Failed to save stats/equipment: {response.status_code}: {response.text}")
+        except Exception as e:
+            print(f"[Sync] Error saving stats/equipment: {e}")
+
     def list_inventory(self):
         """Debug: List all items in the inventory."""
         print("\n-- Inventory --")

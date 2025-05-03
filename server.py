@@ -88,6 +88,12 @@ class InventoryUpdateRequest(BaseModel):
     character_name: str
     inventory: list
 
+class StatEquipUpdateRequest(BaseModel):
+    character_name: str
+    stats: dict
+    equipment: dict
+
+
 def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
     to_encode = data.copy()
     expire = datetime.datetime.utcnow() + (expires_delta or datetime.timedelta(minutes=15))
@@ -333,6 +339,17 @@ def update_inventory(request: InventoryUpdateRequest, db: Session = Depends(get_
     db.commit()
 
     return {"success": True, "message": f"Inventory updated for {request.character_name}."}
+
+@app.post("/stats_equipment/update")
+def update_stats_and_equipment(request: StatEquipUpdateRequest, db: Session = Depends(get_db)):
+    player = db.query(Player).filter_by(name=request.character_name).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Character not found.")
+
+    player.stats = request.stats
+    player.equipment = request.equipment
+    db.commit()
+    return {"success": True, "message": f"Stats and equipment updated for {request.character_name}."}
 
 @app.post("/chat/send")
 def send_chat_message(chat: ChatMessage):

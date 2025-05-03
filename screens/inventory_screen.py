@@ -463,6 +463,7 @@ class InventoryScreen(BaseScreen):
                 self.dragging_item = None
                 self.dragging_index = None
 
+                self.player.save_stats_and_equipment()
                 self.refresh_stat_display()
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
@@ -487,6 +488,7 @@ class InventoryScreen(BaseScreen):
                                 equipped_item["slot"] = i
 
                             self.render_inventory_icons()
+                            self.player.save_stats_and_equipment()
                             self._save_inventory()
                     return
 
@@ -509,6 +511,7 @@ class InventoryScreen(BaseScreen):
 
                         equipped_item["slot"] = free_slots[0]  # Move back to inventory
                         self.render_inventory_icons()
+                        self.player.save_stats_and_equipment()
                         self._save_inventory()
                     return
             self.refresh_stat_display()
