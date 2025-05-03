@@ -357,6 +357,29 @@ class InventoryScreen(BaseScreen):
         except Exception as e:
             print(f"[Inventory] Failed to update inventory: {e}")
 
+    def sync_equipment_to_player(self):
+        self.player.equipment = {
+            "head": None,
+            "shoulders": None,
+            "chest": None,
+            "gloves": None,
+            "legs": None,
+            "boots": None,
+            "primary": None,
+            "secondary": None,
+            "amulet": None,
+            "ring": None,
+            "bracelet": None,
+            "belt": None
+        }
+
+        for item in self.inventory_data:
+            slot = item.get("slot")
+            if isinstance(slot, str) and slot.startswith("equipped:"):
+                subtype = slot.split(":")[1]
+                if subtype in self.player.equipment:
+                    self.player.equipment[subtype] = item
+
     def handle_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.back_button:
@@ -463,6 +486,7 @@ class InventoryScreen(BaseScreen):
                 self.dragging_item = None
                 self.dragging_index = None
 
+                self.sync_equipment_to_player()
                 self.player.save_stats_and_equipment()
                 self.refresh_stat_display()
 
@@ -488,6 +512,7 @@ class InventoryScreen(BaseScreen):
                                 equipped_item["slot"] = i
 
                             self.render_inventory_icons()
+                            self.sync_equipment_to_player()
                             self.player.save_stats_and_equipment()
                             self._save_inventory()
                     return
@@ -511,6 +536,7 @@ class InventoryScreen(BaseScreen):
 
                         equipped_item["slot"] = free_slots[0]  # Move back to inventory
                         self.render_inventory_icons()
+                        self.sync_equipment_to_player()
                         self.player.save_stats_and_equipment()
                         self._save_inventory()
                     return

@@ -448,16 +448,28 @@ def get_player_stats(requester_name: str, target_name: str = None, db: Session =
     if not player:
         raise HTTPException(status_code=404, detail="Character not found.")
 
+    # Recalculate total_stats from equipment
+    total_stats = player.stats.copy() if player.stats else {}
+
+    if player.equipment:
+        for item in player.equipment.values():
+            if item and isinstance(item, dict):
+                for stat, value in item.get("stats", {}).items():
+                    total_stats[stat] = total_stats.get(stat, 0) + value
+
     return {
         "name": player.name,
         "char_class": player.char_class,
         "level": player.level,
         "experience": player.experience,
         "gold": player.gold,
-        "stats": player.stats if hasattr(player, "stats") else {},
+        "base_stats": player.stats if hasattr(player, "stats") else {},
+        "total_stats": total_stats,
         "equipment": player.equipment,
         "is_muted": player.is_muted
     }
+
+
 
 @app.get("/chat/fetch")
 def fetch_chat_messages(since: float = Query(0.0), player_name: str = Query(...), db: Session = Depends(get_db)):
