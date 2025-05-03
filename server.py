@@ -468,8 +468,8 @@ def get_player_stats(requester_name: str, target_name: str = None, db: Session =
     total_stats["Bonus Mana"] = intelligence // 5
     total_stats["Bonus Health"] = vitality // 5
     total_stats["Avoidance"] = agility // 10
-    total_stats["Health"] = 100 + vitality * 10
-    total_stats["Mana"] = 50 + intelligence * 5
+    total_stats["Health"] = 10 + vitality // 5
+    total_stats["Mana"] = 10 + intelligence // 5
 
     return {
         "name": player.name,
