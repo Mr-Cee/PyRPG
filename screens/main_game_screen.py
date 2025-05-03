@@ -118,8 +118,8 @@ class MainGameScreen(BaseScreen):
         self.player.update_heartbeat(time_delta)
 
         self.idle_timer += time_delta
-        if self.idle_timer >= 5.0:
-            self.player.add_coins(1)
+        if self.idle_timer >= 2.0:
+            self.player.add_coins(50)
             print(self.player.format_coins())
             self.idle_timer = 0
 

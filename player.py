@@ -176,13 +176,13 @@ class Player:
             print(f"[Sync] Error saving stats/equipment: {e}")
 
     def condense_coins(self):
-        self.coins["silver"] = self.coins["copper"] // 100
+        self.coins["silver"] += self.coins["copper"] // 100
         self.coins["copper"] %= 100
 
-        self.coins["gold"] = self.coins["silver"] // 100
+        self.coins["gold"] += self.coins["silver"] // 100
         self.coins["silver"] %= 100
 
-        self.coins["platinum"] = self.coins["gold"] // 100
+        self.coins["platinum"] += self.coins["gold"] // 100
         self.coins["gold"] %= 100
 
         self.sync_coins_to_server(self.auth_token)
