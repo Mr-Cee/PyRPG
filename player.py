@@ -7,6 +7,7 @@ from settings import SERVER_URL, CLIENT_VERSION  # or wherever your server runs
 
 class Player:
     def __init__(self, name, char_class, level=1, experience=0, inventory=None, equipment=None, skills=None, username=None, role="player"):
+        self.auth_token = None
         self.role = role
         self.username = username
         self.name = name
@@ -184,6 +185,8 @@ class Player:
         self.coins["platinum"] = self.coins["gold"] // 100
         self.coins["gold"] %= 100
 
+        self.sync_coins_to_server(self.auth_token)
+
     def add_coins(self, copper_amount, silver_amount=None, gold_amount=None, platinum_amount=None):
         if copper_amount:
             self.coins["copper"] += copper_amount
@@ -193,6 +196,8 @@ class Player:
             self.coins["gold"] += gold_amount
         if platinum_amount:
             self.coins["platinum"] += platinum_amount
+
+        print(f"Added {copper_amount}c, {silver_amount}s, {gold_amount}g, {platinum_amount}p")
 
         self.condense_coins()
 
@@ -240,6 +245,28 @@ class Player:
 
     def format_coins(self):
         return f"{self.coins['platinum']}p {self.coins['gold']}g {self.coins['silver']}s {self.coins['copper']}c"
+
+    def sync_coins_to_server(self, auth_token):
+        try:
+            headers = {
+                "Authorization": f"Bearer {auth_token}"
+            }
+            payload = {
+                "username": self.username,
+                "name": self.name,
+                "level": self.level,  # included just to fulfill the UpdatePlayerRequest
+                "experience": self.experience,
+                "copper": self.coins["copper"],
+                "silver": self.coins["silver"],
+                "gold": self.coins["gold"],
+                "platinum": self.coins["platinum"],
+                "last_logout_time": self.last_logout_time.isoformat() if self.last_logout_time else datetime.datetime.utcnow().isoformat()
+            }
+            response = requests.post(f"{SERVER_URL}/update_player", json=payload, headers=headers, timeout=5)
+            if response.status_code != 200:
+                print(f"[Sync Coins] Failed to sync coins: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"[Sync Coins] Error: {e}")
 
     def list_inventory(self):
         """Debug: List all items in the inventory."""

@@ -259,6 +259,7 @@ class CharacterSelectScreen(BaseScreen):
                     for char in self.character_data:
                         if char["name"] == selected_name:
                             self.screen_manager.player = Player.from_server_data(char)
+                            self.screen_manager.player.auth_token = self.screen_manager.auth_token
                             try:
                                 response = requests.post(
                                     f"{SERVER_URL}/set_active_character",

@@ -119,7 +119,8 @@ class MainGameScreen(BaseScreen):
 
         self.idle_timer += time_delta
         if self.idle_timer >= 5.0:
-            self.player.gold += 1  # ✅ Add to real player gold
+            self.player.add_coins(1)
+            print(self.player.format_coins())
             self.idle_timer = 0
 
 
