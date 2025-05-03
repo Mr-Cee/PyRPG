@@ -120,7 +120,6 @@ class MainGameScreen(BaseScreen):
         self.idle_timer += time_delta
         if self.idle_timer >= 2.0:
             self.player.add_coins(50)
-            print(self.player.format_coins())
             self.idle_timer = 0
 
         if self.player.pending_idle_rewards and not self.idle_chest_popup_open:

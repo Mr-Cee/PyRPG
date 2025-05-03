@@ -534,8 +534,8 @@ def get_player_stats(requester_name: str, target_name: str = None, db: Session =
     total_stats["Bonus Mana"] = intelligence // 5
     total_stats["Bonus Health"] = vitality // 5
     total_stats["Avoidance"] = dexterity // 10
-    total_stats["Health"] = 10 + vitality // 5
-    total_stats["Mana"] = 10 + intelligence // 5
+    total_stats["Health"] = total_stats["base_health"] + vitality // 5
+    total_stats["Mana"] = total_stats["base_mana"] + intelligence // 5
     total_stats["Avoidance"] = intelligence // 10
     total_stats["Dodge"] = dexterity // 10
 

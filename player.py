@@ -80,6 +80,7 @@ class Player:
         self.level += 1
         self.stats["base_health"] += 5
         self.stats["base_mana"] += 5
+        print(f"HP: {self.stats["base_health"]}")
         self.recalculate_stats()
         self.save_stats_and_equipment()
         if self.chat_window:
@@ -227,8 +228,6 @@ class Player:
             self.coins["gold"] += gold_amount
         if platinum_amount:
             self.coins["platinum"] += platinum_amount
-
-        print(f"Added {copper_amount}c, {silver_amount}s, {gold_amount}g, {platinum_amount}p")
 
         self.condense_coins()
 
