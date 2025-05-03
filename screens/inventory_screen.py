@@ -1,3 +1,6 @@
+import math
+import time
+import pygame.gfxdraw
 import pygame
 import pygame_gui
 from pygame import Rect
@@ -208,6 +211,32 @@ class InventoryScreen(BaseScreen):
         )
         self.equip_tooltip_box.hide()
 
+        self._create_stat_display()
+
+    def _create_stat_display(self):
+        stat_lines = []
+        for stat, val in self.player.total_stats.items():
+            val_display = f"{val:.1f}%" if isinstance(val, float) else str(val)
+            stat_lines.append(f"<b>{stat.title()}</b>: {val_display}")
+        stats_html = "<br>".join(stat_lines)
+
+        self.stats_box = pygame_gui.elements.UITextBox(
+            html_text=stats_html,
+            relative_rect=Rect((68, 120), (190, 200)),
+            manager=self.manager,
+            container=self.char_panel
+        )
+
+    def refresh_stat_display(self):
+        self.player.recalculate_stats()
+        stat_lines = []
+        for stat, val in self.player.total_stats.items():
+            val_display = f"{val:.1f}%" if isinstance(val, float) else str(val)
+            stat_lines.append(f"<b>{stat.title()}</b>: {val_display}")
+        stats_html = "<br>".join(stat_lines)
+        if hasattr(self, "stats_box"):
+            self.stats_box.set_text(stats_html)
+
     def render_inventory_icons(self):
         # Clear existing icons first
         for icon in self.slot_icons:
@@ -228,13 +257,27 @@ class InventoryScreen(BaseScreen):
             else:
                 continue
 
-            # Render icon
             try:
                 icon_surface = pygame.image.load(item["icon"]).convert_alpha()
-                icon_surface = pygame.transform.scale(icon_surface, (42, 42))
+                icon_surface = pygame.transform.scale(icon_surface, (40, 40))  # Slightly smaller to fit in border
+
+                # Get rarity color
+                rarity = item.get("rarity", "Common")
+                color_hex = rarity_colors.get(rarity, "#ffffff")
+                color_rgb = pygame.Color(color_hex)
+
+                # Create border surface (44x44) and fill with border color
+                border_surface = pygame.Surface((44, 44), pygame.SRCALPHA)
+                border_surface.fill((0, 0, 0, 0))  # transparent background
+                pygame.draw.rect(border_surface, color_rgb, pygame.Rect(0, 0, 44, 44), border_radius=4)
+
+                # Blit icon onto border surface (centered)
+                border_surface.blit(icon_surface, (2, 2))  # offset to center
+
+                # Create UIImage using the final composite
                 icon = pygame_gui.elements.UIImage(
                     relative_rect=pygame.Rect((1, 1), (42, 42)),
-                    image_surface=icon_surface,
+                    image_surface=border_surface,
                     manager=self.manager,
                     container=container,
                 )
@@ -242,6 +285,29 @@ class InventoryScreen(BaseScreen):
                 self.slot_icons.append(icon)
             except Exception as e:
                 print(f"[Inventory] Failed to render icon for {item['name']}: {e}")
+
+    def draw_item_auras(self, surface):
+        for icon in self.slot_icons:
+            rarity = next((item["rarity"] for item in self.inventory_data if item["slot"] == icon.slot_index), None)
+            if rarity not in ("Legendary", "Mythical"):
+                continue  # Skip if not glow-worthy
+
+            color_hex = rarity_colors.get(rarity)
+            if not color_hex:
+                continue
+
+            glow_color = pygame.Color(color_hex)
+            glow_color.a = 0  # We'll handle alpha manually
+
+            icon_rect = icon.get_abs_rect()
+            icon_center = icon_rect.center
+
+            for i in range(8):  # Number of blur layers
+                alpha = max(0, 60 - i * 7)  # Strong center, fading out
+                radius = 18 + i * 2  # Increasing blur radius
+                aura_surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+                pygame.draw.circle(aura_surface, (*glow_color[:3], alpha), (radius, radius), radius)
+                surface.blit(aura_surface, (icon_center[0] - radius, icon_center[1] - radius))
 
     def teardown(self):
         self.back_button.kill()
@@ -397,6 +463,8 @@ class InventoryScreen(BaseScreen):
                 self.dragging_item = None
                 self.dragging_index = None
 
+                self.refresh_stat_display()
+
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
             mouse_pos = pygame.mouse.get_pos()
 
@@ -443,6 +511,7 @@ class InventoryScreen(BaseScreen):
                         self.render_inventory_icons()
                         self._save_inventory()
                     return
+            self.refresh_stat_display()
 
         if self.chat_window:
             self.chat_window.process_event(event)
@@ -534,7 +603,10 @@ class InventoryScreen(BaseScreen):
             self.chat_window.update(time_delta)
 
     def draw(self, window_surface):
+
+
         self.manager.draw_ui(window_surface)
+        self.draw_item_auras(window_surface)
 
         if self.dragging_item:
             mx, my = pygame.mouse.get_pos()

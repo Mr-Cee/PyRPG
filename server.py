@@ -422,6 +422,26 @@ def get_players(username: str, token: str = Depends(oauth2_scheme), db: Session 
 
     return player_list
 
+@app.get("/player_stats")
+def get_player_stats(requester_name: str, target_name: str = None, db: Session = Depends(get_db)):
+    if target_name is None:
+        target_name = requester_name
+
+    player = db.query(Player).filter_by(name=target_name).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Character not found.")
+
+    return {
+        "name": player.name,
+        "char_class": player.char_class,
+        "level": player.level,
+        "experience": player.experience,
+        "gold": player.gold,
+        "stats": player.stats if hasattr(player, "stats") else {},
+        "equipment": player.equipment,
+        "is_muted": player.is_muted
+    }
+
 @app.get("/chat/fetch")
 def fetch_chat_messages(since: float = Query(0.0), player_name: str = Query(...), db: Session = Depends(get_db)):
     messages = (

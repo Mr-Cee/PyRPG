@@ -255,7 +255,13 @@ class ChatWindow:
                 "min_role": "player",
                 "aliases": [],
                 "help": "Usage: /online\nShow who's currently online."
-            }
+            },
+            "stats": {
+                "func": self.cmd_stats,
+                "min_role": "player",
+                "aliases": [],
+                "help": "Usage: /stats [player_name]\nView your stats or another player's."
+            },
         }
 
     def _load_gm_commands(self):
@@ -883,4 +889,35 @@ class ChatWindow:
                 self.log_message(f"[Admin] {data.get('error')}", "System")
         except Exception:
             self.log_message("[Error] Could not contact server.", "System")
+
+    def cmd_stats(self, *args):
+        target = args[0] if args else self.player.name
+
+        try:
+            response = requests.get(
+                f"{SERVER_URL}/player_stats",
+                params={"requester_name": self.player.name, "target_name": target},
+                timeout=5
+            )
+            if response.status_code != 200:
+                self.log_message(f"[Stats] Could not fetch stats for {target}.", "System")
+                return
+
+            data = response.json()
+            self.log_message(f"[Stats for {data['name']} - Level {data['level']} {data['char_class']}]", "System")
+            self.log_message(f"Gold: {data['gold']}", "System")
+
+            stats = data.get("stats", {})
+            for stat, val in stats.items():
+                self.log_message(f"  {stat.capitalize()}: {val}", "System")
+
+            equipment = data.get("equipment", {})
+            if equipment:
+                self.log_message("Equipment:", "System")
+                for slot, item in equipment.items():
+                    if item:
+                        self.log_message(f"  {slot}: {item.get('name', 'Unknown')}", "System")
+
+        except Exception as e:
+            self.log_message(f"[Error] Failed to fetch stats: {e}", "System")
 

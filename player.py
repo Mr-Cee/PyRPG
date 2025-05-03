@@ -32,15 +32,23 @@ class Player:
         }
         self.skills = skills if skills else {}
 
+
         self.stats = {
+            "Health": 10,
+            "Mana": 10,
             "Strength": 5,
             "Dexterity": 5,
             "Intelligence": 5,
-            "Vitality": 5
+            "Vitality": 5,
+            "Critical Chance": 0,
+            "Critical Damage": 0,
+            "Armor": 0,
+            "Block": 0,
+            "Dodge": 0
         }
+        self.total_stats = self.calculate_total_stats()
 
         self.chat_window = None
-
 
         self.last_heartbeat_time = 0
         self.heartbeat_interval = 30  # seconds
@@ -81,51 +89,51 @@ class Player:
             self.chat_window.log(f"[Inventory] {item['name']} not found!", "Debug")
             return False
 
+    def calculate_total_stats(self):
+        # Start with base stats
+        total_stats = self.stats.copy()
+
+        # Add bonuses from equipped items
+        for item in self.equipment.values():
+            if item and "stats" in item:
+                for stat, value in item["stats"].items():
+                    total_stats[stat] = total_stats.get(stat, 0) + value
+
+        return total_stats
+
     def equip_item(self, item):
-        """Equips an item from inventory to equipment slots."""
         subtype = item.get("subtype")
-        item_type = item.get("type")
-
-        if not subtype:
-            self.chat_window.log(f"[Equip] Item missing subtype!", "Debug")
+        if not subtype or subtype not in self.equipment:
+            self.chat_window.log(f"[Equip] Invalid slot or missing subtype!", "Debug")
             return False
 
-        # Verify that the slot exists
-        if subtype not in self.equipment:
-            self.chat_window.log(f"[Equip] No equipment slot for {subtype}.", "Debug")
-            return False
-
-        # Remove item from inventory
         if not self.remove_from_inventory(item):
             return False
 
-        # If an item is already equipped, move it back to inventory
         if self.equipment[subtype]:
             self.add_to_inventory(self.equipment[subtype])
 
-        # Equip new item
         self.equipment[subtype] = item
+        self.total_stats = self.calculate_total_stats()  # <- Update here
         self.chat_window.log(f"[Equip] Equipped {item['name']} to {subtype} slot.", "System")
         return True
 
     def unequip_item(self, slot):
-        """Unequips an item from a given equipment slot back into inventory."""
         if slot not in self.equipment:
-            self.chat_window.log(f"[Unequip] No such equipment slot: {slot}", "Debug")
+            self.chat_window.log(f"[Unequip] Invalid slot: {slot}", "Debug")
             return False
 
         equipped_item = self.equipment.get(slot)
         if equipped_item:
             if self.add_to_inventory(equipped_item):
                 self.equipment[slot] = None
-                self.chat_window.log(f"[Unequip] Moved {equipped_item['name']} back to inventory.", "System")
+                self.total_stats = self.calculate_total_stats()  # <- Update here
+                self.chat_window.log(f"[Unequip] Removed {equipped_item['name']} from {slot}.", "System")
                 return True
             else:
-                self.chat_window.log("[Unequip] Inventory full. Cannot unequip item.", "System")
+                self.chat_window.log("[Unequip] Inventory full.", "System")
                 return False
-        else:
-            self.chat_window.log("[Unequip] No item equipped in that slot.", "Debug")
-            return False
+        return False
 
     def list_inventory(self):
         """Debug: List all items in the inventory."""
