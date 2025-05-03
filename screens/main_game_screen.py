@@ -23,9 +23,9 @@ class MainGameScreen(BaseScreen):
         self.player.last_logout_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=10)
         self.player.calculate_idle_rewards()
 
-        self.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
-        self.chat_window.panel.set_relative_position((10, 480))
-        self.chat_window.panel.set_dimensions((400, 220))
+        self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
+        self.player.chat_window.panel.set_relative_position((10, 480))
+        self.player.chat_window.panel.set_dimensions((400, 220))
 
         self.logout_button = pygame_gui.elements.UIButton(
             relative_rect=pygame.Rect((1050, 650), (200, 50)),
@@ -60,9 +60,9 @@ class MainGameScreen(BaseScreen):
         self.logout_button.kill()
         if self.idle_chest_window:
             self.idle_chest_window.kill()
-        if self.chat_window:
-            self.chat_window.teardown()
-            self.chat_window = None
+        if self.player.chat_window:
+            self.player.chat_window.teardown()
+            self.player.chat_window = None
         if self.player:
             self.player.stop_heartbeat()
         self.menu_panel.kill()
@@ -108,8 +108,8 @@ class MainGameScreen(BaseScreen):
             if self.idle_chest_window and event.ui_element == self.idle_chest_window:
                 self.claim_idle_rewards()
 
-        if self.chat_window:
-            self.chat_window.process_event(event)
+        if self.player.chat_window:
+            self.player.chat_window.process_event(event)
 
 
     def update(self, time_delta):
@@ -129,7 +129,7 @@ class MainGameScreen(BaseScreen):
         if hasattr(self, "idle_chest_button") and self.idle_chest_button:
             self.idle_chest_button.set_image(self.chest_icon)
 
-        self.chat_window.update(time_delta)
+        self.player.chat_window.update(time_delta)
 
     def draw(self, window_surface):
         self.manager.draw_ui(window_surface)
@@ -167,7 +167,7 @@ class MainGameScreen(BaseScreen):
 
             # Log to chat (client-side only)
             reward_summary = f"[Idle Rewards] You were offline for {minutes}m {seconds}s and earned {xp} XP and {gold} Gold."
-            self.chat_window.log_message(reward_summary, "System")
+            self.player.chat_window.log_message(reward_summary, "System")
             self.player.pending_idle_rewards = None
 
 

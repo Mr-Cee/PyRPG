@@ -42,6 +42,8 @@ class Player:
         self.stats = {
             "Health": 10,
             "Mana": 10,
+            "base_health": 10,
+            "base_mana": 10,
             "Strength": 5,
             "Dexterity": 5,
             "Intelligence": 5,
@@ -69,17 +71,19 @@ class Player:
             self.experience -= self.get_exp_to_next_level()
             self.level_up()
 
-        self.sync_coins_to_server(self.auth_token) # this function just saves everything
+        self.sync_coins_to_server(self.auth_token)  # this function just saves everything
 
     def get_exp_to_next_level(self):
         return self.level * 25
 
     def level_up(self):
         self.level += 1
-        self.stats["Health"] += 5
-        self.stats["Mana"] += 5
+        self.stats["base_health"] += 5
+        self.stats["base_mana"] += 5
+        self.recalculate_stats()
+        self.save_stats_and_equipment()
         if self.chat_window:
-            self.chat_window.log(f"[Level Up] {self.name} reached level {self.level}!", "System")
+            self.chat_window.log_message(f"[Level Up] {self.name} reached level {self.level}!", "System")
 
     def refresh_stats_and_level(self):
         try:
@@ -96,6 +100,11 @@ class Player:
                 self.total_stats = data.get("total_stats", self.total_stats)
         except Exception as e:
             print(f"[Refresh Stats] Error: {e}")
+
+            if "base_health" not in self.stats:
+                self.stats["base_health"] = 5 + (self.level * 5)
+            if "base_mana" not in self.stats:
+                self.stats["base_mana"] = 5 + (self.level * 5)
 
     def add_to_inventory(self, item):
         """Adds an item to the inventory if space is available."""
@@ -143,8 +152,8 @@ class Player:
         total_stats["Avoidance"] = dexterity // 10
 
         # Final calculated pools
-        total_stats["Health"] = 10 + vitality // 5  # Or however you want to base the starting HP
-        total_stats["Mana"] = 10 + intelligence // 5  # Similar logic
+        total_stats["Health"] = total_stats["base_health"] + vitality // 5  # Or however you want to base the starting HP
+        total_stats["Mana"] = total_stats["base_mana"] + intelligence // 5  # Similar logic
         total_stats["Avoidance"] = intelligence // 10
         total_stats["Dodge"] = dexterity // 10
 

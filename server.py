@@ -139,8 +139,8 @@ def apply_experience_and_level_up(player: Player, xp_gain: int, db: Session = De
     while player.experience >= player.level * 25:
         player.experience -= player.level * 25
         player.level += 1
-        player.stats["Health"] += 5
-        player.stats["Mana"] += 5
+        player.stats["base_health"] = player.stats.get("base_health", 10) + 5
+        player.stats["base_mana"] = player.stats.get("base_mana", 10) + 5
 
         system_msg = models.ChatMessage(
             sender="System",
