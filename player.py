@@ -299,6 +299,21 @@ class Player:
         except Exception as e:
             print(f"[Sync Coins] Error: {e}")
 
+    def refresh_coins(self):
+        try:
+            response = requests.get(f"{SERVER_URL}/player_stats", params={"requester_name": self.name}, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                self.coins = {
+                    "copper": data.get("copper", 0),
+                    "silver": data.get("silver", 0),
+                    "gold": data.get("gold", 0),
+                    "platinum": data.get("platinum", 0)
+                }
+                self._trigger_coin_update_callbacks()
+        except Exception as e:
+            print(f"[Refresh Coins] Error: {e}")
+
     def register_coin_update_callback(self, callback_fn):
         self._coin_update_callbacks.append(callback_fn)
 

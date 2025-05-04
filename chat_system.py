@@ -93,7 +93,7 @@ class ChatWindow:
         self.commands.update(self._load_player_commands())
         self.commands.update(self._load_gm_commands())
         self.commands.update(self._load_dev_commands())
-        self.admin_commands = ["broadcast", "kick", "mute", "unmute", "addcoins"]
+        self.admin_commands = ["broadcast", "kick", "mute", "unmute"]
 
         self.reports_window = None
         self.resolution_popup = None
@@ -674,6 +674,30 @@ class ChatWindow:
 
             return
 
+        elif command == "addcoins":
+            if len(args) < 2:
+                self.log_message("[Usage] /addcoins <amount> <cointype> [player]", "System")
+                return
+            amount = args[0]
+            coin_type = args[1]
+            target = args[2] if len(args) > 2 else None
+
+            payload = {
+                "username": self.player.username,
+                "command": f"/addcoins {amount} {coin_type}" + (f" {target}" if target else "")
+            }
+
+            try:
+                response = requests.post(f"{SERVER_URL}/admin_command", json=payload)
+                result = response.json()
+                if result.get("success"):
+                    self.log_message(f"[Coins] {result['message']}", "System")
+                    self.player.refresh_coins()
+                else:
+                    self.log_message(f"[Error] {result.get('error', 'Unknown error')}", "System")
+            except Exception as e:
+                self.log_message(f"[Error] Failed to contact server: {e}", "System")
+
         elif command == "stats":
             min_role = "gm"
             if self.has_permission(min_role):
@@ -746,20 +770,6 @@ class ChatWindow:
         if getattr(self.player, "is_muted", False):
             status_line += " (Muted)"
         self.log_message(status_line, "System")
-
-    def cmd_addcoins(self, amount, cointype):
-        try:
-            amount = int(amount)
-            if hasattr(self.player, "add_coins"):
-                print("made it here")
-                self.player.add_coins(amount, cointype)
-                self.log_message(f"[Admin] Added {amount} {cointype} coins.", "System")
-            else:
-                print("here instead")
-                self.log_message("[Debug] Player object has no 'add_coins' method.", "Debug")
-        except ValueError:
-            print("error")
-            self.log_message("[Error] Invalid amount.", "System")
 
     def cmd_createitem(self, args):
         """Dev command: /createitem chest Warrior Rare 5"""

@@ -141,6 +141,8 @@ class InventoryScreen(BaseScreen):
             manager=self.manager
         )
 
+        self.player.register_coin_update_callback(self.refresh_coin_display)
+
     def setup_character_sheet(self):
         self.equip_slot_size = 44
         self.equip_slot_padding = 0
