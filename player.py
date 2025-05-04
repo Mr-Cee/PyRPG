@@ -301,7 +301,7 @@ class Player:
 
     def refresh_coins(self):
         try:
-            response = requests.get(f"{SERVER_URL}/player_stats", params={"requester_name": self.name}, timeout=5)
+            response = requests.get(f"{SERVER_URL}/player_coins", params={"requester_name": self.name}, timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 self.coins = {
@@ -310,7 +310,7 @@ class Player:
                     "gold": data.get("gold", 0),
                     "platinum": data.get("platinum", 0)
                 }
-                self._trigger_coin_update_callbacks()
+                self._notify_coin_update()
         except Exception as e:
             print(f"[Refresh Coins] Error: {e}")
 
@@ -392,6 +392,7 @@ class Player:
         player.coins = data.get("coins", {
             "copper": 0, "silver": 0, "gold": 0, "platinum": 0
         })
+        player._notify_coin_update()
 
         return player
 

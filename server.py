@@ -595,6 +595,18 @@ def get_player_stats(requester_name: str, target_name: str = None, db: Session =
         "is_muted": player.is_muted
     }
 
+@app.get("/player_coins")
+def get_player_coins(requester_name: str, db: Session = Depends(get_db)):
+    player = db.query(Player).filter_by(name=requester_name).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+    return {
+        "copper": player.copper,
+        "silver": player.silver,
+        "gold": player.gold,
+        "platinum": player.platinum
+    }
+
 @app.get("/chat/fetch")
 def fetch_chat_messages(since: float = Query(0.0), player_name: str = Query(...), db: Session = Depends(get_db)):
     messages = (
