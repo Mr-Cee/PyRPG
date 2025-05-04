@@ -675,28 +675,14 @@ class ChatWindow:
             return
 
         elif command == "addcoins":
-            if len(args) < 2:
-                self.log_message("[Usage] /addcoins <amount> <cointype> [player]", "System")
-                return
-            amount = args[0]
-            coin_type = args[1]
-            target = args[2] if len(args) > 2 else None
+            min_role = "dev"
+            if self.has_permission(min_role):
+                self.cmd_addcoins(*args)
 
-            payload = {
-                "username": self.player.username,
-                "command": f"/addcoins {amount} {coin_type}" + (f" {target}" if target else "")
-            }
+            else:
+                self.log_message("No Command Found", "System")
 
-            try:
-                response = requests.post(f"{SERVER_URL}/admin_command", json=payload)
-                result = response.json()
-                if result.get("success"):
-                    self.log_message(f"[Coins] {result['message']}", "System")
-                    self.player.refresh_coins()
-                else:
-                    self.log_message(f"[Error] {result.get('error', 'Unknown error')}", "System")
-            except Exception as e:
-                self.log_message(f"[Error] Failed to contact server: {e}", "System")
+            return
 
         elif command == "stats":
             min_role = "gm"
@@ -868,6 +854,33 @@ class ChatWindow:
                     self.log_message(f"[Error] {result.get('error')}", "System")
             except Exception as e:
                 self.log_message(f"[Error] Failed to add experience: {e}", "System")
+
+    def cmd_addcoins(self, *args):
+        if len(args) < 2:
+            self.log_message("[Usage] /addcoins <amount> <cointype> [player]", "System")
+            return
+
+        amount = args[0]
+        coin_type = args[1]
+        target = args[2] if len(args) > 2 else None
+
+        payload = {
+            "requester": self.player.username,
+            "amount": amount,
+            "coin_type": coin_type,
+            "target": target
+        }
+
+        try:
+            response = requests.post(f"{SERVER_URL}/add_coins", json=payload, timeout=5)
+            result = response.json()
+            if result.get("success"):
+                self.log_message(f"[Coins] {result['message']}", "System")
+                self.player.refresh_coins()
+            else:
+                self.log_message(f"[Error] {result.get('error', 'Unknown error')}", "System")
+        except Exception as e:
+            self.log_message(f"[Error] Failed to contact server: {e}", "System")
 
     def cmd_online(self):
         try:

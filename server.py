@@ -412,6 +412,45 @@ def add_experience(payload: dict, db: Session = Depends(get_db)):
         "stats": target_player.stats
     }
 
+@app.post("/add_coins")
+def add_coins(payload: dict, db: Session = Depends(get_db)):
+    requester = payload.get("requester")
+    amount = payload.get("amount")
+    coin_type = payload.get("coin_type", "").lower()
+    target_name = payload.get("target")
+
+    if not all([requester, amount, coin_type]):
+        return {"success": False, "error": "Missing parameters."}
+
+    if coin_type not in ("copper", "silver", "gold", "platinum"):
+        return {"success": False, "error": "Invalid coin type. Must be copper, silver, gold, or platinum."}
+
+    try:
+        amount = int(amount)
+    except ValueError:
+        return {"success": False, "error": "Amount must be a number."}
+
+    if not target_name:
+        # Get active character for the requester
+        account = db.query(Account).filter_by(username=requester).first()
+        if not account:
+            return {"success": False, "error": "Requester account not found."}
+        target_player = db.query(Player).filter_by(account_id=account.id, is_active=True).first()
+    else:
+        target_player = db.query(Player).filter_by(name=target_name).first()
+
+    if not target_player:
+        return {"success": False, "error": f"Player {target_name or requester} not found."}
+
+    current = getattr(target_player, coin_type, 0)
+    setattr(target_player, coin_type, current + amount)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Added {amount} {coin_type} to {target_player.name}."
+    }
+
 @app.post("/chat/send")
 def send_chat_message(chat: ChatMessage):
     db = SessionLocal()
@@ -918,40 +957,6 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
 
         db.commit()
         return {"success": True}
-
-    elif command == "addcoins":
-        if len(parts) < 3:
-            return {"success": False, "error": "Usage: /addcoins <amount> <cointype> [player]"}
-
-        try:
-            amount = int(parts[1])
-        except ValueError:
-            return {"success": False, "error": "Amount must be a number."}
-
-        coin_type = parts[2].lower()
-        if coin_type not in ("copper", "silver", "gold", "platinum"):
-            return {"success": False, "error": "Invalid coin type. Must be copper, silver, gold, or platinum."}
-
-        # Determine target
-        if len(parts) == 4:
-            target_name = parts[3]
-        else:
-            # Default to issuer
-            target_name = account.character_name if hasattr(account, "character_name") else None
-
-        if not target_name:
-            return {"success": False, "error": "No target player provided and issuer has no character."}
-
-        player = db.query(Player).filter_by(name=target_name).first()
-        if not player:
-            return {"success": False, "error": f"Player {target_name} not found."}
-
-        # Add coins
-        current = getattr(player, coin_type, 0)
-        setattr(player, coin_type, current + amount)
-        db.commit()
-
-        return {"success": True, "message": f"Added {amount} {coin_type} to {target_name}."}
 
     elif command == "spawnboss":
         if len(parts) < 2:
