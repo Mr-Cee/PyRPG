@@ -13,6 +13,7 @@ import datetime
 from pydantic import BaseModel
 
 import models
+from items import create_item
 from models import Base, Account, Player
 
 # ⚙️ PostgreSQL Settings (used by server only)
@@ -450,6 +451,37 @@ def add_coins(payload: dict, db: Session = Depends(get_db)):
         "success": True,
         "message": f"Added {amount} {coin_type} to {target_player.name}."
     }
+
+@app.post("/createitem")
+def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
+    required = ["slot_type"]
+    for key in required:
+        if key not in data:
+            return {"success": False, "error": f"Missing field: {key}"}
+
+    slot_type = data["slot_type"]
+    char_class = data.get("char_class", "Warrior")
+    rarity = data.get("rarity")
+    weapon_type = data.get("weapon_type")
+    item_level = int(data.get("item_level", 1))
+    target_name = data.get("target")
+
+    item = create_item(slot_type, char_class, rarity, weapon_type=weapon_type, level=item_level)
+    item["slot"] = None  # Inventory will auto-place it
+
+    target = db.query(Player).filter_by(name=target_name).first()
+    if not target:
+        return {"success": False, "error": f"Target {target_name} not found"}
+
+    inventory = target.inventory or []
+    if len(inventory) >= 49:
+        return {"success": False, "error": "Target inventory is full"}
+
+    inventory.append(item)
+    target.inventory = inventory
+    db.commit()
+
+    return {"success": True, "message": f"{item['name']} added to {target.name}'s inventory."}
 
 @app.post("/chat/send")
 def send_chat_message(chat: ChatMessage):

@@ -297,10 +297,9 @@ class ChatWindow:
                 "help": "Usage: /addcoins <amount> <type>\nAdds coins to player."
             },
             "createitem": {
-                "func": self.cmd_createitem,
-                "min_role": "dev",
-                "aliases": ["ci"],
-                "help": "Usage: /createitem <slot_type> [char_class] [rarity] [player_name]\nCreates an item and gives it to a player."
+                "description": "Create item: /createitem <slot_type> [char_class] [rarity] [weapon_type] [level] [target]",
+                "roles": ["gm", "dev"],
+                "func": self.cmd_createitem
             },
             "addExperience": {
                 "func": self.cmd_addexperience,
@@ -657,7 +656,7 @@ class ChatWindow:
         elif command == "createitem":
             min_role = "dev"
             if self.has_permission(min_role):
-                self.cmd_createitem(args)
+                self.cmd_createitem(*args)
             else:
                 self.log_message("No Command Found", "System")
 
@@ -757,62 +756,36 @@ class ChatWindow:
             status_line += " (Muted)"
         self.log_message(status_line, "System")
 
-    def cmd_createitem(self, args):
-        """Dev command: /createitem chest Warrior Rare 5"""
-        if self.player.role not in ("dev", "gm"):
-            self.log_message("[Error] You do not have permission to use this command.", "System")
-            return
+    def cmd_createitem(self, parts, account):
+        if len(parts) < 2:
+            return {"success": False,
+                    "error": "Usage: /createitem <slot_type> [char_class] [rarity] [weapon_type] [level] [target]"}
 
-        if len(args) < 1:
-            self.log_message("[Usage] /createitem <slot_type> [class] [rarity] [slot]", "System")
-            return
+        slot_type = parts[1]
+        char_class = parts[2] if len(parts) > 2 else "Warrior"
+        rarity = parts[3] if len(parts) > 3 else None
+        weapon_type = parts[4] if len(parts) > 4 else None
+        level = int(parts[5]) if len(parts) > 5 else 1
+        target = parts[6] if len(parts) > 6 else getattr(account, "character_name", None)
 
-        slot_type = args[0]
+        if not target:
+            return {"success": False, "error": "No target player provided and issuer has no character."}
 
-        # Validate slot_type
-        from items import EQUIP_SLOTS
-        # Flatten all valid slot names
-        VALID_SLOTS = {slot for sublist in EQUIP_SLOTS.values() for slot in sublist}
-        if slot_type.lower() not in VALID_SLOTS:
-            self.log_message(f"[Error] Invalid slot_type '{slot_type}'. Valid types: {', '.join(VALID_SLOTS)}", "System")
-            return
+        payload = {
+            "slot_type": slot_type,
+            "char_class": char_class,
+            "rarity": rarity,
+            "weapon_type": weapon_type,
+            "item_level": level,
+            "target": target
+        }
 
-        char_class = args[1] if len(args) >= 2 else self.player.char_class
-        rarity = args[2] if len(args) >= 3 else None
-        slot_index = int(args[3]) if len(args) >= 4 and args[3].isdigit() else None
-
-        item = create_item(slot_type=slot_type, char_class=char_class, rarity=rarity)
-
-        # Find or assign inventory slot
-        occupied = {i.get("slot") for i in self.player.inventory if "slot" in i}
-        if slot_index is None:
-            for i in range(self.player.INVENTORY_SIZE):
-                if i not in occupied:
-                    slot_index = i
-                    break
-        if slot_index is None or slot_index >= self.player.INVENTORY_SIZE:
-            self.log_message("[Error] Inventory is full or invalid slot.", "System")
-            return
-
-        item["slot"] = slot_index
-        self.player.inventory.append(item)
-
-        # Save to server
         try:
-            payload = {
-                "character_name": self.player.name,
-                "inventory": self.player.inventory
-            }
-            response = requests.post(f"{SERVER_URL}/inventory/update", json=payload, timeout=5)
-            response.raise_for_status()
-            self.log_message(f"[Dev] Created {item['rarity']} {item['subtype']} in slot {slot_index}.", "Debug")
-            # Log item preview
-            preview_lines = [f"[Item Created] Slot {slot_index}: {item['name']} ({item['rarity']})"]
-            for stat, val in item.get("stats", {}).items():
-                preview_lines.append(f"  {stat.title()}: {val}")
-            self.log_message("\n".join(preview_lines), "System")
+            response = requests.post(f"{SERVER_URL}/createitem", json=payload, timeout=5)
+            data = response.json()
+            return data
         except Exception as e:
-            self.log_message(f"[Error] Failed to save item: {e}", "System")
+            return {"success": False, "error": f"Server error: {e}"}
 
     def cmd_addexperience(self, *args):
         if not args:
