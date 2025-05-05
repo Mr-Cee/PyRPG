@@ -41,71 +41,62 @@ def pick_rarity(rng=None, rarity_override=None):
     return "Common"  # fallback
 
 
-def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_type=None):
+def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_type=None, item_level=1):
     rarity = pick_rarity() if rarity is None else rarity
     multiplier = RARITY_MULTIPLIERS[rarity]
     main_stat = PLAYER_CLASSES.get(char_class, "Strength")
 
+    # Item level scaling factor (example formula: linear scale)
+    level_scale = 1 + (item_level - 1) * 0.2  # Each level adds 20% more power
+
     item = {
-        "name": f"{rarity} {slot_type.title()} Item",
+        "name": f"{rarity} {slot_type.title()} Item (Lv{item_level})",
         "type": get_type_from_slot(slot_type),
         "subtype": slot_type,
         "rarity": rarity,
+        "level": item_level,
         "stats": {},
-        "slot": slot,  # ✅ Add this
-        "icon": f"Assets/Items/{slot_type}.png"  # ✅ Simple default icon path
+        "slot": slot,
+        "icon": f"Assets/Items/{slot_type}.png"
     }
 
     # Shared stat distribution logic
-    item["stats"][main_stat] = int(5 * multiplier)
-    item["stats"]["Vitality"] = int(4 * multiplier)
+    item["stats"][main_stat] = int(5 * multiplier * level_scale)
+    item["stats"]["Vitality"] = int(4 * multiplier * level_scale)
 
     if slot_type in EQUIP_SLOTS["armor"]:
-        item["stats"]["Armor"] = int(6 * multiplier)
+        item["stats"]["Armor"] = int(6 * multiplier * level_scale)
 
-    # Weapon type logic if provided
     elif slot_type in ("primary", "secondary") and weapon_type in WEAPON_TYPES:
         item["weapon_type"] = weapon_type
         wt = WEAPON_TYPES[weapon_type]
 
         if wt["block"]:
-            item["stats"]["Block"] = int(wt["base_block"] * multiplier)
+            item["stats"]["Block"] = int(wt.get("base_block", 10) * multiplier * level_scale)
         else:
-            item["stats"]["Weapon Damage"] = int(wt["base_damage"] * multiplier)
+            item["stats"]["Weapon Damage"] = int(wt.get("base_damage", 10) * multiplier * level_scale)
 
-            # Adjust attack speed if it's a secondary weapon
             if slot_type == "secondary":
-                # Rogue bonus for offhand?
                 bonus = -0.10 if char_class == "Rogue" else -0.05
-                speed = wt["base_speed"] + bonus
+                speed = wt.get("base_speed", 1.0) + bonus
             else:
-                speed = wt["base_speed"]
+                speed = wt.get("base_speed", 1.0)
 
             item["stats"]["Attack Speed"] = round(speed, 2)
 
-
     elif slot_type == "primary" and weapon_type is None:
-
-        # fallback logic if no weapon type is used
-
-        item["stats"]["Weapon Damage"] = int(10 * multiplier)
-
+        item["stats"]["Weapon Damage"] = int(10 * multiplier * level_scale)
         item["stats"]["Attack Speed"] = round(1.0 - (0.05 * multiplier), 2)
 
-
     elif slot_type == "secondary" and weapon_type is None:
-
-        item["stats"]["Weapon Damage"] = int(5 * multiplier)
-
-        item["stats"]["Block"] = round(5 * multiplier, 1) if char_class == "Warrior" else round(3 * multiplier, 1)
-
-        item["stats"]["Dodge"] = round(5 * multiplier, 1) if char_class == "Rogue" else round(2 * multiplier, 1)
-
+        item["stats"]["Weapon Damage"] = int(5 * multiplier * level_scale)
+        item["stats"]["Block"] = round((5 if char_class == "Warrior" else 3) * multiplier * level_scale, 1)
+        item["stats"]["Dodge"] = round((5 if char_class == "Rogue" else 2) * multiplier * level_scale, 1)
         item["stats"]["Attack Speed"] = round(1.0 - (0.03 * multiplier), 2)
 
     elif slot_type in EQUIP_SLOTS["accessory"]:
-        item["stats"]["Critical Chance"] = round(3 * multiplier, 1)
-        item["stats"]["Critical Damage"] = round(7 * multiplier, 1)
+        item["stats"]["Critical Chance"] = round(3 * multiplier * level_scale, 1)
+        item["stats"]["Critical Damage"] = round(7 * multiplier * level_scale, 1)
 
     return item
 
