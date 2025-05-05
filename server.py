@@ -320,7 +320,28 @@ def create_player(username: str, player_data: dict = Body(...), token: str = Dep
         char_class=player_data.get("char_class", "Warrior"),
         level=player_data.get("level", 1),
         experience=player_data.get("experience", 0),
-        gold=player_data.get("gold", 0),  # ✅ ADD THIS!
+        coins=player_data.get("coins", {
+            "copper": 0,
+            "silver": 0,
+            "gold": 0,
+            "platinum": 0
+        }),
+        stats=player_data.get("stats", {
+            "Health": 10,
+            "Mana": 10,
+            "base_health": 10,
+            "base_mana": 10,
+            "Strength": 5,
+            "Dexterity": 5,
+            "Intelligence": 5,
+            "Vitality": 5,
+            "Critical Chance": 0,
+            "Critical Damage": 0,
+            "Armor": 0,
+            "Block": 0,
+            "Dodge": 0,
+            "Attack Speed": 1.0
+        }),
         inventory=inventory,
         equipment=player_data.get("equipment", {}),
         skills=player_data.get("skills", {})

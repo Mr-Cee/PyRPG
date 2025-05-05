@@ -148,14 +148,17 @@ class ChatWindow:
                     data = response.json()
                     for msg in data.get("messages", []):
 
+
+
                         self.last_fetch_time = max(self.last_fetch_time, msg["timestamp"])
                         msg_type = msg['type']
                         timestamp = msg["timestamp"]
+                        print(msg_type)
 
                         if msg_type == "admin" and self.player.role not in ("gm", "dev"):
                             continue
 
-                        if msg_type == "whisper":
+                        elif msg_type == "whisper":
                             if msg['sender'] == self.player.name:
                                 display = f"[To: {msg['recipient']}] {msg['message']}"
                             else:
@@ -165,6 +168,7 @@ class ChatWindow:
                             label_type = "Whisper"  # Ensure purple formatting
 
                         elif msg_type == "InventoryUpdate":
+                            print("test")
                             if self.inventory_screen:
                                 self.inventory_screen.reload_inventory()
                                 continue
