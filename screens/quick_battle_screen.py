@@ -2,12 +2,14 @@ import pygame
 import pygame_gui
 from pygame import Rect
 from pygame_gui.elements import UIButton, UITextBox, UILabel
-
+from enemies import ENEMY_TIERS, NAME_PREFIXES, ELITE_PREFIXES, ELITE_AURA_COLORS
 from chat_system import ChatWindow
 from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
 import random
 
+
+MAX_DUNGEON_LEVEL=1
 
 class QuickBattleScreen(BaseScreen):
     def __init__(self, manager, screen_manager):
@@ -19,7 +21,6 @@ class QuickBattleScreen(BaseScreen):
         self.player.chat_window.panel.set_relative_position((10, 480))
         self.player.chat_window.panel.set_dimensions((400, 220))
 
-        # UI elements
         self.title_label = UILabel(
             relative_rect=Rect((10, 10), (300, 30)),
             text="Quick Battle - Auto Combat",
@@ -40,123 +41,202 @@ class QuickBattleScreen(BaseScreen):
 
         self.battle_log = []
         self.battle_running = True
-        self.time_accumulator = 0
-        self.turn_interval = 1.5  # seconds between turns
+        self.player_attack_timer = 0
+        self.enemy_attack_timer = 0
 
-        # Setup combatants
-        self.enemy = {
-            "name": "Slime",
-            "hp": 25,
-            "max_hp": 25,
-            "damage": 5,
-            "speed": 1.0,
-            "reward_xp": 10,
-            "reward_copper": 50
-        }
+        self.enemy = self.generate_enemy_from_dungeon_level(MAX_DUNGEON_LEVEL)
 
         self.player_hp = self.player.total_stats.get("Health", 100)
-        self.player_damage = self.player.total_stats.get("Bonus Damage", 1) + 5  # base damage + bonus
+        self.player_damage = self.player.total_stats.get("Bonus Damage", 1) + 5
 
-        # Enemy name & HP
-        self.enemy_name_label = UILabel(
-            relative_rect=Rect((420, 50), (200, 30)),
-            text=self.enemy["name"],
-            manager=self.manager
+        self.player_attack_speed = self.player.total_stats.get("Attack Speed", 1.0)
+        self.enemy_attack_speed = self.enemy.get("speed", 1.0)
+
+        self.player_attack_delay = max(0.2, 1.0 / self.player_attack_speed)
+        self.enemy_attack_delay = max(0.2, 1.0 / self.enemy_attack_speed)
+
+        elite_type = self.enemy.get("elite_type")
+        color = ELITE_AURA_COLORS.get(elite_type, "#FFFFFF")
+        colored_name = f"<font color='{color}'>{self.enemy['name']}</font>"
+
+        # Enemy Name (with color)
+        elite_type = self.enemy.get("elite_type")
+        color = ELITE_AURA_COLORS.get(elite_type, "#FFFFFF")
+        colored_name = f"<font color='{color}'><b>{self.enemy['name']}</b></font>"
+
+
+        # Enemy Title (e.g., "Elite", "Mythic", etc.)
+        title_text = f"<i>{elite_type}</i>" if elite_type else ""
+        self.enemy_title_label = UITextBox(
+            html_text=title_text,
+            relative_rect=Rect((420, 20), (200, 35)),
+            manager=self.manager,
+            object_id="#enemy_title_label"
         )
-        # Player name & HP
-        self.player_name_label = UILabel(
-            relative_rect=Rect((420, 150), (200, 30)),
-            text=self.player.name,
-            manager=self.manager
+
+        # Enemy name
+        self.enemy_name_label = UITextBox(
+            html_text=colored_name,
+            relative_rect=Rect((420, 45), (200, 30)),
+            manager=self.manager,
+            object_id="#enemy_title_label"
         )
+
+
+        # self.enemy_name_label = UILabel(Rect((420, 50), (200, 30)), text=self.enemy["name"], manager=self.manager)
+        self.player_name_label = UILabel(Rect((420, 150), (200, 30)), text=self.player.name, manager=self.manager)
+
+        # Enemy HP label
         self.enemy_hp_label = UITextBox(
             html_text="",
-            relative_rect=Rect((420, 80), (200, 30)),  # ← was 25, now 30
-            manager=self.manager
+            relative_rect=Rect((420, 75), (200, 30)),
+            manager=self.manager,
+            object_id="#battle_hp_label"
         )
-
         self.player_hp_label = UITextBox(
-            html_text="",
-            relative_rect=Rect((420, 180), (200, 30)),  # ← was 25, now 30
-            manager=self.manager
+            "",
+             Rect((420, 180), (200, 30)),
+             manager=self.manager,
+            object_id="#battle_hp_label"
         )
 
         self.enemy_hp_label.background_colour = pygame.Color(0, 0, 0, 0)
         self.player_hp_label.background_colour = pygame.Color(0, 0, 0, 0)
-
         self.enemy_hp_label.rebuild()
         self.player_hp_label.rebuild()
 
-        # Bar rectangles (we'll draw them manually)
-        self.enemy_hp_rect = pygame.Rect(420, 110, 200, 20)
+        # Enemy HP bar (just below label)
+        self.enemy_hp_rect = pygame.Rect(420, 108, 200, 20)
         self.player_hp_rect = pygame.Rect(420, 210, 200, 20)
 
         self.update_hp_display()
-
         self.add_log(f"You engage a {self.enemy['name']}!")
-        self.update_hp_display()
 
+    def update_enemy_name_display(self):
+        elite_type = self.enemy.get("elite_type")
+        color = ELITE_AURA_COLORS.get(elite_type, "#FFFFFF")
+        colored_name = f"<font color='{color}'>{self.enemy['name']}</font>"
+        self.enemy_name_label.set_text(colored_name)
+
+    def update_enemy_labels(self):
+        elite_type = self.enemy.get("elite_type")
+        color = ELITE_AURA_COLORS.get(elite_type, "#FFFFFF")
+        colored_name = f"<font color='{color}'><b>{self.enemy['name']}</b></font>"
+        self.enemy_name_label.set_text(colored_name)
+
+        title_text = f"<i>{elite_type}</i>" if elite_type else ""
+        self.enemy_title_label.set_text(title_text)
+
+    def generate_enemy_from_dungeon_level(self, level):
+        # Find highest tier
+        tier = ENEMY_TIERS[0]
+        for t in ENEMY_TIERS:
+            if level >= t["min_level"]:
+                tier = t
+            else:
+                break
+
+        is_elite = random.random() < 0.99  # 15% chance to be elite
+        prefix = random.choice(NAME_PREFIXES)
+
+        base_name = f"{random.choice(NAME_PREFIXES)} {tier['name']} Lv{level}"
+
+        elite_type = None
+        if is_elite:
+            elite_type = random.choice(list(ELITE_AURA_COLORS.keys()))
+
+
+            # Do not modify name — show elite_type in title only
+        name = base_name
+
+        hp = int(tier["base_hp"] + level * 5)
+        dmg = int(tier["base_dmg"] + level * 1.5)
+        speed = round(max(0.5, tier["base_speed"] - level * 0.02), 2)
+        xp = int(tier["base_xp"] + level * 2.5)
+        copper = int(tier["base_copper"] + level * 15)
+
+        if is_elite:
+            hp = int(hp * 1.6)
+            dmg = int(dmg * 1.5)
+            speed = max(speed - 0.1, 0.5)
+            xp = int(xp * 2)
+            copper = int(copper * 1.75)
+
+        return {
+            "name": name,
+            "hp": hp,
+            "max_hp": hp,
+            "damage": dmg,
+            "speed": speed,
+            "reward_xp": xp,
+            "reward_copper": copper,
+            "elite": is_elite,
+            "elite_type": elite_type
+        }
 
     def update_hp_display(self):
-        # Labels
         self.enemy_hp_label.set_text(f"HP: {self.enemy['hp']} / {self.enemy['max_hp']}")
         self.player_hp_label.set_text(f"HP: {max(0, self.player_hp)} / {self.player.total_stats.get('Health', 100)}")
-
-        # HP percentages for bar widths
         self.enemy_hp_pct = max(0, self.enemy["hp"] / self.enemy["max_hp"])
         self.player_hp_pct = max(0, self.player_hp / self.player.total_stats.get("Health", 100))
 
     def add_log(self, text):
         self.battle_log.append(text)
-        self.battle_log = self.battle_log[-15:]  # limit to last 15 lines
-        formatted = "<br>".join(self.battle_log)
-        self.log_box.set_text(formatted)
+        self.battle_log = self.battle_log[-15:]
+        self.log_box.set_text("<br>".join(self.battle_log))
 
     def update(self, time_delta):
         self.manager.update(time_delta)
 
         if self.battle_running:
-            self.time_accumulator += time_delta
-            if self.time_accumulator >= self.turn_interval:
-                self.time_accumulator = 0
-                self.run_turn()
+            self.player_attack_timer += time_delta
+            self.enemy_attack_timer += time_delta
+
+            if self.player_attack_timer >= self.player_attack_delay:
+                self.player_attack_timer = 0
+                self.player_attack()
+
+            if self.enemy_attack_timer >= self.enemy_attack_delay:
+                self.enemy_attack_timer = 0
+                self.enemy_attack()
 
         if self.player.chat_window:
             self.player.chat_window.update(time_delta)
 
-    def run_turn(self):
-        # Player attacks
+    def player_attack(self):
+        if not self.battle_running:
+            return
+
         dmg = self.player_damage
         self.enemy["hp"] -= dmg
         self.add_log(f"You hit {self.enemy['name']} for {dmg} damage.")
 
         if self.enemy["hp"] <= 0:
-            self.add_log(f"{self.enemy['name']} is defeated!")
+            self.enemy["hp"] = 0
             self.battle_running = False
-
-            # Apply rewards
+            self.add_log(f"{self.enemy['name']} is defeated!")
             xp = self.enemy.get("reward_xp", 0)
             copper = self.enemy.get("reward_copper", 0)
-
             self.player.gain_experience(xp)
             self.player.add_coins(copper_amount=copper)
-
             self.add_log(f"You gain {xp} XP and {copper} copper.")
-
-            # Sync to server
             if self.player.auth_token:
                 self.player.sync_coins_to_server(self.player.auth_token)
                 self.player.save_to_server(self.player.auth_token)
+        self.update_hp_display()
+
+    def enemy_attack(self):
+        if not self.battle_running:
             return
 
-        # Enemy attacks
-        enemy_dmg = self.enemy["damage"]
-        self.player_hp -= enemy_dmg
-        self.add_log(f"{self.enemy['name']} hits you for {enemy_dmg} damage.")
+        dmg = self.enemy["damage"]
+        self.player_hp -= dmg
+        self.add_log(f"{self.enemy['name']} hits you for {dmg} damage.")
 
         if self.player_hp <= 0:
-            self.add_log("You have been defeated.")
             self.battle_running = False
+            self.player_hp = 0
+            self.add_log("You have been defeated.")
 
         self.update_hp_display()
 
@@ -165,28 +245,39 @@ class QuickBattleScreen(BaseScreen):
             if event.ui_element == self.back_button:
                 from screens.battle_home_screen import BattleHomeScreen
                 self.screen_manager.set_screen(BattleHomeScreen(self.manager, self.screen_manager))
-
         if self.player.chat_window:
             self.player.chat_window.process_event(event)
 
+    def draw_elite_aura(self, surface):
+        elite_type = self.enemy.get("elite_type", "Mythic")
+        color_hex = ELITE_AURA_COLORS.get(elite_type, "#FFD700")  # fallback to gold
+        glow_color = pygame.Color(color_hex)
+
+        center_x = self.enemy_hp_rect.centerx
+        center_y = self.enemy_hp_rect.centery
+
+        for i in range(8):  # Layers of aura
+            alpha = max(0, 80 - i * 10)
+            radius = 40 + i * 4
+            aura_surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(aura_surface, (*glow_color[:3], alpha), (radius, radius), radius)
+            surface.blit(aura_surface, (center_x - radius, center_y - radius))
+
     def draw(self, window_surface):
-        # After manager.draw_ui(window_surface)
-        # Enemy HP Bar
-        pygame.draw.rect(window_surface, (100, 0, 0), self.enemy_hp_rect)  # Background
-        pygame.draw.rect(
-            window_surface, (255, 0, 0),
-            pygame.Rect(self.enemy_hp_rect.x, self.enemy_hp_rect.y, int(self.enemy_hp_rect.width * self.enemy_hp_pct),
-                        self.enemy_hp_rect.height)
-        )
+        pygame.draw.rect(window_surface, (100, 0, 0), self.enemy_hp_rect)
+        pygame.draw.rect(window_surface, (255, 0, 0),
+                         pygame.Rect(self.enemy_hp_rect.x, self.enemy_hp_rect.y,
+                                     int(self.enemy_hp_rect.width * self.enemy_hp_pct),
+                                     self.enemy_hp_rect.height))
 
-        # Player HP Bar
-        pygame.draw.rect(window_surface, (0, 100, 0), self.player_hp_rect)  # Background
-        pygame.draw.rect(
-            window_surface, (0, 255, 0),
-            pygame.Rect(self.player_hp_rect.x, self.player_hp_rect.y,
-                        int(self.player_hp_rect.width * self.player_hp_pct), self.player_hp_rect.height)
-        )
+        pygame.draw.rect(window_surface, (0, 100, 0), self.player_hp_rect)
+        pygame.draw.rect(window_surface, (0, 255, 0),
+                         pygame.Rect(self.player_hp_rect.x, self.player_hp_rect.y,
+                                     int(self.player_hp_rect.width * self.player_hp_pct),
+                                     self.player_hp_rect.height))
 
+        # if self.enemy.get("elite"):
+        #     self.draw_elite_aura(window_surface)
 
         self.manager.draw_ui(window_surface)
 
@@ -195,6 +286,7 @@ class QuickBattleScreen(BaseScreen):
         self.back_button.kill()
         self.log_box.kill()
         self.enemy_name_label.kill()
+        self.enemy_title_label.kill()
         self.enemy_hp_label.kill()
         self.player_name_label.kill()
         self.player_hp_label.kill()
