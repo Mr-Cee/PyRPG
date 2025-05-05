@@ -314,18 +314,17 @@ def create_player(username: str, player_data: dict = Body(...), token: str = Dep
     raw_inventory = player_data.get("inventory", [])
     inventory = raw_inventory if isinstance(raw_inventory, list) else []
 
+
     new_player = Player(
         account_id=account.id,
         name=player_data.get("name", "Unnamed"),
         char_class=player_data.get("char_class", "Warrior"),
         level=player_data.get("level", 1),
         experience=player_data.get("experience", 0),
-        coins=player_data.get("coins", {
-            "copper": 0,
-            "silver": 0,
-            "gold": 0,
-            "platinum": 0
-        }),
+        copper=player_data.get("copper", 0),
+        silver=player_data.get("silver", 0),
+        gold=player_data.get("gold", 0),
+        platinum=player_data.get("platinum", 0),
         stats=player_data.get("stats", {
             "Health": 10,
             "Mana": 10,
@@ -343,6 +342,7 @@ def create_player(username: str, player_data: dict = Body(...), token: str = Dep
             "Attack Speed": 1.0
         }),
         inventory=inventory,
+        max_inventory_slots=player_data.get("max_inventory_slots", 36),
         equipment=player_data.get("equipment", {}),
         skills=player_data.get("skills", {})
     )

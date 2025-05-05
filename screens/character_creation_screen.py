@@ -93,9 +93,30 @@ class CharacterCreationScreen(BaseScreen):
             "char_class": char_class,
             "level": 1,
             "experience": 0,
-            "inventory": {},
+            "inventory": [],  # ✅ list, not dict
             "equipment": {},
-            "skills": {}
+            "skills": {},
+            "stats": {  # ✅ optional but good to set defaults
+                "Health": 10,
+                "Mana": 10,
+                "base_health": 10,
+                "base_mana": 10,
+                "Strength": 5,
+                "Dexterity": 5,
+                "Intelligence": 5,
+                "Vitality": 5,
+                "Critical Chance": 0,
+                "Critical Damage": 0,
+                "Armor": 0,
+                "Block": 0,
+                "Dodge": 0,
+                "Attack Speed": 1.0
+            },
+            "max_inventory_slots": 36,
+            "copper": 0,
+            "silver": 0,
+            "gold": 0,
+            "platinum": 0
         }
 
         try:
