@@ -528,6 +528,7 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
         type="InventoryUpdate"
     )
     db.add(system_msg)
+    db.commit()
 
 
     return {"success": True, "message": f"{item['name']} added to {target.name}'s inventory."}
