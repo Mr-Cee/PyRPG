@@ -502,6 +502,9 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
     # Normalize weapon type capitalization
     if weapon_type:
         weapon_type = weapon_type.capitalize()
+    # Normalize rarity capitalization
+    if rarity:
+        rarity = rarity.capitalize()
 
     item = create_item(slot_type, char_class, rarity, weapon_type=weapon_type, item_level=item_level)
 

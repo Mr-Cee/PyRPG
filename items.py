@@ -10,12 +10,12 @@ EQUIP_SLOTS = {
 }
 
 WEAPON_TYPES = {
-    "Sword": {"slots": 1, "block": False, "speed_secondary_penalty": True},
-    "Dagger": {"slots": 1, "block": False, "speed_secondary_penalty": True},
-    "Staff": {"slots": 2, "block": False, "speed_secondary_penalty": False},
-    "Bow": {"slots": 2, "block": False, "speed_secondary_penalty": False},
-    "Shield": {"slots": 1, "block": True, "speed_secondary_penalty": False},
-    "Focus": {"slots": 1, "block": False, "speed_secondary_penalty": False},
+    "Sword":  {"slots": 1, "block": False, "speed_secondary_penalty": True,  "base_damage": 12, "base_speed": 1.0},
+    "Dagger": {"slots": 1, "block": False, "speed_secondary_penalty": True,  "base_damage": 10, "base_speed": 1.2},
+    "Staff":  {"slots": 2, "block": False, "speed_secondary_penalty": False, "base_damage": 18, "base_speed": 0.8},
+    "Bow":    {"slots": 2, "block": False, "speed_secondary_penalty": False, "base_damage": 20, "base_speed": 0.7},
+    "Shield": {"slots": 1, "block": True,  "speed_secondary_penalty": False, "base_block": 15},
+    "Focus":  {"slots": 1, "block": False, "speed_secondary_penalty": False, "base_damage": 8,  "base_speed": 1.1},
 }
 
 STAT_TYPES = [
@@ -78,15 +78,16 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_
         wt = WEAPON_TYPES[weapon_type]
 
         if wt["block"]:
-            item["stats"]["Block"] = int(wt.get("base_block", 10) * multiplier * level_scale)
+            item["stats"]["Block"] = int(wt["base_block"] * multiplier * level_scale)
         else:
-            item["stats"]["Weapon Damage"] = int(wt.get("base_damage", 10) * multiplier * level_scale)
+            item["stats"]["Weapon Damage"] = int(wt["base_damage"] * multiplier * level_scale)
 
             if slot_type == "secondary":
-                bonus = -0.10 if char_class == "Rogue" else -0.05
-                speed = wt.get("base_speed", 1.0) + bonus
+                # Secondary hand penalty
+                penalty = -0.10 if char_class == "Rogue" else -0.05
+                speed = wt["base_speed"] + penalty
             else:
-                speed = wt.get("base_speed", 1.0)
+                speed = wt["base_speed"]
 
             item["stats"]["Attack Speed"] = round(speed, 2)
 
