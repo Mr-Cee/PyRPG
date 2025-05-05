@@ -498,6 +498,17 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(target)
 
+    # ✅ Send system whisper to muted player
+    system_msg = models.ChatMessage(
+        sender="System",
+        recipient=target_name,
+        message=f"{item['name']} added to {target.name}'s inventory.",
+        timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+        type="InventoryUpdate"
+    )
+    db.add(system_msg)
+
+
     return {"success": True, "message": f"{item['name']} added to {target.name}'s inventory."}
 
 @app.post("/chat/send")

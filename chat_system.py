@@ -164,6 +164,10 @@ class ChatWindow:
                             tab = "Chat"
                             label_type = "Whisper"  # Ensure purple formatting
 
+                        elif msg_type == "InventoryUpdate":
+                            if self.inventory_screen:
+                                self.inventory_screen.reload_inventory()
+                                continue
 
                         elif msg_type == "System" and msg.get("recipient") == self.player.name:
                             message_lower = msg["message"].lower()
@@ -182,7 +186,6 @@ class ChatWindow:
                             tab = msg_type
                             label_type = msg_type.capitalize()
 
-                        print(label_type)
                         valid_tabs = {"Chat", "System", "Combat", "Admin"}
                         tab = tab.capitalize() if tab.capitalize() in valid_tabs else "Chat"
 

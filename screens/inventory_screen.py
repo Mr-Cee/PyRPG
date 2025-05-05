@@ -293,6 +293,19 @@ class InventoryScreen(BaseScreen):
         except Exception as e:
             print(f"[Inventory] Failed to refresh inventory: {e}")
 
+    def reload_inventory(self):
+        player_name = self.screen_manager.player.name
+        try:
+            response = requests.get(f"{SERVER_URL}/inventory/{player_name}", timeout=5)
+            response.raise_for_status()
+            self.inventory_data = response.json()
+            self.render_inventory_icons()
+            self.sync_equipment_to_player()
+            self.update_secondary_slot_visual()
+            self.refresh_stat_display()
+        except Exception as e:
+            print(f"[Inventory] Failed to reload inventory: {e}")
+
     def render_inventory_icons(self):
         # Clear existing icons first
         for icon in self.slot_icons:
