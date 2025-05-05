@@ -4,6 +4,7 @@ import uuid
 from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean, DateTime, Text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.mutable import MutableList
 
 Base = declarative_base()
 
@@ -33,7 +34,7 @@ class Player(Base):
     platinum = Column(Integer, default=0)
     last_logout_time = Column(String, nullable=True)  # ✅ Add this, store ISO string
     max_inventory_slots = Column(Integer, default=36)
-    inventory = Column(JSONB, default=dict)
+    inventory = Column(MutableList.as_mutable(JSONB), default=dict)
     equipment = Column(JSONB, default=dict)
     stats = Column(JSONB, default=dict)
     skills = Column(JSONB, default=dict)
