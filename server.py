@@ -521,7 +521,7 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
 
     # ✅ Send system whisper to muted player
     system_msg = models.ChatMessage(
-        sender="System",
+        sender="InventoryUpdate",
         recipient=target_name,
         message=f"{item['name']} added to {target.name}'s inventory.",
         timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
