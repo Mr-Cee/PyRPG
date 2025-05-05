@@ -767,7 +767,7 @@ class ChatWindow:
             self.log_message("Usage: /createitem type=head rarity=Rare level=5 target=PlayerName", "System")
             return
 
-        args = self.parse_command_arguments(*args)
+
         print(f"[DEBUG] Parsed args: {args}")
 
         # Abbreviation mapping

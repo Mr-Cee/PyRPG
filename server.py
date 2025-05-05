@@ -492,9 +492,6 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
         if key not in data:
             return {"success": False, "error": f"Missing field: {key}"}
 
-    args = parse_command_arguments(data)
-    print(f"[DEBUG] Parsed args: {args}")
-
     slot_type = data["slot_type"]
     char_class = data.get("char_class", "Warrior")
     rarity = data.get("rarity")
