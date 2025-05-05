@@ -712,6 +712,10 @@ def fetch_chat_messages(since: float = Query(0.0), player_name: str = Query(...)
                 and_(
                     models.ChatMessage.type == "whisper",
                     models.ChatMessage.recipient == player_name
+                ),
+                and_(
+                    models.ChatMessage.type == "InventoryUpdate",
+                    models.ChatMessage.recipient == player_name
                 )
             )
         )
