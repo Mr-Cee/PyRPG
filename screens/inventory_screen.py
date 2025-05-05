@@ -277,14 +277,6 @@ class InventoryScreen(BaseScreen):
 
         self.stats_box.set_text("<br>".join(stat_lines))
 
-        # Update gray out logic
-        # if self.player.is_two_handed_weapon_equipped():
-        #     self.secondary_slot_panel.set_active(False)
-        #     self.secondary_slot_panel.set_border_colour(pygame.Color("#444444"))
-        # else:
-        #     self.secondary_slot_panel.set_active(True)
-        #     self.secondary_slot_panel.set_border_colour(pygame.Color("#ffffff"))
-
     def refresh_coin_display(self):
         if hasattr(self, "coin_label"):
             self.coin_label.set_text(f"Coins: {self.player.format_coins()}")

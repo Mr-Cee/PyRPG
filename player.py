@@ -22,7 +22,7 @@ class Player:
         }
         self._coin_update_callbacks = []
         self.inventory = inventory if inventory else []
-        self.INVENTORY_SIZE = 49
+        self.INVENTORY_SIZE = 36
         self.equipment = equipment if equipment else {
             "head": None,
             "shoulders": None,
@@ -410,6 +410,16 @@ class Player:
                 self._notify_coin_update()
         except Exception as e:
             print(f"[Refresh Coins] Error: {e}")
+
+    def refresh_inventory(self):
+        try:
+            response = requests.get(f"{SERVER_URL}/inventory/{self.name}", timeout=5)
+            if response.status_code == 200:
+                self.inventory = response.json()
+            else:
+                print(f"[Refresh Inventory] Server returned error: {response.status_code}")
+        except Exception as e:
+            print(f"[Refresh Inventory] Error: {e}")
 
     def register_coin_update_callback(self, callback_fn):
         self._coin_update_callbacks.append(callback_fn)

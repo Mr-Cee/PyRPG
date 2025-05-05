@@ -32,6 +32,7 @@ class Player(Base):
     gold = Column(Integer, default=0)
     platinum = Column(Integer, default=0)
     last_logout_time = Column(String, nullable=True)  # ✅ Add this, store ISO string
+    max_inventory_slots = Column(Integer, default=36)
     inventory = Column(JSONB, default=dict)
     equipment = Column(JSONB, default=dict)
     stats = Column(JSONB, default=dict)

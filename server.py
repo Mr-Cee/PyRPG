@@ -467,15 +467,29 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
     target_name = data.get("target")
 
     item = create_item(slot_type, char_class, rarity, weapon_type=weapon_type, item_level=item_level)
+
     item["slot"] = None  # Inventory will auto-place it
 
     target = db.query(Player).filter_by(name=target_name).first()
     if not target:
         return {"success": False, "error": f"Target {target_name} not found"}
 
+    # Load current inventory
     inventory = target.inventory or []
-    if len(inventory) >= 49:
+
+    # Determine used slots
+    used_slots = {itm.get("slot") for itm in inventory if isinstance(itm.get("slot"), int)}
+    max_slots = target.max_inventory_slots or 36
+    all_slots = set(range(max_slots))
+    free_slots = list(all_slots - used_slots)
+
+    if not free_slots:
         return {"success": False, "error": "Target inventory is full"}
+
+    # Assign the first free slot
+    item["slot"] = free_slots[0]
+    inventory.append(item)
+    target.inventory = inventory
 
     inventory.append(item)
     target.inventory = inventory
