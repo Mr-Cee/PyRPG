@@ -53,7 +53,8 @@ class Player:
             "Critical Damage": 0,
             "Armor": 0,
             "Block": 0,
-            "Dodge": 0
+            "Dodge": 0,
+            "Attack Speed": 1.0  # <-- default 1 second per attack
         }
         self.total_stats = self.calculate_total_stats()
 
@@ -140,6 +141,9 @@ class Player:
                 for stat, value in item["stats"].items():
                     total_stats[stat] = total_stats.get(stat, 0) + value
 
+        # Make sure there's always a fallback
+        total_stats["Attack Speed"] = total_stats.get("Attack Speed", 1.0)
+
         # Raw stats
         strength = total_stats.get("Strength", 0)
         intelligence = total_stats.get("Intelligence", 0)
@@ -158,6 +162,42 @@ class Player:
         total_stats["Avoidance"] = intelligence // 10
         total_stats["Dodge"] = dexterity // 10
 
+        # Begin new logic for Attack Speed
+        attack_speed = None
+
+        primary = self.equipment.get("primary")
+        secondary = self.equipment.get("secondary")
+
+        if primary and primary.get("weapon_type") in ("Bow", "Staff"):
+            # 2-handed weapon overrides everything
+            attack_speed = primary["stats"].get("Attack Speed", 1.0)
+
+        else:
+            # Start with primary
+            primary_speed = primary["stats"].get("Attack Speed", 1.0) if primary else None
+            secondary_speed = None
+
+            if secondary:
+                weapon_type = secondary.get("weapon_type")
+
+                if weapon_type == "Shield":
+                    # Shields provide no attack speed
+                    secondary_speed = 0
+                elif weapon_type in ("Sword", "Dagger"):
+                    if self.char_class == "Rogue":
+                        secondary_speed = secondary["stats"].get("Attack Speed", 0) * 0.6  # Higher dual wield bonus
+                    else:
+                        secondary_speed = secondary["stats"].get("Attack Speed", 0) * 0.4  # Lower for others
+                elif weapon_type == "Focus":
+                    secondary_speed = secondary["stats"].get("Attack Speed", 0) * 0.3
+
+            # Combine speeds — base from primary, bonus from secondary
+            attack_speed = (primary_speed or 1.0) - (secondary_speed or 0)
+
+        # Ensure attack_speed is never below a hard cap
+        attack_speed = max(0.2, round(attack_speed, 2))
+        total_stats["Attack Speed"] = attack_speed
+
         return total_stats
 
     def equip_item(self, item):
@@ -165,6 +205,52 @@ class Player:
         if not subtype or subtype not in self.equipment:
             self.chat_window.log(f"[Equip] Invalid slot or missing subtype!", "Debug")
             return False
+
+        subtype = item.get("subtype")
+        if not subtype or subtype not in self.equipment:
+            self.chat_window.log(f"[Equip] Invalid slot or missing subtype!", "Debug")
+            return False
+
+        item_type = item.get("type")
+        char_class = self.char_class
+
+        # Class-based allowed weapon logic
+        if subtype in ("primary", "secondary"):
+            primary = self.equipment.get("primary")
+            secondary = self.equipment.get("secondary")
+
+            if char_class == "Warrior":
+                allowed_primary = {"Sword"}
+                allowed_secondary = {"Sword", "Shield"}
+            elif char_class == "Rogue":
+                allowed_primary = {"Sword", "Dagger", "Bow"}
+                allowed_secondary = {"Sword", "Dagger"}
+            elif char_class == "Mage":
+                allowed_primary = {"Staff", "Dagger"}
+                allowed_secondary = {"Focus"}
+            else:
+                allowed_primary = set()
+                allowed_secondary = set()
+
+            weapon_type = item.get("weapon_type")  # <- Must be included in item definition!
+
+            if subtype == "primary" and weapon_type not in allowed_primary:
+                self.chat_window.log(f"[Equip] {char_class}s cannot equip {weapon_type} as primary.", "System")
+                return False
+
+            if subtype == "secondary":
+                # Prevent secondary if primary is 2H
+                if primary and primary.get("weapon_type") in ("Bow", "Staff"):
+                    self.chat_window.log(f"[Equip] Cannot equip secondary with a 2-handed weapon.", "System")
+                    return False
+
+                if weapon_type not in allowed_secondary:
+                    self.chat_window.log(f"[Equip] {char_class}s cannot equip {weapon_type} as secondary.", "System")
+                    return False
+
+                if char_class == "Rogue" and primary and primary.get("weapon_type") == "Bow":
+                    self.chat_window.log(f"[Equip] Rogues cannot dual wield with a Bow equipped.", "System")
+                    return False
 
         if not self.remove_from_inventory(item):
             return False
@@ -176,6 +262,17 @@ class Player:
         self.total_stats = self.calculate_total_stats()  # <- Update here
         self.chat_window.log(f"[Equip] Equipped {item['name']} to {subtype} slot.", "System")
         return True
+
+    def is_two_handed_weapon_equipped(self):
+        """Returns True if a bow or staff is equipped in the primary slot."""
+        primary = self.equipment.get("primary")
+        if primary and primary.get("weapon_type") in ("Bow", "Staff"):
+            return True
+        return False
+
+    def get_primary_weapon_type(self):
+        primary = self.equipment.get("primary")
+        return primary.get("weapon_type") if primary else None
 
     def unequip_item(self, slot):
         if slot not in self.equipment:

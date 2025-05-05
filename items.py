@@ -9,6 +9,15 @@ EQUIP_SLOTS = {
     "accessory": ["amulet", "ring", "bracelet", "belt"]
 }
 
+WEAPON_TYPES = {
+    "Sword": {"slots": 1, "block": False, "speed_secondary_penalty": True},
+    "Dagger": {"slots": 1, "block": False, "speed_secondary_penalty": True},
+    "Staff": {"slots": 2, "block": False, "speed_secondary_penalty": False},
+    "Bow": {"slots": 2, "block": False, "speed_secondary_penalty": False},
+    "Shield": {"slots": 1, "block": True, "speed_secondary_penalty": False},
+    "Focus": {"slots": 1, "block": False, "speed_secondary_penalty": False},
+}
+
 STAT_TYPES = [
     "Strength", "Intelligence", "Agility", "Vitality",
     "Critical Chance", "Critical Damage", "Block", "Armor", "Dodge"
@@ -32,7 +41,7 @@ def pick_rarity(rng=None, rarity_override=None):
     return "Common"  # fallback
 
 
-def create_item(slot_type, char_class="Warrior", rarity=None, slot=None):
+def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_type=None):
     rarity = pick_rarity() if rarity is None else rarity
     multiplier = RARITY_MULTIPLIERS[rarity]
     main_stat = PLAYER_CLASSES.get(char_class, "Strength")
@@ -54,13 +63,45 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None):
     if slot_type in EQUIP_SLOTS["armor"]:
         item["stats"]["Armor"] = int(6 * multiplier)
 
-    elif slot_type == "primary":
+    # Weapon type logic if provided
+    elif slot_type in ("primary", "secondary") and weapon_type in WEAPON_TYPES:
+        item["weapon_type"] = weapon_type
+        wt = WEAPON_TYPES[weapon_type]
+
+        if wt["block"]:
+            item["stats"]["Block"] = int(wt["base_block"] * multiplier)
+        else:
+            item["stats"]["Weapon Damage"] = int(wt["base_damage"] * multiplier)
+
+            # Adjust attack speed if it's a secondary weapon
+            if slot_type == "secondary":
+                # Rogue bonus for offhand?
+                bonus = -0.10 if char_class == "Rogue" else -0.05
+                speed = wt["base_speed"] + bonus
+            else:
+                speed = wt["base_speed"]
+
+            item["stats"]["Attack Speed"] = round(speed, 2)
+
+
+    elif slot_type == "primary" and weapon_type is None:
+
+        # fallback logic if no weapon type is used
+
         item["stats"]["Weapon Damage"] = int(10 * multiplier)
 
-    elif slot_type == "secondary":
+        item["stats"]["Attack Speed"] = round(1.0 - (0.05 * multiplier), 2)
+
+
+    elif slot_type == "secondary" and weapon_type is None:
+
         item["stats"]["Weapon Damage"] = int(5 * multiplier)
+
         item["stats"]["Block"] = round(5 * multiplier, 1) if char_class == "Warrior" else round(3 * multiplier, 1)
+
         item["stats"]["Dodge"] = round(5 * multiplier, 1) if char_class == "Rogue" else round(2 * multiplier, 1)
+
+        item["stats"]["Attack Speed"] = round(1.0 - (0.03 * multiplier), 2)
 
     elif slot_type in EQUIP_SLOTS["accessory"]:
         item["stats"]["Critical Chance"] = round(3 * multiplier, 1)

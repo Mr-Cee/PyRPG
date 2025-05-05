@@ -148,6 +148,8 @@ class InventoryScreen(BaseScreen):
         self.equip_slot_padding = 0
         self.equip_slot_origin_y = (444 - (6 * 44 + 5 * 4)) // 2  # = 90
         self.equipment_slots = []
+
+
         slot_size = 46
         slot_padding = 4
         slot_names = [
@@ -211,6 +213,9 @@ class InventoryScreen(BaseScreen):
             slot_panel.slot_type = slot_names[i + 6]
             self.equipment_slots.append(slot_panel)
 
+        # Find secondary slot reference for later greying out
+        self.secondary_slot_panel = next((s for s in self.equipment_slots if s.slot_type == "secondary"), None)
+
         # Tooltip for equipped items (initially hidden)
         self.equip_tooltip_box = pygame_gui.elements.UITextBox(
             html_text="",
@@ -220,31 +225,65 @@ class InventoryScreen(BaseScreen):
         self.equip_tooltip_box.hide()
 
         self._create_stat_display()
+        self.update_secondary_slot_visual()
 
     def _create_stat_display(self):
-        stat_lines = []
-        for stat, val in self.player.total_stats.items():
-            val_display = f"{val:.1f}%" if isinstance(val, float) else str(val)
-            stat_lines.append(f"<b>{stat.title()}</b>: {val_display}")
-        stats_html = "<br>".join(stat_lines)
-
         self.stats_box = pygame_gui.elements.UITextBox(
-            html_text=stats_html,
+            html_text="",
             relative_rect=Rect((68, 120), (190, 200)),
             manager=self.manager,
             container=self.char_panel
         )
         self.refresh_stat_display()
+        # stat_lines = []
+        # for stat, val in self.player.total_stats.items():
+        #     val_display = f"{val:.1f}%" if isinstance(val, float) else str(val)
+        #     stat_lines.append(f"<b>{stat.title()}</b>: {val_display}")
+        # stats_html = "<br>".join(stat_lines)
+        #
+        # self.stats_box = pygame_gui.elements.UITextBox(
+        #     html_text=stats_html,
+        #     relative_rect=Rect((68, 120), (190, 200)),
+        #     manager=self.manager,
+        #     container=self.char_panel
+        # )
+        self.refresh_stat_display()
 
     def refresh_stat_display(self):
         self.player.recalculate_stats()
+        stats = self.player.total_stats
+
+        # Exclude certain stats from being shown
+        hidden_stats = {
+            "base_health", "base_mana",
+            "Bonus Damage", "Bonus Health", "Bonus Mana"
+        }
+
+        # Define the stat order you want explicitly
+        ordered_stats = [
+            "Health", "Mana",
+            "Strength", "Dexterity", "Intelligence", "Vitality",
+            "Armor", "Block", "Dodge",
+            "Critical Chance", "Critical Damage",
+            "Attack Speed"
+        ]
+
         stat_lines = []
-        for stat, val in self.player.total_stats.items():
-            val_display = f"{val:.1f}%" if isinstance(val, float) else str(val)
-            stat_lines.append(f"<b>{stat.title()}</b>: {val_display}")
-        stats_html = "<br>".join(stat_lines)
-        if hasattr(self, "stats_box"):
-            self.stats_box.set_text(stats_html)
+        for stat in ordered_stats:
+            if stat in self.player.total_stats and stat not in hidden_stats:
+                val = self.player.total_stats[stat]
+                val_display = f"{val:.1f}%" if isinstance(val, float) else str(val)
+                stat_lines.append(f"<b>{stat}</b>: {val_display}")
+
+        self.stats_box.set_text("<br>".join(stat_lines))
+
+        # Update gray out logic
+        # if self.player.is_two_handed_weapon_equipped():
+        #     self.secondary_slot_panel.set_active(False)
+        #     self.secondary_slot_panel.set_border_colour(pygame.Color("#444444"))
+        # else:
+        #     self.secondary_slot_panel.set_active(True)
+        #     self.secondary_slot_panel.set_border_colour(pygame.Color("#ffffff"))
 
     def refresh_coin_display(self):
         if hasattr(self, "coin_label"):
@@ -298,6 +337,26 @@ class InventoryScreen(BaseScreen):
                 self.slot_icons.append(icon)
             except Exception as e:
                 print(f"[Inventory] Failed to render icon for {item['name']}: {e}")
+
+    def update_secondary_slot_visual(self):
+        # Check what is equipped in primary
+        primary_item = self.player.equipment.get("primary")
+        is_two_handed = primary_item and primary_item.get("weapon_type") in ("Bow", "Staff")
+
+        if is_two_handed:
+            # Draw gray overlay
+            overlay = pygame.Surface((44, 44), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 150))  # Semi-transparent black
+            self.secondary_slot_overlay = pygame_gui.elements.UIImage(
+                relative_rect=pygame.Rect((0, 0), (44, 44)),
+                image_surface=overlay,
+                manager=self.manager,
+                container=self.secondary_slot_panel
+            )
+        else:
+            if hasattr(self, "secondary_slot_overlay"):
+                self.secondary_slot_overlay.kill()
+                del self.secondary_slot_overlay
 
     def draw_item_auras(self, surface):
         for icon in self.slot_icons:
@@ -456,6 +515,11 @@ class InventoryScreen(BaseScreen):
                             drop_index = f"equipped:{slot_panel.slot_type}"
                             break
 
+                # Before equipping into secondary slot:
+                if drop_index == "equipped:secondary" and self.player.is_two_handed_weapon_equipped():
+                    print("[Equip] Cannot equip secondary item with 2-handed weapon.")
+                    drop_index = self.dragging_index  # Cancel drop
+
                 # If dropped outside both, return to original
                 if drop_index is None:
                     drop_index = self.dragging_index
@@ -503,6 +567,7 @@ class InventoryScreen(BaseScreen):
 
                 self.sync_equipment_to_player()
                 self.player.save_stats_and_equipment()
+                self.update_secondary_slot_visual()
                 self.refresh_stat_display()
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
@@ -519,6 +584,14 @@ class InventoryScreen(BaseScreen):
                             equipped_item = next((itm for itm in self.inventory_data if itm.get("slot") == equip_key),
                                                  None)
 
+                            # 🚫 BLOCK equipping to secondary if 2-handed weapon is equipped
+                            if subtype == "secondary" and self.player.is_two_handed_weapon_equipped():
+                                print("[Equip] Cannot equip secondary item while a 2-handed weapon is equipped.")
+                                return  # Cancel the right-click equip
+
+                            equipped_item = next((itm for itm in self.inventory_data if itm.get("slot") == equip_key),
+                                                 None)
+
                             # Equip current item
                             item["slot"] = equip_key
 
@@ -529,6 +602,7 @@ class InventoryScreen(BaseScreen):
                             self.render_inventory_icons()
                             self.sync_equipment_to_player()
                             self.player.save_stats_and_equipment()
+                            self.update_secondary_slot_visual()
                             self.refresh_stat_display()
                             self._save_inventory()
                     return
@@ -554,6 +628,7 @@ class InventoryScreen(BaseScreen):
                         self.render_inventory_icons()
                         self.sync_equipment_to_player()
                         self.player.save_stats_and_equipment()
+                        self.update_secondary_slot_visual()
                         self.refresh_stat_display()
                         self._save_inventory()
                     return
