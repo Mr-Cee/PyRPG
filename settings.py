@@ -38,3 +38,8 @@ rarity_colors = {
     "Mythical": "#e60000" #Red
 }
 
+CLASS_WEAPON_RESTRICTIONS = {
+    "Warrior": {"Sword", "Shield"},
+    "Rogue": {"Sword", "Dagger", "Bow"},
+    "Mage": {"Staff", "Dagger", "Focus"},
+}

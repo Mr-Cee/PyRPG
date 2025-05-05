@@ -7,7 +7,7 @@ from pygame import Rect
 import requests
 
 from chat_system import ChatWindow
-from settings import SERVER_URL, rarity_colors
+from settings import SERVER_URL, rarity_colors, CLASS_WEAPON_RESTRICTIONS
 from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
 
@@ -551,6 +551,14 @@ class InventoryScreen(BaseScreen):
                     if dragged_item.get("subtype") != slot_type:
                         print(f"[Equip] Invalid: {dragged_item['subtype']} can't go into {slot_type}")
                         drop_index = self.dragging_index  # Cancel
+                # 🚫 Check weapon restrictions if it's a weapon
+                weapon_type = dragged_item.get("weapon_type")
+                if weapon_type:
+                    player_class = self.player.char_class
+                    allowed_weapons = CLASS_WEAPON_RESTRICTIONS.get(player_class, set())
+                    if weapon_type not in allowed_weapons:
+                        print(f"[Equip] {player_class} cannot equip {weapon_type}.")
+                        drop_index = self.dragging_index  # Cancel drop
 
                 # Find item already in the drop slot (if any)
                 existing_item = next((item for item in self.inventory_data if item.get("slot") == drop_index), None)
@@ -605,6 +613,14 @@ class InventoryScreen(BaseScreen):
                             if subtype == "secondary" and self.player.is_two_handed_weapon_equipped():
                                 print("[Equip] Cannot equip secondary item while a 2-handed weapon is equipped.")
                                 return  # Cancel the right-click equip
+                            # 🚫 Check weapon class restrictions
+                            weapon_type = item.get("weapon_type")
+                            if weapon_type:
+                                player_class = self.player.char_class
+                                allowed_weapons = CLASS_WEAPON_RESTRICTIONS.get(player_class, set())
+                                if weapon_type not in allowed_weapons:
+                                    print(f"[Equip] {player_class} cannot equip {weapon_type}.")
+                                    return
 
                             equipped_item = next((itm for itm in self.inventory_data if itm.get("slot") == equip_key),
                                                  None)
