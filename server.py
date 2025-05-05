@@ -488,8 +488,7 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
 
     # Assign the first free slot
     item["slot"] = free_slots[0]
-    inventory.append(item)
-    target.inventory = inventory
+
 
     inventory.append(item)
     target.inventory = inventory
