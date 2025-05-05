@@ -311,6 +311,9 @@ def create_player(username: str, player_data: dict = Body(...), token: str = Dep
     if existing_player:
         raise HTTPException(status_code=400, detail="Character name already exists for this account.")
 
+    raw_inventory = player_data.get("inventory", [])
+    inventory = raw_inventory if isinstance(raw_inventory, list) else []
+
     new_player = Player(
         account_id=account.id,
         name=player_data.get("name", "Unnamed"),
@@ -318,7 +321,7 @@ def create_player(username: str, player_data: dict = Body(...), token: str = Dep
         level=player_data.get("level", 1),
         experience=player_data.get("experience", 0),
         gold=player_data.get("gold", 0),  # ✅ ADD THIS!
-        inventory=player_data.get("inventory", []),
+        inventory=inventory,
         equipment=player_data.get("equipment", {}),
         skills=player_data.get("skills", {})
     )
