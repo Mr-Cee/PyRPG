@@ -466,7 +466,7 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
     item_level = int(data.get("item_level", 1))
     target_name = data.get("target")
 
-    item = create_item(slot_type, char_class, rarity, weapon_type=weapon_type, level=item_level)
+    item = create_item(slot_type, char_class, rarity, weapon_type=weapon_type, item_level=item_level)
     item["slot"] = None  # Inventory will auto-place it
 
     target = db.query(Player).filter_by(name=target_name).first()

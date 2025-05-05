@@ -756,20 +756,23 @@ class ChatWindow:
             status_line += " (Muted)"
         self.log_message(status_line, "System")
 
-    def cmd_createitem(self, parts, account):
-        if len(parts) < 2:
-            return {"success": False,
-                    "error": "Usage: /createitem <slot_type> [char_class] [rarity] [weapon_type] [level] [target]"}
+    def cmd_createitem(self, *args):
+        if len(args) < 1:
+            self.log_message("[Usage] /createitem <slot_type> [char_class] [rarity] [weapon_type] [level] [target]",
+                             "System")
+            return
 
-        slot_type = parts[1]
-        char_class = parts[2] if len(parts) > 2 else "Warrior"
-        rarity = parts[3] if len(parts) > 3 else None
-        weapon_type = parts[4] if len(parts) > 4 else None
-        level = int(parts[5]) if len(parts) > 5 else 1
-        target = parts[6] if len(parts) > 6 else getattr(account, "character_name", None)
+        slot_type = args[0]
+        char_class = args[1] if len(args) > 1 else "Warrior"
+        rarity = args[2] if len(args) > 2 else None
+        weapon_type = args[3] if len(args) > 3 else None
+        try:
+            level = int(args[4]) if len(args) > 4 else 1
+        except ValueError:
+            self.log_message("[Error] Invalid item level (must be a number)", "System")
+            return
 
-        if not target:
-            return {"success": False, "error": "No target player provided and issuer has no character."}
+        target = args[5] if len(args) > 5 else self.player.name
 
         payload = {
             "slot_type": slot_type,
@@ -782,10 +785,16 @@ class ChatWindow:
 
         try:
             response = requests.post(f"{SERVER_URL}/createitem", json=payload, timeout=5)
-            data = response.json()
-            return data
+            result = response.json()
+            if result.get("success"):
+                self.log_message(f"[Item] {result['message']}", "System")
+                if target == self.player.name and self.inventory_screen:
+                    self.player.refresh_inventory()
+                    self.inventory_screen.refresh_stat_display()
+            else:
+                self.log_message(f"[Error] {result.get('error')}", "System")
         except Exception as e:
-            return {"success": False, "error": f"Server error: {e}"}
+            self.log_message(f"[Error] Failed to contact server: {e}", "System")
 
     def cmd_addexperience(self, *args):
         if not args:
