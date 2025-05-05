@@ -790,7 +790,9 @@ class ChatWindow:
                 self.log_message(f"[Item] {result['message']}", "System")
                 if target == self.player.name and self.inventory_screen:
                     self.player.refresh_inventory()
-                    self.inventory_screen.refresh_stat_display()
+                    if self.inventory_screen:
+                        self.inventory_screen.refresh_inventory_data()
+                        self.inventory_screen.refresh_stat_display()
             else:
                 self.log_message(f"[Error] {result.get('error')}", "System")
         except Exception as e:

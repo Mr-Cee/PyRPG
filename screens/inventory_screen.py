@@ -281,6 +281,18 @@ class InventoryScreen(BaseScreen):
         if hasattr(self, "coin_label"):
             self.coin_label.set_text(f"Coins: {self.player.format_coins()}")
 
+    def refresh_inventory_data(self):
+        try:
+            player_name = self.screen_manager.player.name
+            response = requests.get(f"{SERVER_URL}/inventory/{player_name}", timeout=5)
+            response.raise_for_status()
+            self.inventory_data = response.json()
+            self.render_inventory_icons()
+            self.sync_equipment_to_player()
+            self.refresh_stat_display()
+        except Exception as e:
+            print(f"[Inventory] Failed to refresh inventory: {e}")
+
     def render_inventory_icons(self):
         # Clear existing icons first
         for icon in self.slot_icons:
