@@ -767,6 +767,9 @@ class ChatWindow:
             self.log_message("Usage: /createitem type=head rarity=Rare level=5 target=PlayerName", "System")
             return
 
+        args = self.parse_command_arguments(*args)
+        print(f"[DEBUG] Parsed args: {args}")
+
         # Abbreviation mapping
         key_map = {
             "t": "type",
@@ -1036,4 +1039,13 @@ class ChatWindow:
 
         except Exception as e:
             self.log_message(f"[Error] Failed to fetch stats: {e}", "System")
+
+    def parse_command_arguments(self, message: str):
+        parts = message.split()
+        args = {}
+        for part in parts[1:]:
+            if '=' in part:
+                key, value = part.split('=', 1)
+                args[key.strip()] = value.strip()
+        return args
 

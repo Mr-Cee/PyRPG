@@ -152,6 +152,15 @@ def apply_experience_and_level_up(player: Player, xp_gain: int, db: Session = De
         )
         db.add(system_msg)
 
+def parse_command_arguments(message: str):
+    parts = message.split()
+    args = {}
+    for part in parts[1:]:
+        if '=' in part:
+            key, value = part.split('=', 1)
+            args[key.strip()] = value.strip()
+    return args
+
 @app.on_event("startup")
 def start_background_cleanup():
     threading.Thread(target=background_cleanup_thread, daemon=True).start()
@@ -482,6 +491,9 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
     for key in required:
         if key not in data:
             return {"success": False, "error": f"Missing field: {key}"}
+
+    args = parse_command_arguments(data)
+    print(f"[DEBUG] Parsed args: {args}")
 
     slot_type = data["slot_type"]
     char_class = data.get("char_class", "Warrior")
