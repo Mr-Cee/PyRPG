@@ -4,10 +4,12 @@ from pygame import Rect
 from pygame_gui.elements import UIButton, UITextBox, UILabel
 from enemies import ENEMY_TIERS, NAME_PREFIXES, ELITE_PREFIXES, ELITE_AURA_COLORS
 from chat_system import ChatWindow
+from items import create_item
 from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
 import random
 
+from settings import CLASS_WEAPON_RESTRICTIONS, CLASS_PRIMARIES, CLASS_SECONDARIES
 
 MAX_DUNGEON_LEVEL=1
 
@@ -215,14 +217,7 @@ class QuickBattleScreen(BaseScreen):
             self.enemy["hp"] = 0
             self.battle_running = False
             self.add_log(f"{self.enemy['name']} is defeated!")
-            xp = self.enemy.get("reward_xp", 0)
-            copper = self.enemy.get("reward_copper", 0)
-            self.player.gain_experience(xp)
-            self.player.add_coins(copper_amount=copper)
-            self.add_log(f"You gain {xp} XP and {copper} copper.")
-            if self.player.auth_token:
-                self.player.sync_coins_to_server(self.player.auth_token)
-                self.player.save_to_server(self.player.auth_token)
+            self.apply_battle_rewards()
         self.update_hp_display()
 
     def enemy_attack(self):
@@ -240,11 +235,95 @@ class QuickBattleScreen(BaseScreen):
 
         self.update_hp_display()
 
+    def apply_battle_rewards(self):
+        xp = self.enemy.get("reward_xp", 0)
+        copper = self.enemy.get("reward_copper", 0)
+        self.player.gain_experience(xp)
+        self.player.add_coins(copper_amount=copper)
+        self.add_log(f"You gain {xp} XP and {copper} copper.")
+
+        # Chance-based item reward
+        drop_chance = 0.75 if self.enemy.get("elite") else 0.5
+        if random.random() < drop_chance:
+            valid_primary = random.choice(list(CLASS_PRIMARIES.get(self.player.char_class, [])))
+            valid_secondary = random.choice(list(CLASS_SECONDARIES.get(self.player.char_class, [])))
+            randomSlot=random.choice(["head", "shoulders", "chest", "gloves", "legs", "boots", "primary", "secondary", "amulet", "ring", "bracelet", "belt"])
+            if randomSlot == "primary":
+                item = create_item(slot_type=randomSlot,
+                                   char_class=self.player.char_class,
+                                   weapon_type=valid_primary,
+                                   item_level=MAX_DUNGEON_LEVEL)
+            elif randomSlot == "secondary":
+                item = create_item(slot_type=randomSlot,
+                                   char_class=self.player.char_class,
+                                   weapon_type=valid_secondary,
+                                   item_level=MAX_DUNGEON_LEVEL)
+            else:
+                item = create_item(slot_type=randomSlot,
+                                   char_class=self.player.char_class,
+                                   item_level=MAX_DUNGEON_LEVEL)
+            item["slot"] = self.find_free_inventory_slot()
+            if item["slot"] is not None:
+                self.player.inventory.append(item)
+                self.add_log(f"Loot: {item['name']} acquired!")
+            else:
+                self.add_log("[Loot] No space to add item.")
+
+            self.show_item_drop_popup(item)
+
+        if self.player.auth_token:
+            self.player.sync_coins_to_server(self.player.auth_token)
+            self.player.save_to_server(self.player.auth_token)
+
+
+
+    def show_item_drop_popup(self, item):
+        from pygame import Rect
+
+        stats_lines = [f"<b>{item['name']}</b>"]
+        for stat, value in item["stats"].items():
+            stats_lines.append(f"{stat}: {value}")
+        html_text = "<br>".join(stats_lines)
+
+        self.item_popup = pygame_gui.elements.UIWindow(
+            rect=Rect((300, 200), (280, 200)),
+            manager=self.manager,
+            window_display_title="Item Acquired!",
+            object_id="#item_drop_popup"
+        )
+
+        pygame_gui.elements.UITextBox(
+            html_text=html_text,
+            relative_rect=Rect((10, 10), (260, 150)),
+            manager=self.manager,
+            container=self.item_popup
+        )
+
+        self.popup_ok_button = pygame_gui.elements.UIButton(
+            relative_rect=Rect((90, 160), (100, 30)),
+            text="OK",
+            manager=self.manager,
+            container=self.item_popup
+        )
+
+    def find_free_inventory_slot(self):
+        used = {itm.get("slot") for itm in self.player.inventory if isinstance(itm.get("slot"), int)}
+        for i in range(50):
+            if i not in used:
+                return i
+        return None
+
     def handle_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.back_button:
                 from screens.battle_home_screen import BattleHomeScreen
                 self.screen_manager.set_screen(BattleHomeScreen(self.manager, self.screen_manager))
+            elif hasattr(self, 'popup_ok_button') and event.ui_element == self.popup_ok_button:
+                self.item_popup.kill()
+                del self.item_popup
+                del self.popup_ok_button
+
+
         if self.player.chat_window:
             self.player.chat_window.process_event(event)
 

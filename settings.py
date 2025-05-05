@@ -43,3 +43,15 @@ CLASS_WEAPON_RESTRICTIONS = {
     "Rogue": {"Sword", "Dagger", "Bow"},
     "Mage": {"Staff", "Dagger", "Focus"},
 }
+
+CLASS_PRIMARIES = {
+    "Warrior": {"Sword"},
+    "Rogue": {"Sword", "Dagger", "Bow"},
+    "Mage": {"Staff", "Dagger"}
+}
+
+CLASS_SECONDARIES = {
+    "Warrior": {"Sword", "Shield"},
+    "Rogue": {"Sword", "Dagger"},
+    "Mage": {"Focus"}
+}
