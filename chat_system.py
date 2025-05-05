@@ -143,8 +143,6 @@ class ChatWindow:
                     params={"since": self.last_fetch_time, "player_name": self.player.name},
                     timeout=2
                 )
-                messages = response.json().get("messages", [])
-                print("📥 Received messages from server:", messages)  # <-- add this
 
                 if response.status_code == 200:
                     data = response.json()
@@ -156,8 +154,6 @@ class ChatWindow:
                         msg_type = msg['type']
                         timestamp = msg["timestamp"]
 
-
-                        print(msg_type)
 
                         if msg_type == "admin" and self.player.role not in ("gm", "dev"):
                             continue
@@ -172,10 +168,9 @@ class ChatWindow:
                             label_type = "Whisper"  # Ensure purple formatting
 
                         elif msg_type == "InventoryUpdate":
-                            print("test")
                             if self.inventory_screen:
                                 self.inventory_screen.reload_inventory()
-                            display = f"[System] {msg['message']}"
+                            continue
 
                         elif msg_type == "System" and msg.get("recipient") == self.player.name:
                             message_lower = msg["message"].lower()
