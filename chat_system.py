@@ -800,9 +800,11 @@ class ChatWindow:
             "char_class": kv_pairs.get("class", self.player.char_class or "Warrior"),
             "rarity": kv_pairs.get("rarity"),
             "item_level": int(kv_pairs.get("level", 1)),
-            "weapon_type": kv_pairs.get("weapon"),
+            "weapon_type": kv_pairs.get("weapon_type"),
             "target": kv_pairs.get("target", self.player.name)
         }
+
+        print(payload["weapon_type"])
 
         try:
             response = requests.post(f"{SERVER_URL}/createitem", json=payload, timeout=5)

@@ -50,8 +50,14 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_
     # Item level scaling factor (example formula: linear scale)
     level_scale = 1 + (item_level - 1) * 0.2  # Each level adds 20% more power
 
+    if slot_type in ("primary", "secondary") and weapon_type:
+        item_name = f"{rarity} {weapon_type} | (Lv{item_level})"
+        print("In Primary/Secondary")
+    else:
+        item_name = f"{rarity} {slot_type.title()} | (Lv{item_level})"
+
     item = {
-        "name": f"{rarity} {slot_type.title()} Item (Lv{item_level})",
+        "name": item_name,
         "type": get_type_from_slot(slot_type),
         "subtype": slot_type,
         "rarity": rarity,
@@ -60,11 +66,6 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_
         "slot": slot,
         "icon": f"Assets/Items/{weapon_type.lower()}.png" if slot_type in ("primary", "secondary") and weapon_type else f"Assets/Items/{slot_type}.png"
     }
-
-    print(f"[ITEM GEN] Slot: {slot_type}, Weapon: {weapon_type}, Icon: {item['icon']}")
-
-    print(item["icon"])
-
     # Shared stat distribution logic
     item["stats"][main_stat] = int(5 * multiplier * level_scale)
     item["stats"]["Vitality"] = int(4 * multiplier * level_scale)
