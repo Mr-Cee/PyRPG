@@ -318,7 +318,7 @@ def create_player(username: str, player_data: dict = Body(...), token: str = Dep
         level=player_data.get("level", 1),
         experience=player_data.get("experience", 0),
         gold=player_data.get("gold", 0),  # ✅ ADD THIS!
-        inventory=player_data.get("inventory", {}),
+        inventory=player_data.get("inventory", []),
         equipment=player_data.get("equipment", {}),
         skills=player_data.get("skills", {})
     )

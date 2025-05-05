@@ -757,44 +757,55 @@ class ChatWindow:
         self.log_message(status_line, "System")
 
     def cmd_createitem(self, *args):
-        if len(args) < 1:
-            self.log_message("[Usage] /createitem <slot_type> [char_class] [rarity] [weapon_type] [level] [target]",
-                             "System")
+        if not args:
+            self.log_message("Usage: /createitem type=head rarity=Rare level=5 target=PlayerName", "System")
             return
 
-        slot_type = args[0]
-        char_class = args[1] if len(args) > 1 else "Warrior"
-        rarity = args[2] if len(args) > 2 else None
-        weapon_type = args[3] if len(args) > 3 else None
-        try:
-            level = int(args[4]) if len(args) > 4 else 1
-        except ValueError:
-            self.log_message("[Error] Invalid item level (must be a number)", "System")
-            return
+        # Abbreviation mapping
+        key_map = {
+            "t": "type",
+            "rar": "rarity",
+            "lvl": "level",
+            "tgt": "target",
+            "cls": "class",
+            "wpn": "weapon_type"
+        }
 
-        target = args[5] if len(args) > 5 else self.player.name
+        # Convert args into a dictionary of key=value
+        arg_str = " ".join(args)
+        tokens = arg_str.split()
+        kv_pairs = {}
+        for token in tokens:
+            if "=" in token:
+                k, v = token.split("=", 1)
+                k = k.lower()
+                full_key = key_map.get(k, k)  # Expand abbreviation if present
+                kv_pairs[full_key] = v
+
+        if "type" not in kv_pairs:
+            self.log_message("You must specify at least 'type=' for the item slot.", "System")
+            return
 
         payload = {
-            "slot_type": slot_type,
-            "char_class": char_class,
-            "rarity": rarity,
-            "weapon_type": weapon_type,
-            "item_level": level,
-            "target": target
+            "slot_type": kv_pairs["type"],
+            "char_class": kv_pairs.get("class", self.player.char_class or "Warrior"),
+            "rarity": kv_pairs.get("rarity"),
+            "item_level": int(kv_pairs.get("level", 1)),
+            "weapon_type": kv_pairs.get("weapon"),
+            "target": kv_pairs.get("target", self.player.name)
         }
 
         try:
             response = requests.post(f"{SERVER_URL}/createitem", json=payload, timeout=5)
+            response.raise_for_status()
             result = response.json()
             if result.get("success"):
-                self.log_message(f"[Item] {result['message']}", "System")
-                if target == self.player.name and self.inventory_screen:
-                    self.player.refresh_inventory()
-                    if self.inventory_screen:
-                        self.inventory_screen.refresh_inventory_data()
-                        self.inventory_screen.refresh_stat_display()
+                self.log_message(result.get("message"), "System")
+                # Refresh inventory if item is for us
+                if payload["target"] == self.player.name and self.inventory_screen:
+                    self.inventory_screen.refresh_inventory_data()
             else:
-                self.log_message(f"[Error] {result.get('error')}", "System")
+                self.log_message(f"[Error] {result.get('error', 'Unknown error')}", "System")
         except Exception as e:
             self.log_message(f"[Error] Failed to contact server: {e}", "System")
 
