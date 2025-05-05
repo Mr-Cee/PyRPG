@@ -396,8 +396,6 @@ class ChatWindow:
         self.messages[msg_type].append((timestamp, message, msg_type))
         self.messages["All"].append((timestamp, message, msg_type))
 
-        print(display_text)
-
         if self.active_tab == msg_type or self.active_tab == "All":
             self._create_label(display_text, msg_type)
         else:
@@ -767,9 +765,6 @@ class ChatWindow:
             self.log_message("Usage: /createitem type=head rarity=Rare level=5 target=PlayerName", "System")
             return
 
-
-        print(f"[DEBUG] Parsed args: {args}")
-
         # Abbreviation mapping
         key_map = {
             "t": "type",
@@ -804,11 +799,9 @@ class ChatWindow:
             "target": kv_pairs.get("target", self.player.name)
         }
 
-        print(payload["weapon_type"])
-
         try:
             response = requests.post(f"{SERVER_URL}/createitem", json=payload, timeout=5)
-            response.raise_for_status()
+            # response.raise_for_status()
             result = response.json()
             if result.get("success"):
                 self.log_message(result.get("message"), "System")
@@ -840,7 +833,6 @@ class ChatWindow:
             self.log_message(f"[Dev] You gained {amount} experience!", "System")
             # Refresh inventory stat display if visible
             if self.inventory_screen and hasattr(self.inventory_screen, "refresh_stat_display"):
-                print("test")
                 self.inventory_screen.refresh_stat_display()
         else:
             try:

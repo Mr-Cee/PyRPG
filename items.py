@@ -52,7 +52,6 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_
 
     if slot_type in ("primary", "secondary") and weapon_type:
         item_name = f"{rarity} {weapon_type} | (Lv{item_level})"
-        print("In Primary/Secondary")
     else:
         item_name = f"{rarity} {slot_type.title()} | (Lv{item_level})"
 

@@ -162,40 +162,39 @@ class Player:
         total_stats["Avoidance"] = intelligence // 10
         total_stats["Dodge"] = dexterity // 10
 
-        # Begin new logic for Attack Speed
-        attack_speed = None
-
+        # Begin updated logic for Attack Speed
         primary = self.equipment.get("primary")
         secondary = self.equipment.get("secondary")
 
+        # Default base speed
+        attack_speed = 1.0
+
         if primary and primary.get("weapon_type") in ("Bow", "Staff"):
-            # 2-handed weapon overrides everything
+            # 2-handed weapons override everything
             attack_speed = primary["stats"].get("Attack Speed", 1.0)
 
         else:
-            # Start with primary
-            primary_speed = primary["stats"].get("Attack Speed", 1.0) if primary else None
-            secondary_speed = None
+            primary_speed = primary["stats"].get("Attack Speed", 1.0) if primary else 1.0
+            secondary_bonus = 0
 
             if secondary:
                 weapon_type = secondary.get("weapon_type")
+                secondary_speed = secondary["stats"].get("Attack Speed", 0)
 
                 if weapon_type == "Shield":
-                    # Shields provide no attack speed
-                    secondary_speed = 0
+                    secondary_bonus = 0
+                elif weapon_type == "Focus":
+                    secondary_bonus = secondary_speed * 0.05  # Small bonus for focus
                 elif weapon_type in ("Sword", "Dagger"):
                     if self.char_class == "Rogue":
-                        secondary_speed = secondary["stats"].get("Attack Speed", 0) * 0.6  # Higher dual wield bonus
+                        secondary_bonus = secondary_speed * 0.25
                     else:
-                        secondary_speed = secondary["stats"].get("Attack Speed", 0) * 0.4  # Lower for others
-                elif weapon_type == "Focus":
-                    secondary_speed = secondary["stats"].get("Attack Speed", 0) * 0.3
+                        secondary_bonus = secondary_speed * 0.10
 
-            # Combine speeds — base from primary, bonus from secondary
-            attack_speed = (primary_speed or 1.0) - (secondary_speed or 0)
+            attack_speed = round(primary_speed + secondary_bonus, 2)
 
-        # Ensure attack_speed is never below a hard cap
-        attack_speed = max(0.2, round(attack_speed, 2))
+        # Ensure attack_speed is never below a minimum cap
+        attack_speed = max(0.2, attack_speed)
         total_stats["Attack Speed"] = attack_speed
 
         return total_stats

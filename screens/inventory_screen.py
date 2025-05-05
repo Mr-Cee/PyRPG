@@ -419,7 +419,10 @@ class InventoryScreen(BaseScreen):
         if hasattr(self, "inventory_container"):
             self.inventory_container.kill()
         for icon in self.slot_icons:
-            icon.kill()
+            try:
+                icon.hide()
+            except Exception:
+                pass  # Already killed
         self.slot_icons = []
 
         ####### Character Sheet #######
@@ -532,11 +535,6 @@ class InventoryScreen(BaseScreen):
                             drop_index = f"equipped:{slot_panel.slot_type}"
                             break
 
-                # Before equipping into secondary slot:
-                if drop_index == "equipped:secondary" and self.player.is_two_handed_weapon_equipped():
-                    print("[Equip] Cannot equip secondary item with 2-handed weapon.")
-                    drop_index = self.dragging_index  # Cancel drop
-
                 # If dropped outside both, return to original
                 if drop_index is None:
                     drop_index = self.dragging_index
@@ -545,20 +543,49 @@ class InventoryScreen(BaseScreen):
                 dragged_item = next((item for item in self.inventory_data if item.get("slot") == self.dragging_index),
                                     None)
 
-                # Check slot validity for equipment
+                # If trying to equip (into equipment slot)
                 if isinstance(drop_index, str) and drop_index.startswith("equipped:"):
                     slot_type = drop_index.split(":")[1]
-                    if dragged_item.get("subtype") != slot_type:
+                    weapon_type = dragged_item.get("weapon_type")
+                    subtype = dragged_item.get("subtype")
+
+                    # 🎯 Redirect 2-handed weapons to primary no matter what
+                    if weapon_type in ("Bow", "Staff"):
+                        drop_index = "equipped:primary"
+                        # Unequip both hands
+                        for hand in ("primary", "secondary"):
+                            equip_key = f"equipped:{hand}"
+                            equipped_hand_item = next(
+                                (itm for itm in self.inventory_data if itm.get("slot") == equip_key), None)
+                            if equipped_hand_item:
+                                used_slots = {itm.get("slot") for itm in self.inventory_data if
+                                              isinstance(itm.get("slot"), int)}
+                                all_slots = set(range(len(self.inventory_slots)))
+                                free_slots = list(all_slots - used_slots)
+                                if free_slots:
+                                    equipped_hand_item["slot"] = free_slots[0]
+                                else:
+                                    print("[Equip] No space to unequip 2-handed weapon items!")
+                                    drop_index = self.dragging_index  # Cancel equip
+                                    break
+
+                    # ❌ Prevent invalid subtype (e.g., putting head into chest slot)
+                    elif subtype != slot_type:
                         print(f"[Equip] Invalid: {dragged_item['subtype']} can't go into {slot_type}")
-                        drop_index = self.dragging_index  # Cancel
-                # 🚫 Check weapon restrictions if it's a weapon
-                weapon_type = dragged_item.get("weapon_type")
-                if weapon_type:
-                    player_class = self.player.char_class
-                    allowed_weapons = CLASS_WEAPON_RESTRICTIONS.get(player_class, set())
-                    if weapon_type not in allowed_weapons:
-                        print(f"[Equip] {player_class} cannot equip {weapon_type}.")
-                        drop_index = self.dragging_index  # Cancel drop
+                        drop_index = self.dragging_index  # Cancel equip
+
+                    # ❌ Prevent invalid weapon class
+                    if weapon_type:
+                        player_class = self.player.char_class
+                        allowed_weapons = CLASS_WEAPON_RESTRICTIONS.get(player_class, set())
+                        if weapon_type not in allowed_weapons:
+                            print(f"[Equip] {player_class} cannot equip {weapon_type}.")
+                            drop_index = self.dragging_index  # Cancel equip
+
+                # Prevent equipping into secondary if 2-hander is equipped
+                if drop_index == "equipped:secondary" and self.player.is_two_handed_weapon_equipped():
+                    print("[Equip] Cannot equip secondary item with 2-handed weapon.")
+                    drop_index = self.dragging_index  # Cancel
 
                 # Find item already in the drop slot (if any)
                 existing_item = next((item for item in self.inventory_data if item.get("slot") == drop_index), None)
@@ -568,11 +595,6 @@ class InventoryScreen(BaseScreen):
                     dragged_item["slot"] = drop_index
                 if existing_item:
                     existing_item["slot"] = self.dragging_index
-
-                # Remove existing icons in both slots (inventory or equipment)
-                slots_to_clear = (drop_index, self.dragging_index)
-                icons_to_kill = [icon for icon in self.slot_icons if
-                                 getattr(icon, "slot_index", None) in slots_to_clear]
 
                 self.render_inventory_icons()
 
@@ -611,7 +633,7 @@ class InventoryScreen(BaseScreen):
 
                             # 🚫 BLOCK equipping to secondary if 2-handed weapon is equipped
                             if subtype == "secondary" and self.player.is_two_handed_weapon_equipped():
-                                print("[Equip] Cannot equip secondary item while a 2-handed weapon is equipped.")
+                                self.player.chat_window.log_message("[Equip] Cannot equip secondary item while a 2-handed weapon is equipped.", "System")
                                 return  # Cancel the right-click equip
                             # 🚫 Check weapon class restrictions
                             weapon_type = item.get("weapon_type")
@@ -619,14 +641,37 @@ class InventoryScreen(BaseScreen):
                                 player_class = self.player.char_class
                                 allowed_weapons = CLASS_WEAPON_RESTRICTIONS.get(player_class, set())
                                 if weapon_type not in allowed_weapons:
-                                    print(f"[Equip] {player_class} cannot equip {weapon_type}.")
+                                    self.player.chat_window.log_message(f"[Equip] {player_class} cannot equip {weapon_type}.","System")
                                     return
+
+                            # 🔄 If equipping a 2-handed weapon, unequip both hands
+                            if subtype == "primary" and weapon_type in ("Bow", "Staff"):
+                                # Unequip both primary and secondary if they exist
+                                for hand in ("primary", "secondary"):
+                                    equip_key = f"equipped:{hand}"
+                                    equipped_hand_item = next(
+                                        (itm for itm in self.inventory_data if itm.get("slot") == equip_key), None)
+                                    if equipped_hand_item:
+                                        # Find an open inventory slot
+                                        used_slots = {itm.get("slot") for itm in self.inventory_data if
+                                                      isinstance(itm.get("slot"), int)}
+                                        all_slots = set(range(len(self.inventory_slots)))
+                                        free_slots = list(all_slots - used_slots)
+
+                                        if free_slots:
+                                            equipped_hand_item["slot"] = free_slots[0]
+                                        else:
+                                            print("[Equip] No space to unequip old weapon!")
+                                            return  # Cancel equipping if we can't unequip the old weapon
 
                             equipped_item = next((itm for itm in self.inventory_data if itm.get("slot") == equip_key),
                                                  None)
 
                             # Equip current item
-                            item["slot"] = equip_key
+                            if weapon_type in ("Bow", "Staff"):
+                                item["slot"] = "equipped:primary"
+                            else:
+                                item["slot"] = equip_key
 
                             # If something is already equipped, move it BACK to the same inventory slot
                             if equipped_item:
@@ -654,7 +699,7 @@ class InventoryScreen(BaseScreen):
                         free_slots = list(all_slots - used_slots)
 
                         if not free_slots:
-                            print("[Right-click] Cannot unequip — inventory is full.")
+                            self.player.chat_window.log_message("[Right-click] Cannot unequip — inventory is full.", "System")
                             return
 
                         equipped_item["slot"] = free_slots[0]  # Move back to inventory
