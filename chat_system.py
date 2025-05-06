@@ -505,10 +505,6 @@ class ChatWindow:
             self.input_box.set_text("")
 
     def process_event(self, event):
-        if event.type == pygame_gui.UI_BUTTON_PRESSED:
-            for idx, btn in enumerate(self.tab_buttons):
-                if event.ui_element == btn:
-                    self.switch_tab(self.tabs[idx])
 
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_RETURN, pygame.K_SLASH):
@@ -541,6 +537,12 @@ class ChatWindow:
                     self.input_box.set_text(self.history[self.history_index])
                 else:
                     self.input_box.set_text("")
+
+        elif event.type == pygame_gui.UI_BUTTON_PRESSED:
+            for idx, btn in enumerate(self.tab_buttons):
+                if event.ui_element == btn:
+                    self.switch_tab(self.tabs[idx])
+
 
         if self.reports_window:
             self.reports_window.process_event(event)

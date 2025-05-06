@@ -1,3 +1,5 @@
+import time
+
 import pygame
 import pygame_gui
 import requests
@@ -10,7 +12,7 @@ from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
 import random
 
-from settings import CLASS_WEAPON_RESTRICTIONS, CLASS_PRIMARIES, CLASS_SECONDARIES, SERVER_URL
+from settings import *
 
 MAX_DUNGEON_LEVEL=1
 
@@ -23,6 +25,10 @@ class QuickBattleScreen(BaseScreen):
         self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
         self.player.chat_window.panel.set_relative_position((10, 480))
         self.player.chat_window.panel.set_dimensions((400, 220))
+
+        self.pending_enemy_spawn = False
+        self.enemy_spawn_timer = 0.0
+        self.enemy_spawn_delay = 1.0  # 1 second delay
 
         self.title_label = UILabel(
             relative_rect=Rect((10, 10), (300, 30)),
@@ -41,6 +47,17 @@ class QuickBattleScreen(BaseScreen):
             relative_rect=Rect((10, 50), (380, 340)),
             manager=manager
         )
+
+        self.session_summary_label = UITextBox(
+            html_text="",
+            relative_rect=Rect((GAME_WIDTH-275, 10), (250, 150)),
+            manager=self.manager,
+            object_id="#session_summary_box"
+        )
+        self.session_kills = 0
+        self.session_xp = 0
+        self.session_copper = 0
+        self.session_start_time = time.time()
 
         self.battle_log = []
         self.battle_running = True
@@ -115,6 +132,18 @@ class QuickBattleScreen(BaseScreen):
 
         self.update_hp_display()
         self.add_log(f"You engage a {self.enemy['name']}!")
+
+    def start_new_battle(self):
+        self.enemy = self.generate_enemy_from_dungeon_level(MAX_DUNGEON_LEVEL)
+        self.player_hp = self.player.total_stats.get("Health", 100)
+        self.enemy_attack_speed = self.enemy.get("speed", 1.0)
+        self.enemy_attack_delay = max(0.2, 1.0 / self.enemy_attack_speed)
+        self.battle_running = True
+        self.player_attack_timer = 0
+        self.enemy_attack_timer = 0
+        self.update_enemy_labels()
+        self.update_hp_display()
+        self.add_log(f"<font color='#aaaaaa'>A new {self.enemy['name']} approaches!</font>")
 
     def update_enemy_name_display(self):
         elite_type = self.enemy.get("elite_type")
@@ -207,6 +236,11 @@ class QuickBattleScreen(BaseScreen):
             if self.enemy_attack_timer >= self.enemy_attack_delay:
                 self.enemy_attack_timer = 0
                 self.enemy_attack()
+        if self.pending_enemy_spawn:
+            self.enemy_spawn_timer += time_delta
+            if self.enemy_spawn_timer >= self.enemy_spawn_delay:
+                self.start_new_battle()
+                self.pending_enemy_spawn = False
 
         if self.player.chat_window:
             self.player.chat_window.update(time_delta)
@@ -242,43 +276,79 @@ class QuickBattleScreen(BaseScreen):
             self.add_log(f"You hit {self.enemy['name']} for {dmg} damage.")
 
         self.enemy["hp"] -= dmg
-        self.add_log(f"You hit {self.enemy['name']} for {dmg} damage.")
+
 
         if self.enemy["hp"] <= 0:
             self.enemy["hp"] = 0
             self.battle_running = False
             self.add_log(f"{self.enemy['name']} is defeated!")
             self.apply_battle_rewards()
+
+            # Automatically start new battle
+            self.pending_enemy_spawn = True
+            self.enemy_spawn_timer = 0.0
         self.update_hp_display()
 
     def enemy_attack(self):
         if not self.battle_running:
             return
 
-        raw_dmg = self.enemy["damage"]
+        base_dmg = self.enemy["damage"]
         crit_chance = self.enemy.get("crit_chance", 0)
         crit_damage = self.enemy.get("crit_damage", 0)
+
+        dodge_chance = self.player.total_stats.get("Dodge", 0)
+        avoid_chance = self.player.total_stats.get("Avoidance", 0)
+        block_chance = self.player.total_stats.get("Block", 0)
         armor = self.player.total_stats.get("Armor", 0)
 
-        # Roll for crit
+        # Dodge
+        if random.random() < (dodge_chance / 100):
+            self.add_log(f"<font color='#00ffff'>You dodged the attack!</font>")
+            return
+
+        # Avoidance
+        if random.random() < (avoid_chance / 100):
+            self.add_log(f"<font color='#00ffff'>You avoided the attack!</font>")
+            return
+
+        # Crit
         is_crit = random.random() < (crit_chance / 100)
+        dmg = base_dmg
         if is_crit:
-            crit_dmg = int(raw_dmg * (1 + crit_damage / 100))
-            reduced_dmg = int(crit_dmg * (100 / (100 + armor)))  # Damage mitigation formula
-            self.add_log(f"<font color='#ff3333'>CRITICAL HIT!</font> {self.enemy['name']} hits you for {reduced_dmg} damage.")
+            dmg = int(dmg * (1 + crit_damage / 100))
+
+        # Block
+        if random.random() < (block_chance / 100):
+            dmg = int(dmg * 0.5)
+            self.add_log(f"<font color='#aaaaff'>You blocked the attack!</font> Damage reduced.")
+
+        # Armor application (after all multipliers)
+        dmg_after_armor = max(0, dmg - armor)
+
+        if dmg_after_armor <= 0:
+            self.add_log(f"<font color='#cccccc'>Your armor absorbed all damage!</font>")
         else:
-            reduced_dmg = int(raw_dmg * (100 / (100 + armor)))  # Damage mitigation formula
-            self.add_log(f"{self.enemy['name']} hits you for {reduced_dmg} damage.")
+            if is_crit:
+                self.add_log(
+                    f"<font color='#ff3333'>CRITICAL!</font> {self.enemy['name']} hits you for {dmg_after_armor} after armor.")
+            else:
+                self.add_log(f"{self.enemy['name']} hits you for {dmg_after_armor} after armor.")
 
-        # reduced_dmg = int(raw_dmg * (100 / (100 + armor)))  # Damage mitigation formula
-
-        self.player_hp -= reduced_dmg
-
+        self.player_hp -= dmg_after_armor
 
         if self.player_hp <= 0:
             self.player_hp = 0
             self.battle_running = False
-            self.add_log("You have been defeated.")
+            self.add_log("<font color='#ff4444'>You have been defeated.</font>")
+
+            # Reset health only
+            self.player_hp = self.player.total_stats.get("Health", 100)
+            self.enemy["hp"] = self.enemy["max_hp"]
+            self.player_attack_timer = 0
+            self.enemy_attack_timer = 0
+
+            self.battle_running = True
 
         self.update_hp_display()
 
@@ -324,7 +394,7 @@ class QuickBattleScreen(BaseScreen):
                     self.add_log(result["message"])
                     # Optionally show the item popup if you also want to show what was dropped
                     # You could refetch inventory and search for newest item to show
-                    self.show_item_drop_popup(result["item"])
+                    # self.show_item_drop_popup(result["item"])
                 else:
                     self.add_log(f"[Loot Error] {result.get('error', 'Unknown error')}")
             except Exception as e:
@@ -333,6 +403,24 @@ class QuickBattleScreen(BaseScreen):
         if self.player.auth_token:
             self.player.sync_coins_to_server(self.player.auth_token)
             self.player.save_to_server(self.player.auth_token)
+
+        self.session_kills += 1
+        self.session_xp += xp
+        self.session_copper += copper
+        self.update_session_summary()
+
+    def update_session_summary(self):
+        duration = int(time.time() - self.session_start_time)
+        minutes = duration // 60
+        seconds = duration % 60
+        summary_text = (
+            f"<b>Session Summary</b><br>"
+            f"Kills: {self.session_kills}<br>"
+            f"XP: {self.session_xp}<br>"
+            f"Copper: {self.session_copper}<br>"
+            f"Time: {minutes}m {seconds}s"
+        )
+        self.session_summary_label.set_text(summary_text)
 
     def show_item_drop_popup(self, item):
         from pygame import Rect
@@ -371,16 +459,21 @@ class QuickBattleScreen(BaseScreen):
         return None
 
     def handle_event(self, event):
+        # ✅ Only access event.ui_element when event is of this type
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
+            print("button pressed")
             if event.ui_element == self.back_button:
                 from screens.battle_home_screen import BattleHomeScreen
                 self.screen_manager.set_screen(BattleHomeScreen(self.manager, self.screen_manager))
+
             elif hasattr(self, 'popup_ok_button') and event.ui_element == self.popup_ok_button:
                 self.item_popup.kill()
                 del self.item_popup
                 del self.popup_ok_button
 
 
+
+        # Let the chat system process any events too
         if self.player.chat_window:
             self.player.chat_window.process_event(event)
 
@@ -429,6 +522,7 @@ class QuickBattleScreen(BaseScreen):
         if self.player.chat_window:
             self.player.chat_window.teardown()
             self.player.chat_window = None
+        self.session_summary_label.kill()
 
 
 ScreenRegistry.register("quick_battle", QuickBattleScreen)
