@@ -23,7 +23,7 @@ DATABASE_USER = "PyRPG_Admin"
 DATABASE_PASSWORD = "Christie91!"
 DATABASE_URL = f"postgresql+psycopg2://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}"
 
-REQUIRED_VERSION = "v0.0.7"
+REQUIRED_VERSION = "v0.0.8"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
