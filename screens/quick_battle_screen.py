@@ -64,7 +64,7 @@ class QuickBattleScreen(BaseScreen):
         self.player_attack_timer = 0
         self.enemy_attack_timer = 0
 
-        self.enemy = self.generate_enemy_from_dungeon_level(self.player.dungeon_stats.get("highest_level", 1))
+        self.enemy = self.generate_enemy_from_dungeon_level(self.player.highest_dungeon_completed)
         # self.enemy = self.generate_enemy_from_dungeon_level(MAX_DUNGEON_LEVEL)
 
         self.player_hp = self.player.total_stats.get("Health", 100)
