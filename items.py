@@ -73,7 +73,6 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_
         item["stats"]["Armor"] = int(6 * multiplier * level_scale)
 
     elif slot_type in ("primary", "secondary") and weapon_type in WEAPON_TYPES:
-        print("TEST BEGINNING BLOCK")
         item["weapon_type"] = weapon_type
         wt = WEAPON_TYPES[weapon_type]
 
@@ -81,11 +80,8 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_
             item["stats"]["Block"] = int(wt["base_block"] * multiplier * level_scale)
         else:
             base_damage = wt["base_damage"]
-
-            print("Primary!")
             # ✅ Reduce damage for secondary non-shield weapons
             if slot_type == "secondary" and not wt["block"]:
-                print("Secondary!")
                 base_damage *= 0.5
 
             base = int(base_damage * multiplier * level_scale)
@@ -116,8 +112,6 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_
     elif slot_type in EQUIP_SLOTS["accessory"]:
         item["stats"]["Critical Chance"] = round(3 * multiplier * level_scale, 1)
         item["stats"]["Critical Damage"] = round(7 * multiplier * level_scale, 1)
-
-    print(item)
     return item
 
 
