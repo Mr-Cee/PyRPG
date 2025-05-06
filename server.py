@@ -99,6 +99,11 @@ class StatEquipUpdateRequest(BaseModel):
     stats: dict
     equipment: dict
 
+class DungeonResult(BaseModel):
+    username: str
+    level_completed: int
+    time_seconds: int
+
 
 def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
     to_encode = data.copy()
@@ -391,6 +396,28 @@ def update_player(request: UpdatePlayerRequest, db: Session = Depends(get_db)):
     db.refresh(character)
 
     return {"msg": "Player updated successfully!"}
+
+@app.post("/dungeon_complete")
+def dungeon_complete(data: DungeonResult, db: Session = Depends(get_db)):
+    player = db.query(Player).filter_by(username=data.username).first()
+    if not player:
+        raise HTTPException(status_code=404, detail="Player not found")
+
+    # Update if it's a new highest level or better time
+    updated = False
+    if data.level_completed > (player.highest_dungeon_completed or 0):
+        player.highest_dungeon_completed = data.level_completed
+        player.best_dungeon_time_seconds = data.time_seconds
+        updated = True
+    elif data.level_completed == (player.highest_dungeon_completed or 0):
+        if data.time_seconds < (player.best_dungeon_time_seconds or 9999999):
+            player.best_dungeon_time_seconds = data.time_seconds
+            updated = True
+
+    if updated:
+        db.commit()
+
+    return {"success": True, "message": "Dungeon completion recorded"}
 
 @app.post("/inventory/update")
 def update_inventory(request: InventoryUpdateRequest, db: Session = Depends(get_db)):

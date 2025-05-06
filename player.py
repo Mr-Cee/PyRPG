@@ -38,8 +38,6 @@ class Player:
             "belt": None
         }
         self.skills = skills if skills else {}
-
-
         self.stats = {
             "Health": 10,
             "Mana": 10,
@@ -57,7 +55,6 @@ class Player:
             "Attack Speed": 1.0  # <-- default 1 second per attack
         }
         self.total_stats = self.calculate_total_stats()
-
         self.dungeon_stats = {
             "highest_level": 0,
             "fastest_time": None,
@@ -65,7 +62,6 @@ class Player:
             "damage_taken": 0
         }
         self.chat_window = None
-
         self.last_heartbeat_time = 0
         self.heartbeat_interval = 30  # seconds
 
@@ -393,7 +389,9 @@ class Player:
                 "silver": self.coins["silver"],
                 "gold": self.coins["gold"],
                 "platinum": self.coins["platinum"],
-                "last_logout_time": self.last_logout_time.isoformat() if self.last_logout_time else datetime.datetime.utcnow().isoformat()
+                "last_logout_time": self.last_logout_time.isoformat() if self.last_logout_time else datetime.datetime.utcnow().isoformat(),
+                "highest_dungeon_completed": self.dungeon_stats.get("highest_level", 0),
+                "best_dungeon_time_seconds": self.dungeon_stats.get("best_time", 0),
             }
             response = requests.post(f"{SERVER_URL}/update_player", json=payload, headers=headers, timeout=5)
             if response.status_code != 200:
@@ -522,7 +520,9 @@ class Player:
                 "silver": self.coins["silver"],
                 "gold": self.coins["gold"],
                 "platinum": self.coins["platinum"],
-                "last_logout_time": self.last_logout_time.isoformat() if self.last_logout_time else datetime.datetime.utcnow().isoformat()
+                "last_logout_time": self.last_logout_time.isoformat() if self.last_logout_time else datetime.datetime.utcnow().isoformat(),
+                "highest_dungeon_completed": self.dungeon_stats.get("highest_level", 0),
+                "best_dungeon_time_seconds": self.dungeon_stats.get("best_time", 0),
             }
             response = requests.post(f"{SERVER_URL}/update_player", json=payload, headers=headers)
             if response.status_code == 200:
