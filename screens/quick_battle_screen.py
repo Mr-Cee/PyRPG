@@ -224,6 +224,19 @@ class QuickBattleScreen(BaseScreen):
         self.player_damage = base_weapon_dmg + bonus
 
         dmg = self.player_damage
+
+        # 🎯 Get crit stats
+        crit_chance = self.player.total_stats.get("Critical Chance", 0)
+        crit_damage = self.player.total_stats.get("Critical Damage", 0)
+
+        # 🎲 Roll for crit
+        is_crit = random.random() < (crit_chance / 100)
+        if is_crit:
+            dmg = int(dmg * (1 + crit_damage / 100))
+            self.add_log(f"<font color='#ffcc00'>CRIT!</font> You hit {self.enemy['name']} for {dmg} damage!")
+        else:
+            self.add_log(f"You hit {self.enemy['name']} for {dmg} damage.")
+
         self.enemy["hp"] -= dmg
         self.add_log(f"You hit {self.enemy['name']} for {dmg} damage.")
 
