@@ -40,6 +40,8 @@ class Player(Base):
     skills = Column(JSONB, default=dict)
     is_active = Column(Boolean, default=False)
     is_muted = Column(Boolean, default=False)
+    highest_dungeon_completed = Column(Integer, default=0)
+    best_dungeon_time_seconds = Column(Integer, default=0)
 
 class ChatMessage(Base):
     __tablename__ = 'chat_messages'

@@ -1,7 +1,7 @@
 import pygame
 import pygame_gui
 from pygame import Rect
-from pygame_gui.elements import UIButton
+from pygame_gui.elements import UIButton, UIPanel, UILabel
 
 from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
@@ -24,6 +24,18 @@ class BattleHomeScreen(BaseScreen):
             manager=manager
         )
 
+        # Dungeon Panel
+        self.dungeon_panel = UIPanel(
+            relative_rect=Rect((10, 120), (300, 120)),
+            manager=self.manager
+        )
+        self.dungeon_label = UILabel(
+            relative_rect=Rect((10, 10), (280, 30)),
+            text=f"Highest Dungeon Completed: {self.player.dungeon_stats.get('highest_level', 0)}",
+            manager=self.manager,
+            container=self.dungeon_panel
+        )
+
         self.raid_button = UIButton(
             relative_rect=Rect((100, 220), (200, 40)),
             text="Raids",
@@ -42,9 +54,9 @@ class BattleHomeScreen(BaseScreen):
             if event.ui_element == self.quick_button:
                 from screens.quick_battle_screen import QuickBattleScreen
                 self.screen_manager.set_screen(QuickBattleScreen(self.manager, self.screen_manager))
-            elif event.ui_element == self.dungeon_button:
-                # Placeholder
-                pass
+            elif event.ui_element == self.dungeon_start_button:
+                from screens.dungeon_screen import DungeonScreen
+                self.screen_manager.set_screen(DungeonScreen(self.manager, self.screen_manager))
             elif event.ui_element == self.raid_button:
                 # Placeholder
                 pass

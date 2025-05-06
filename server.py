@@ -79,6 +79,8 @@ class UpdatePlayerRequest(BaseModel):
     gold: int
     platinum: int
     last_logout_time: str
+    highest_dungeon_completed: int
+    best_dungeon_time_seconds: int
 
 class HeartbeatRequest(BaseModel):
     username: str
@@ -353,7 +355,9 @@ def create_player(username: str, player_data: dict = Body(...), token: str = Dep
         inventory=inventory,
         max_inventory_slots=player_data.get("max_inventory_slots", 36),
         equipment=player_data.get("equipment", {}),
-        skills=player_data.get("skills", {})
+        skills=player_data.get("skills", {}),
+        highest_dungeon_completed=player_data.get("highest_dungeon_completed", 0),
+        best_dungeon_time_seconds=player_data.get("best_dungeon_time_seconds", 0)
     )
 
     db.add(new_player)
@@ -380,6 +384,8 @@ def update_player(request: UpdatePlayerRequest, db: Session = Depends(get_db)):
     character.gold = request.gold
     character.platinum = request.platinum
     character.last_logout_time = request.last_logout_time
+    character.highest_dungeon_completed = request.highest_dungeon_completed
+    character.best_dungeon_time_seconds = request.best_dungeon_time_seconds
 
     db.commit()
     db.refresh(character)
@@ -639,7 +645,9 @@ def get_players(username: str, token: str = Depends(oauth2_scheme), db: Session 
             "skills": p.skills,
             "username": account.username,
             "role": account.role,
-            "is_muted": p.is_muted
+            "is_muted": p.is_muted,
+            "highest_dungeon_completed": p.highest_dungeon_completed,
+            "best_dungeon_time_seconds": p.best_dungeon_time_seconds
         })
 
     return player_list
@@ -692,7 +700,9 @@ def get_player_stats(requester_name: str, target_name: str = None, db: Session =
         "base_stats": player.stats if hasattr(player, "stats") else {},
         "total_stats": total_stats,
         "equipment": player.equipment,
-        "is_muted": player.is_muted
+        "is_muted": player.is_muted,
+        "highest_dungeon_completed": player.highest_dungeon_completed,
+        "best_dungeon_time_seconds": player.best_dungeon_time_seconds
     }
 
 @app.get("/player_coins")
