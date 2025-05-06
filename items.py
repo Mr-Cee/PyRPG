@@ -79,7 +79,12 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_
         if wt["block"]:
             item["stats"]["Block"] = int(wt["base_block"] * multiplier * level_scale)
         else:
-            item["stats"]["Weapon Damage"] = int(wt["base_damage"] * multiplier * level_scale)
+            base = int(wt["base_damage"] * multiplier * level_scale)
+            min_damage = max(1, int(base * 0.85))  # 85% of base
+            max_damage = int(base * 1.15)  # 115% of base
+            item["stats"]["Min Damage"] = min_damage
+            item["stats"]["Max Damage"] = max_damage
+            # item["stats"]["Weapon Damage"] = int(wt["base_damage"] * multiplier * level_scale)
 
             if slot_type == "secondary":
                 # Secondary hand penalty

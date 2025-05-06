@@ -51,7 +51,7 @@ class QuickBattleScreen(BaseScreen):
         # self.enemy = self.generate_enemy_from_dungeon_level(MAX_DUNGEON_LEVEL)
 
         self.player_hp = self.player.total_stats.get("Health", 100)
-        self.player_damage = self.player.total_stats.get("Bonus Damage", 1) + 5
+        # self.player_damage = self.player.total_stats.get("Bonus Damage", 1) + 5
 
         self.player_attack_speed = self.player.total_stats.get("Attack Speed", 1.0)
         self.enemy_attack_speed = self.enemy.get("speed", 1.0)
@@ -210,6 +210,18 @@ class QuickBattleScreen(BaseScreen):
     def player_attack(self):
         if not self.battle_running:
             return
+
+        weapon = self.player.equipment.get("primary")
+        if weapon:
+            min_dmg = weapon["stats"].get("Min Damage", 1)
+            max_dmg = weapon["stats"].get("Max Damage", 5)
+            base_weapon_dmg = random.randint(min_dmg, max_dmg)
+        else:
+            base_weapon_dmg = 2  # default fallback
+
+        bonus = self.player.total_stats.get("Bonus Damage", 0)
+
+        self.player_damage = base_weapon_dmg + bonus
 
         dmg = self.player_damage
         self.enemy["hp"] -= dmg
