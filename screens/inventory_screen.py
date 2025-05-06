@@ -130,7 +130,7 @@ class InventoryScreen(BaseScreen):
 
         self.hover_tooltip_box = pygame_gui.elements.UITextBox(
             html_text="",
-            relative_rect=pygame.Rect((330, 60), (200, 200)),  # Adjust position/size as needed
+            relative_rect=pygame.Rect((330, 60), (200, 250)),  # Adjust position/size as needed
             manager=self.manager
         )
         self.hover_tooltip_box.hide()
@@ -219,7 +219,7 @@ class InventoryScreen(BaseScreen):
         # Tooltip for equipped items (initially hidden)
         self.equip_tooltip_box = pygame_gui.elements.UITextBox(
             html_text="",
-            relative_rect=pygame.Rect((self.char_panel.get_relative_rect().left - 210, self.grid_origin_y), (200, 200)),
+            relative_rect=pygame.Rect((self.char_panel.get_relative_rect().left - 210, self.grid_origin_y), (200, 250)),
             manager=self.manager
         )
         self.equip_tooltip_box.hide()
@@ -740,7 +740,16 @@ class InventoryScreen(BaseScreen):
         if hovered_inventory_item:
             rarity = hovered_inventory_item.get("rarity", "Common")
             color = rarity_colors.get(rarity, "#ffffff")
-            inventory_tooltip_text = f"<b>{hovered_inventory_item['name']}</b><br><i><font color='{color}'>{rarity}</font></i>"
+            subtype = hovered_inventory_item.get("subtype")
+            subtype_label = f" ({subtype.title()})" if subtype in ("primary", "secondary") else ""
+            slot_label = ""
+            if subtype == "primary":
+                slot_label = " [Main Hand]"
+            elif subtype == "secondary":
+                slot_label = " [Off Hand]"
+
+            inventory_tooltip_text = f"<b>{hovered_inventory_item['name']}</b>{slot_label}<br><i><font color='{color}'>{rarity}</font></i>"
+
 
             stats = hovered_inventory_item.get("stats", {})
             subtype = hovered_inventory_item.get("subtype")

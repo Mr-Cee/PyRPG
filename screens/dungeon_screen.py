@@ -162,20 +162,6 @@ class DungeonScreen(BaseScreen):
         self.battle_log = self.battle_log[-15:]  # Limit to last 15 messages
         self.log_box.set_text("<br>".join(self.battle_log))
 
-        if self.log_box.scroll_bar:
-            scroll_bar = self.log_box.scroll_bar
-            scroll_bar.scroll_position = (scroll_bar.bottom_limit - scroll_bar.sliding_button.rect.height)
-            x_pos = scroll_bar.rect.x + scroll_bar.shadow_width + scroll_bar.border_width
-            y_pos = scroll_bar.scroll_position + scroll_bar.rect.y + scroll_bar.shadow_width + \
-                    scroll_bar.border_width + scroll_bar.button_height
-            pos = pygame.math.Vector2(x_pos, y_pos)
-            print(pos)
-            scroll_bar.sliding_button.set_position(pos)
-
-            scroll_bar.start_percentage = scroll_bar.scroll_position / scroll_bar.scrollable_height
-            if not scroll_bar.has_moved_recently:
-                scroll_bar.has_moved_recently = True
-
     def load_enemies(self):
         tier = self.find_tier(self.level)
         self.enemies = [self.generate_enemy(tier) for _ in range(10)]
@@ -205,7 +191,7 @@ class DungeonScreen(BaseScreen):
         }
 
     def set_next_enemy(self):
-        #self.battle_log = []
+        self.battle_log = []
         if self.current_enemy_index < 10:
             self.current_enemy = self.enemies[self.current_enemy_index]
             self.current_enemy_index += 1

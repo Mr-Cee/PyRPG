@@ -13,7 +13,7 @@ WEAPON_TYPES = {
     "Sword":  {"slots": 1, "block": False, "speed_secondary_penalty": True,  "base_damage": 12, "base_speed": 1.0},
     "Dagger": {"slots": 1, "block": False, "speed_secondary_penalty": True,  "base_damage": 10, "base_speed": 1.2},
     "Staff":  {"slots": 2, "block": False, "speed_secondary_penalty": False, "base_damage": 18, "base_speed": 0.8},
-    "Bow":    {"slots": 2, "block": False, "speed_secondary_penalty": False, "base_damage": 20, "base_speed": 0.7},
+    "Bow":    {"slots": 2, "block": False, "speed_secondary_penalty": False, "base_damage": 20, "base_speed": 0.6},
     "Shield": {"slots": 1, "block": True,  "speed_secondary_penalty": False, "base_block": 15},
     "Focus":  {"slots": 1, "block": False, "speed_secondary_penalty": False, "base_damage": 8,  "base_speed": 1.1},
 }
@@ -73,22 +73,30 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_
         item["stats"]["Armor"] = int(6 * multiplier * level_scale)
 
     elif slot_type in ("primary", "secondary") and weapon_type in WEAPON_TYPES:
+        print("TEST BEGINNING BLOCK")
         item["weapon_type"] = weapon_type
         wt = WEAPON_TYPES[weapon_type]
 
         if wt["block"]:
             item["stats"]["Block"] = int(wt["base_block"] * multiplier * level_scale)
         else:
-            base = int(wt["base_damage"] * multiplier * level_scale)
+            base_damage = wt["base_damage"]
+
+            print("Primary!")
+            # ✅ Reduce damage for secondary non-shield weapons
+            if slot_type == "secondary" and not wt["block"]:
+                print("Secondary!")
+                base_damage *= 0.5
+
+            base = int(base_damage * multiplier * level_scale)
             min_damage = max(1, int(base * 0.85))  # 85% of base
             max_damage = int(base * 1.15)  # 115% of base
             item["stats"]["Min Damage"] = min_damage
             item["stats"]["Max Damage"] = max_damage
-            # item["stats"]["Weapon Damage"] = int(wt["base_damage"] * multiplier * level_scale)
 
             if slot_type == "secondary":
                 # Secondary hand penalty
-                penalty = -0.10 if char_class == "Rogue" else -0.05
+                penalty = -0.25 if char_class == "Rogue" else -0.10
                 speed = wt["base_speed"] + penalty
             else:
                 speed = wt["base_speed"]
