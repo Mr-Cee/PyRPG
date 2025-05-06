@@ -20,10 +20,6 @@ class QuickBattleScreen(BaseScreen):
         self.player = self.screen_manager.player
         self.manager = manager
 
-
-        tempItem=create_item(slot_type="primary", rarity="Common", weapon_type="Sword")
-        print(tempItem)
-
         self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
         self.player.chat_window.panel.set_relative_position((10, 480))
         self.player.chat_window.panel.set_dimensions((400, 220))
@@ -242,13 +238,16 @@ class QuickBattleScreen(BaseScreen):
         if not self.battle_running:
             return
 
-        dmg = self.enemy["damage"]
-        self.player_hp -= dmg
-        self.add_log(f"{self.enemy['name']} hits you for {dmg} damage.")
+        raw_dmg = self.enemy["damage"]
+        armor = self.player.total_stats.get("Armor", 0)
+        reduced_dmg = int(raw_dmg * (100 / (100 + armor)))  # Damage mitigation formula
+
+        self.player_hp -= reduced_dmg
+        self.add_log(f"{self.enemy['name']} hits you for {reduced_dmg} damage (reduced from {raw_dmg}).")
 
         if self.player_hp <= 0:
-            self.battle_running = False
             self.player_hp = 0
+            self.battle_running = False
             self.add_log("You have been defeated.")
 
         self.update_hp_display()
