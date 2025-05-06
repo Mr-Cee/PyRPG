@@ -58,6 +58,12 @@ class Player:
         }
         self.total_stats = self.calculate_total_stats()
 
+        self.dungeon_stats = {
+            "highest_level": 0,
+            "fastest_time": None,
+            "damage_dealt": 0,
+            "damage_taken": 0
+        }
         self.chat_window = None
 
         self.last_heartbeat_time = 0

@@ -2,7 +2,7 @@ import pygame
 import pygame_gui
 from pygame import Rect
 from pygame_gui.elements import UIButton, UIPanel, UILabel
-
+from settings import *
 from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
 
@@ -26,7 +26,7 @@ class BattleHomeScreen(BaseScreen):
 
         # Dungeon Panel
         self.dungeon_panel = UIPanel(
-            relative_rect=Rect((10, 120), (300, 120)),
+            relative_rect=Rect((GAME_WIDTH-325, 25), (300, 120)),
             manager=self.manager
         )
         self.dungeon_label = UILabel(
@@ -54,7 +54,7 @@ class BattleHomeScreen(BaseScreen):
             if event.ui_element == self.quick_button:
                 from screens.quick_battle_screen import QuickBattleScreen
                 self.screen_manager.set_screen(QuickBattleScreen(self.manager, self.screen_manager))
-            elif event.ui_element == self.dungeon_start_button:
+            elif event.ui_element == self.dungeon_button:
                 from screens.dungeon_screen import DungeonScreen
                 self.screen_manager.set_screen(DungeonScreen(self.manager, self.screen_manager))
             elif event.ui_element == self.raid_button:
@@ -75,5 +75,6 @@ class BattleHomeScreen(BaseScreen):
         self.dungeon_button.kill()
         self.raid_button.kill()
         self.back_button.kill()
+        self.dungeon_panel.kill()
 
 ScreenRegistry.register("battle_home", BattleHomeScreen)
