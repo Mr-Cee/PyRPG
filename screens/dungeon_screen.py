@@ -214,17 +214,25 @@ class DungeonScreen(BaseScreen):
         if not self.battle_running:
             return
 
-        weapon = self.player.equipment.get("primary")
-        if weapon:
-            min_dmg = weapon["stats"].get("Min Damage", 1)
-            max_dmg = weapon["stats"].get("Max Damage", 5)
-            base_weapon_dmg = random.randint(min_dmg, max_dmg)
+        primary_weapon = self.player.equipment.get("primary")
+        if primary_weapon:
+            min_dmg = primary_weapon["stats"].get("Min Damage", 1)
+            max_dmg = primary_weapon["stats"].get("Max Damage", 5)
+            base_primary_dmg = random.randint(min_dmg, max_dmg)
         else:
-            base_weapon_dmg = 2  # default fallback
+            base_primary_dmg = 2  # default fallback
+
+        secondary_weapon = self.player.equipment.get("secondary")
+        if secondary_weapon:
+            min_dmg = secondary_weapon["stats"].get("Min Damage", 1)
+            max_dmg = secondary_weapon["stats"].get("Max Damage", 5)
+            base_secondary_dmg = random.randint(min_dmg, max_dmg)
+        else:
+            base_secondary_dmg = 2  # default fallback
 
         bonus = self.player.total_stats.get("Bonus Damage", 0)
 
-        self.player_damage = base_weapon_dmg + bonus
+        self.player_damage = base_primary_dmg + base_secondary_dmg + bonus
 
         dmg = self.player_damage
 
