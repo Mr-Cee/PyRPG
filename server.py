@@ -547,7 +547,9 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
     db.commit()
 
 
-    return {"success": True, "message": f"{item['name']} added to {target.name}'s inventory."}
+    return {"success": True,
+            "message": f"{item['name']} added to {target.name}'s inventory.",
+            "item": item}
 
 @app.post("/chat/send")
 def send_chat_message(chat: ChatMessage):

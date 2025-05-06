@@ -1,5 +1,6 @@
 import pygame
 import pygame_gui
+import requests
 from pygame import Rect
 from pygame_gui.elements import UIButton, UITextBox, UILabel
 from enemies import ENEMY_TIERS, NAME_PREFIXES, ELITE_PREFIXES, ELITE_AURA_COLORS
@@ -9,7 +10,7 @@ from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
 import random
 
-from settings import CLASS_WEAPON_RESTRICTIONS, CLASS_PRIMARIES, CLASS_SECONDARIES
+from settings import CLASS_WEAPON_RESTRICTIONS, CLASS_PRIMARIES, CLASS_SECONDARIES, SERVER_URL
 
 MAX_DUNGEON_LEVEL=1
 
@@ -242,40 +243,53 @@ class QuickBattleScreen(BaseScreen):
         self.player.add_coins(copper_amount=copper)
         self.add_log(f"You gain {xp} XP and {copper} copper.")
 
+        print(CLASS_PRIMARIES.get(self.player.char_class, []))
+
         # Chance-based item reward
         drop_chance = 0.75 if self.enemy.get("elite") else 0.5
         if random.random() < drop_chance:
-            valid_primary = random.choice(list(CLASS_PRIMARIES.get(self.player.char_class, [])))
-            valid_secondary = random.choice(list(CLASS_SECONDARIES.get(self.player.char_class, [])))
-            randomSlot=random.choice(["head", "shoulders", "chest", "gloves", "legs", "boots", "primary", "secondary", "amulet", "ring", "bracelet", "belt"])
-            if randomSlot == "primary":
-                item = create_item(slot_type=randomSlot,
-                                   char_class=self.player.char_class,
-                                   weapon_type=valid_primary,
-                                   item_level=MAX_DUNGEON_LEVEL)
-            elif randomSlot == "secondary":
-                item = create_item(slot_type=randomSlot,
-                                   char_class=self.player.char_class,
-                                   weapon_type=valid_secondary,
-                                   item_level=MAX_DUNGEON_LEVEL)
-            else:
-                item = create_item(slot_type=randomSlot,
-                                   char_class=self.player.char_class,
-                                   item_level=MAX_DUNGEON_LEVEL)
-            item["slot"] = self.find_free_inventory_slot()
-            if item["slot"] is not None:
-                self.player.inventory.append(item)
-                self.add_log(f"Loot: {item['name']} acquired!")
-            else:
-                self.add_log("[Loot] No space to add item.")
+            random_slot = random.choice([
+                "head", "shoulders", "chest", "gloves", "legs", "boots",
+                "primary", "secondary", "amulet", "ring", "bracelet", "belt"
+            ])
+            char_class = self.player.char_class
+            weapon_type = None
+            if random_slot == "primary":
+                weapon_type = random.choice(CLASS_PRIMARIES.get(char_class, []))
+            elif random_slot == "secondary":
+                weapon_type = random.choice(CLASS_SECONDARIES.get(char_class, []))
 
-            self.show_item_drop_popup(item)
+            tempItem = create_item(random_slot, char_class, )
+
+            payload = {
+                "slot_type": random_slot,
+                "char_class": char_class,
+                "weapon_type": weapon_type,
+                "item_level": MAX_DUNGEON_LEVEL,
+                "target": self.player.name
+            }
+
+            if weapon_type:
+                payload["weapon_type"] = weapon_type
+
+
+
+            try:
+                response = requests.post(f"{SERVER_URL}/createitem", json=payload)
+                result = response.json()
+                if result.get("success"):
+                    self.add_log(result["message"])
+                    # Optionally show the item popup if you also want to show what was dropped
+                    # You could refetch inventory and search for newest item to show
+                    self.show_item_drop_popup(result["item"])
+                else:
+                    self.add_log(f"[Loot Error] {result.get('error', 'Unknown error')}")
+            except Exception as e:
+                self.add_log(f"[Loot Error] {str(e)}")
 
         if self.player.auth_token:
             self.player.sync_coins_to_server(self.player.auth_token)
             self.player.save_to_server(self.player.auth_token)
-
-
 
     def show_item_drop_popup(self, item):
         from pygame import Rect
