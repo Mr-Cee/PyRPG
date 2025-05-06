@@ -45,13 +45,13 @@ CLASS_WEAPON_RESTRICTIONS = {
 }
 
 CLASS_PRIMARIES = {
-    "Warrior": {"Sword"},
-    "Rogue": {"Sword", "Dagger", "Bow"},
-    "Mage": {"Staff", "Dagger"}
+    "Warrior": ("Sword", "Sword"), #need two for random to work
+    "Rogue": ("Sword", "Dagger", "Bow"),
+    "Mage": ("Staff", "Dagger")
 }
 
 CLASS_SECONDARIES = {
-    "Warrior": {"Sword", "Shield"},
-    "Rogue": {"Sword", "Dagger"},
-    "Mage": {"Focus"}
+    "Warrior": ("Sword", "Shield"),
+    "Rogue": ("Sword", "Dagger"),
+    "Mage": ("Focus", "Focus") #need two for random to work
 }

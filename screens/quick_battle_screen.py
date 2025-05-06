@@ -47,7 +47,8 @@ class QuickBattleScreen(BaseScreen):
         self.player_attack_timer = 0
         self.enemy_attack_timer = 0
 
-        self.enemy = self.generate_enemy_from_dungeon_level(MAX_DUNGEON_LEVEL)
+        self.enemy = self.generate_enemy_from_dungeon_level(self.player.level)
+        # self.enemy = self.generate_enemy_from_dungeon_level(MAX_DUNGEON_LEVEL)
 
         self.player_hp = self.player.total_stats.get("Health", 100)
         self.player_damage = self.player.total_stats.get("Bonus Damage", 1) + 5
@@ -139,7 +140,7 @@ class QuickBattleScreen(BaseScreen):
             else:
                 break
 
-        is_elite = random.random() < 0.99  # 15% chance to be elite
+        is_elite = random.random() < 0.15  # 15% chance to be elite
         prefix = random.choice(NAME_PREFIXES)
 
         base_name = f"{random.choice(NAME_PREFIXES)} {tier['name']} Lv{level}"
@@ -243,8 +244,6 @@ class QuickBattleScreen(BaseScreen):
         self.player.add_coins(copper_amount=copper)
         self.add_log(f"You gain {xp} XP and {copper} copper.")
 
-        print(CLASS_PRIMARIES.get(self.player.char_class, []))
-
         # Chance-based item reward
         drop_chance = 0.75 if self.enemy.get("elite") else 0.5
         if random.random() < drop_chance:
@@ -258,8 +257,6 @@ class QuickBattleScreen(BaseScreen):
                 weapon_type = random.choice(CLASS_PRIMARIES.get(char_class, []))
             elif random_slot == "secondary":
                 weapon_type = random.choice(CLASS_SECONDARIES.get(char_class, []))
-
-            tempItem = create_item(random_slot, char_class, )
 
             payload = {
                 "slot_type": random_slot,
@@ -300,7 +297,7 @@ class QuickBattleScreen(BaseScreen):
         html_text = "<br>".join(stats_lines)
 
         self.item_popup = pygame_gui.elements.UIWindow(
-            rect=Rect((300, 200), (280, 200)),
+            rect=Rect((300, 200), (280, 250)),
             manager=self.manager,
             window_display_title="Item Acquired!",
             object_id="#item_drop_popup"
