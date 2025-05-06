@@ -135,7 +135,7 @@ class QuickBattleScreen(BaseScreen):
 
     def start_new_battle(self):
         self.battle_log = []
-        self.enemy = self.generate_enemy_from_dungeon_level(self.player.dungeon_stats.get("highest_level", 1))
+        self.enemy = self.generate_enemy_from_dungeon_level(self.player.highest_dungeon_completed)
         self.player_hp = self.player.total_stats.get("Health", 100)
         self.enemy_attack_speed = self.enemy.get("speed", 1.0)
         self.enemy_attack_delay = max(0.2, 1.0 / self.enemy_attack_speed)
