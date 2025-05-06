@@ -399,7 +399,12 @@ def update_player(request: UpdatePlayerRequest, db: Session = Depends(get_db)):
 
 @app.post("/dungeon_complete")
 def dungeon_complete(data: DungeonResult, db: Session = Depends(get_db)):
-    player = db.query(Player).filter_by(username=data.username).first()
+    player = (
+        db.query(Player)
+        .join(Account, Account.id == Player.account_id)
+        .filter(Account.username == data.username, Player.is_active == True)
+        .first()
+    )
     if not player:
         raise HTTPException(status_code=404, detail="Player not found")
 

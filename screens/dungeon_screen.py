@@ -69,6 +69,7 @@ class DungeonScreen(BaseScreen):
         self.battle_log = self.battle_log[-15:]  # Limit to last 15 messages
         self.log_box.set_text("<br>".join(self.battle_log))
 
+
     def load_enemies(self):
         tier = self.find_tier(self.level)
         self.enemies = [self.generate_enemy(tier) for _ in range(10)]
@@ -98,6 +99,7 @@ class DungeonScreen(BaseScreen):
         }
 
     def set_next_enemy(self):
+        self.battle_log = []
         if self.current_enemy_index < 10:
             self.current_enemy = self.enemies[self.current_enemy_index]
             self.current_enemy_index += 1
@@ -231,13 +233,10 @@ class DungeonScreen(BaseScreen):
         self.add_log(
             f"Time: {minutes}m {seconds}s | Damage Dealt: {self.damage_dealt} | Damage Taken: {self.damage_taken}")
 
-        # Save to server
         payload = {
-            "character_name": self.player.name,
-            "level": self.level,
-            "duration": duration,
-            "damage_dealt": self.damage_dealt,
-            "damage_taken": self.damage_taken
+            "username": self.player.username,
+            "level_completed": self.level,
+            "time_seconds": duration
         }
         try:
             requests.post(f"{SERVER_URL}/dungeon_complete", json=payload)
