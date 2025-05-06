@@ -28,7 +28,7 @@ class QuickBattleScreen(BaseScreen):
 
         self.pending_enemy_spawn = False
         self.enemy_spawn_timer = 0.0
-        self.enemy_spawn_delay = 1.0  # 1 second delay
+        self.enemy_spawn_delay = 3.0  # 1 second delay
 
         self.title_label = UILabel(
             relative_rect=Rect((10, 10), (300, 30)),
@@ -64,7 +64,7 @@ class QuickBattleScreen(BaseScreen):
         self.player_attack_timer = 0
         self.enemy_attack_timer = 0
 
-        self.enemy = self.generate_enemy_from_dungeon_level(self.player.level)
+        self.enemy = self.generate_enemy_from_dungeon_level(self.player.dungeon_stats.get("highest_level", 1))
         # self.enemy = self.generate_enemy_from_dungeon_level(MAX_DUNGEON_LEVEL)
 
         self.player_hp = self.player.total_stats.get("Health", 100)
@@ -134,7 +134,8 @@ class QuickBattleScreen(BaseScreen):
         self.add_log(f"You engage a {self.enemy['name']}!")
 
     def start_new_battle(self):
-        self.enemy = self.generate_enemy_from_dungeon_level(MAX_DUNGEON_LEVEL)
+        self.battle_log = []
+        self.enemy = self.generate_enemy_from_dungeon_level(self.player.dungeon_stats.get("highest_level", 1))
         self.player_hp = self.player.total_stats.get("Health", 100)
         self.enemy_attack_speed = self.enemy.get("speed", 1.0)
         self.enemy_attack_delay = max(0.2, 1.0 / self.enemy_attack_speed)
@@ -366,14 +367,12 @@ class QuickBattleScreen(BaseScreen):
                 "head", "shoulders", "chest", "gloves", "legs", "boots",
                 "primary", "secondary", "amulet", "ring", "bracelet", "belt"
             ])
-            random_slot = "primary"
             char_class = self.player.char_class
             weapon_type = None
             if random_slot == "primary":
                 weapon_type = random.choice(CLASS_PRIMARIES.get(char_class, []))
             elif random_slot == "secondary":
                 weapon_type = random.choice(CLASS_SECONDARIES.get(char_class, []))
-
             payload = {
                 "slot_type": random_slot,
                 "char_class": char_class,
@@ -381,12 +380,8 @@ class QuickBattleScreen(BaseScreen):
                 "item_level": MAX_DUNGEON_LEVEL,
                 "target": self.player.name
             }
-
             if weapon_type:
                 payload["weapon_type"] = weapon_type
-
-
-
             try:
                 response = requests.post(f"{SERVER_URL}/createitem", json=payload)
                 result = response.json()

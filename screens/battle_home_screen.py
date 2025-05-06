@@ -1,7 +1,7 @@
 import pygame
 import pygame_gui
 from pygame import Rect
-from pygame_gui.elements import UIButton, UIPanel, UILabel
+from pygame_gui.elements import UIButton, UIPanel, UILabel, UIDropDownMenu
 from settings import *
 from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
@@ -24,6 +24,17 @@ class BattleHomeScreen(BaseScreen):
             manager=manager
         )
 
+        # Dungeon Level Dropdown (positioned next to Dungeon button)
+        self.dungeon_levels = [str(i) for i in range(1, self.player.highest_dungeon_completed + 2)][::-1]
+        self.selected_dungeon_level = self.dungeon_levels[-1]
+
+        self.dungeon_dropdown = UIDropDownMenu(
+            options_list=self.dungeon_levels,
+            starting_option=self.selected_dungeon_level,
+            relative_rect=Rect((310, 160), (100, 40)),  # Positioned right of the Dungeon button
+            manager=self.manager
+        )
+
         # Dungeon Panel
         self.dungeon_panel = UIPanel(
             relative_rect=Rect((GAME_WIDTH-325, 25), (300, 120)),
@@ -31,7 +42,7 @@ class BattleHomeScreen(BaseScreen):
         )
         self.dungeon_label = UILabel(
             relative_rect=Rect((10, 10), (280, 30)),
-            text=f"Highest Dungeon Completed: {self.player.dungeon_stats.get('highest_level', 0)}",
+            text=f"Highest Dungeon Completed: {self.player.highest_dungeon_completed}",
             manager=self.manager,
             container=self.dungeon_panel
         )
@@ -48,6 +59,8 @@ class BattleHomeScreen(BaseScreen):
             manager=manager
         )
 
+        self.load_dungeon_stats()
+
 
     def handle_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
@@ -56,13 +69,52 @@ class BattleHomeScreen(BaseScreen):
                 self.screen_manager.set_screen(QuickBattleScreen(self.manager, self.screen_manager))
             elif event.ui_element == self.dungeon_button:
                 from screens.dungeon_screen import DungeonScreen
-                self.screen_manager.set_screen(DungeonScreen(self.manager, self.screen_manager))
+                screen = DungeonScreen(self.manager, self.screen_manager, int(self.selected_dungeon_level))
+                # screen.set_level(self.selected_dungeon_level)  # Pass selected level
+                self.screen_manager.set_screen(screen)
             elif event.ui_element == self.raid_button:
                 # Placeholder
                 pass
             elif event.ui_element == self.back_button:
                 from screens.main_game_screen import MainGameScreen
                 self.screen_manager.set_screen(MainGameScreen(self.manager, self.screen_manager))
+
+        elif event.type == pygame_gui.UI_DROP_DOWN_MENU_CHANGED:
+            if event.ui_element == self.dungeon_dropdown:
+                self.selected_dungeon_level = int(event.text)
+
+    def load_dungeon_stats(self):
+        import threading
+        import requests
+
+        def fetch_stats():
+            try:
+                response = requests.get(f"{SERVER_URL}/player_stats?requester_name={self.player.name}")
+                if response.status_code == 200:
+                    data = response.json()
+                    highest = data.get("highest_dungeon_completed", 0)
+                    best_time = data.get("best_dungeon_time_seconds", 0)
+                    self.player.highest_dungeon_completed = highest
+                    self.player.best_dungeon_time_seconds = best_time
+                    self.dungeon_label.set_text(f"Highest Dungeon Completed: {highest}")
+
+                    self.dungeon_levels = [str(i) for i in range(1, self.player.highest_dungeon_completed + 2)][::-1]
+                    self.selected_dungeon_level = self.dungeon_levels[0]
+                    self.dungeon_dropdown.kill()  # Remove old dropdown
+                    self.dungeon_dropdown = UIDropDownMenu(
+                        options_list=self.dungeon_levels,
+                        starting_option=self.selected_dungeon_level,
+                        relative_rect=Rect((310, 160), (100, 40)),
+                        manager=self.manager
+                    )
+                else:
+                    self.dungeon_label.set_text("Failed to load stats")
+            except Exception as e:
+                self.dungeon_label.set_text("Error loading stats")
+
+
+
+        threading.Thread(target=fetch_stats, daemon=True).start()
 
     def update(self, time_delta):
         self.manager.update(time_delta)
@@ -76,5 +128,6 @@ class BattleHomeScreen(BaseScreen):
         self.raid_button.kill()
         self.back_button.kill()
         self.dungeon_panel.kill()
+        self.dungeon_dropdown.kill()
 
 ScreenRegistry.register("battle_home", BattleHomeScreen)

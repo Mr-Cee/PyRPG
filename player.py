@@ -55,12 +55,9 @@ class Player:
             "Attack Speed": 1.0  # <-- default 1 second per attack
         }
         self.total_stats = self.calculate_total_stats()
-        self.dungeon_stats = {
-            "highest_level": 0,
-            "fastest_time": None,
-            "damage_dealt": 0,
-            "damage_taken": 0
-        }
+        self.highest_dungeon_completed = 0
+        self.best_dungeon_time_seconds = 0
+
         self.chat_window = None
         self.last_heartbeat_time = 0
         self.heartbeat_interval = 30  # seconds
@@ -390,8 +387,8 @@ class Player:
                 "gold": self.coins["gold"],
                 "platinum": self.coins["platinum"],
                 "last_logout_time": self.last_logout_time.isoformat() if self.last_logout_time else datetime.datetime.utcnow().isoformat(),
-                "highest_dungeon_completed": self.dungeon_stats.get("highest_level", 0),
-                "best_dungeon_time_seconds": self.dungeon_stats.get("best_time", 0),
+                "highest_dungeon_completed": self.highest_dungeon_completed,
+                "best_dungeon_time_seconds": self.best_dungeon_time_seconds
             }
             response = requests.post(f"{SERVER_URL}/update_player", json=payload, headers=headers, timeout=5)
             if response.status_code != 200:
@@ -498,6 +495,10 @@ class Player:
             player.last_logout_time = datetime.datetime.fromisoformat(data["last_logout_time"])
         if data.get("is_muted"):
             player.is_muted = data.get("is_muted", False)
+        if data.get("best_dungeon_time_seconds"):
+            player.best_dungeon_time_seconds = data.get("best_dungeon_time_seconds")
+        if data.get("highest_dungeon_completed"):
+            player.highest_dungeon_completed = data.get("highest_dungeon_completed")
 
         player.coins = data.get("coins", {
             "copper": 0, "silver": 0, "gold": 0, "platinum": 0
@@ -521,8 +522,8 @@ class Player:
                 "gold": self.coins["gold"],
                 "platinum": self.coins["platinum"],
                 "last_logout_time": self.last_logout_time.isoformat() if self.last_logout_time else datetime.datetime.utcnow().isoformat(),
-                "highest_dungeon_completed": self.dungeon_stats.get("highest_level", 0),
-                "best_dungeon_time_seconds": self.dungeon_stats.get("best_time", 0),
+                "highest_dungeon_completed": self.highest_dungeon_completed,
+                "best_dungeon_time_seconds": self.best_dungeon_time_seconds,
             }
             response = requests.post(f"{SERVER_URL}/update_player", json=payload, headers=headers)
             if response.status_code == 200:

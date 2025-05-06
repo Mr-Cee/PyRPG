@@ -116,7 +116,10 @@ class CharacterCreationScreen(BaseScreen):
             "copper": 0,
             "silver": 0,
             "gold": 0,
-            "platinum": 0
+            "platinum": 0,
+            "highest_dungeon_completed": 0,
+
+
         }
 
         try:
