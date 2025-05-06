@@ -155,6 +155,8 @@ class QuickBattleScreen(BaseScreen):
 
         hp = int(tier["base_hp"] + level * 5)
         dmg = int(tier["base_dmg"] + level * 1.5)
+        crit_chance = 10 + level * 0.5  # scale slightly with dungeon level
+        crit_damage = 50  # 1.5x damage
         speed = round(max(0.5, tier["base_speed"] - level * 0.02), 2)
         xp = int(tier["base_xp"] + level * 2.5)
         copper = int(tier["base_copper"] + level * 15)
@@ -175,7 +177,9 @@ class QuickBattleScreen(BaseScreen):
             "reward_xp": xp,
             "reward_copper": copper,
             "elite": is_elite,
-            "elite_type": elite_type
+            "elite_type": elite_type,
+            "crit_chance": crit_chance,
+            "crit_damage": crit_damage
         }
 
     def update_hp_display(self):
@@ -252,11 +256,24 @@ class QuickBattleScreen(BaseScreen):
             return
 
         raw_dmg = self.enemy["damage"]
+        crit_chance = self.enemy.get("crit_chance", 0)
+        crit_damage = self.enemy.get("crit_damage", 0)
         armor = self.player.total_stats.get("Armor", 0)
-        reduced_dmg = int(raw_dmg * (100 / (100 + armor)))  # Damage mitigation formula
+
+        # Roll for crit
+        is_crit = random.random() < (crit_chance / 100)
+        if is_crit:
+            crit_dmg = int(raw_dmg * (1 + crit_damage / 100))
+            reduced_dmg = int(crit_dmg * (100 / (100 + armor)))  # Damage mitigation formula
+            self.add_log(f"<font color='#ff3333'>CRITICAL HIT!</font> {self.enemy['name']} hits you for {reduced_dmg} damage.")
+        else:
+            reduced_dmg = int(raw_dmg * (100 / (100 + armor)))  # Damage mitigation formula
+            self.add_log(f"{self.enemy['name']} hits you for {reduced_dmg} damage.")
+
+        # reduced_dmg = int(raw_dmg * (100 / (100 + armor)))  # Damage mitigation formula
 
         self.player_hp -= reduced_dmg
-        self.add_log(f"{self.enemy['name']} hits you for {reduced_dmg} damage (reduced from {raw_dmg}).")
+
 
         if self.player_hp <= 0:
             self.player_hp = 0
