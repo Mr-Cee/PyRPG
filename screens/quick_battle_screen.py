@@ -20,6 +20,10 @@ class QuickBattleScreen(BaseScreen):
         self.player = self.screen_manager.player
         self.manager = manager
 
+
+        tempItem=create_item(slot_type="primary", rarity="Common", weapon_type="Sword")
+        print(tempItem)
+
         self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
         self.player.chat_window.panel.set_relative_position((10, 480))
         self.player.chat_window.panel.set_dimensions((400, 220))
@@ -263,6 +267,7 @@ class QuickBattleScreen(BaseScreen):
                 "head", "shoulders", "chest", "gloves", "legs", "boots",
                 "primary", "secondary", "amulet", "ring", "bracelet", "belt"
             ])
+            random_slot = "primary"
             char_class = self.player.char_class
             weapon_type = None
             if random_slot == "primary":

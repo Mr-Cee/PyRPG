@@ -109,6 +109,7 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_
         item["stats"]["Critical Chance"] = round(3 * multiplier * level_scale, 1)
         item["stats"]["Critical Damage"] = round(7 * multiplier * level_scale, 1)
 
+    print(item)
     return item
 
 

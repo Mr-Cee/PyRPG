@@ -507,6 +507,7 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
         rarity = rarity.capitalize()
 
     item = create_item(slot_type, char_class, rarity, weapon_type=weapon_type, item_level=item_level)
+    print(item)
 
     item["slot"] = None  # Inventory will auto-place it
 
