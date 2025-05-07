@@ -1190,6 +1190,7 @@ def delete_account(username: str, token: str = Depends(oauth2_scheme), db: Sessi
 
     return {"msg": "Account and associated players deleted successfully."}
 
+
 @app.post("/admin_command")
 def admin_command(payload: dict, db: Session = Depends(get_db)):
     username = payload.get("username")
