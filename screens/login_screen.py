@@ -201,6 +201,7 @@ class LoginScreen(BaseScreen):
                 object_id="#error_label"
             )
         self.fetch_login_banner()
+
         self.load_remembered_login() #Make sure this is at the end of setup
 
     def fetch_login_banner(self):
@@ -208,9 +209,16 @@ class LoginScreen(BaseScreen):
             response = requests.get(f"{SERVER_URL}/login_banner")
             if response.ok:
                 banner = response.json().get("message", "")
+                self.banner_text = banner
                 if banner:
                     self.banner_label = pygame_gui.elements.UILabel(
                         relative_rect=pygame.Rect((GAME_WIDTH-450, 60), (400, 400)),
+                        text=banner,
+                        manager=self.manager,
+                        object_id="#login_banner"
+                    )
+                    self.banner_button = pygame_gui.elements.UIButton(
+                        relative_rect=pygame.Rect((50, 60), (700, 30)),
                         text=banner,
                         manager=self.manager,
                         object_id="#login_banner"
@@ -420,6 +428,21 @@ class LoginScreen(BaseScreen):
 
         self.active_popup = popup
 
+    def show_patch_notes_popup(self):
+        try:
+            response = requests.get(f"{SERVER_URL}/patch_notes", timeout=5)
+            notes = response.json().get("notes", "No patch notes available.")
+        except:
+            notes = "Failed to load patch notes."
+
+        from pygame_gui.windows import UIMessageWindow
+        UIMessageWindow(
+            rect=pygame.Rect((200, 150), (500, 400)),
+            window_title="📋 Patch Notes",
+            html_message=f"<b>Patch Notes:</b><br><br>{notes.replace('\n', '<br>')}",
+            manager=self.manager
+        )
+
     def handle_event(self, event):
 
         if event.type == pygame.USEREVENT + 99 and getattr(self, "restart_pending", False):
@@ -514,6 +537,10 @@ class LoginScreen(BaseScreen):
                         self.show_popup("Update Failed", "Could not fetch server version.")
                 except requests.exceptions.RequestException:
                     self.show_popup("Connection Error", "Failed to connect to server.")
+
+            if event.ui_element == getattr(self, "banner_button", None):
+                self.show_patch_notes_popup()
+
 
         elif event.type == pygame_gui.UI_CONFIRMATION_DIALOG_CONFIRMED:
 

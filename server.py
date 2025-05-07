@@ -214,6 +214,11 @@ def update_login_banner(payload: dict, db: Session = Depends(get_db)):
     db.commit()
     return {"success": True, "message": "Login banner updated."}
 
+@app.get("/patch_notes")
+def get_patch_notes(db: Session = Depends(get_db)):
+    config = db.query(models.ServerConfig).first()
+    return {"notes": config.patch_notes if config else "No patch notes available."}
+
 @app.post("/login")
 async def login(request: Request, db: Session = Depends(get_db)):
     body = await request.json()
