@@ -1,7 +1,9 @@
 # models.py
 import datetime
 import uuid
-from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean, DateTime, Text, Enum
+import enum
+from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean, DateTime, Text
+from sqlalchemy import Enum as SqlEnum
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import MutableList
@@ -20,7 +22,7 @@ class Account(Base):
     is_online = Column(Boolean, default=False)
     last_seen = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
 
-class GatheringActivityEnum(Enum):
+class GatheringActivityEnum(enum.Enum):
     none = "none"
     woodcutting = "woodcutting"
     mining = "mining"
@@ -51,7 +53,7 @@ class Player(Base):
     highest_dungeon_completed = Column(Integer, default=0)
     best_dungeon_time_seconds = Column(Integer, default=0)
 
-    current_gathering_activity = Column(Enum(GatheringActivityEnum), default=GatheringActivityEnum.none)
+    current_gathering_activity = Column(SqlEnum(GatheringActivityEnum), default=GatheringActivityEnum.none)
     gathering_start_time = Column(DateTime, nullable=True)
 
     woodcutting_level = Column(Integer, default=1)
