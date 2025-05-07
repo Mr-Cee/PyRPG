@@ -559,6 +559,9 @@ def get_gathering_state(player_name: str, db: Session = Depends(get_db)):
         "status": f"Currently {activity.value.title()}"
     }
 
+
+from item_ID import get_item_name  # ✅ Import your item lookup function
+
 @app.get("/gathered_materials")
 def get_gathered_materials(player_name: str, db: Session = Depends(get_db)):
     player = db.query(Player).filter_by(name=player_name).first()
@@ -567,15 +570,14 @@ def get_gathered_materials(player_name: str, db: Session = Depends(get_db)):
 
     results = db.query(models.GatheredMaterial).filter_by(player_id=player.id).all()
 
-    # TODO: Replace with item table lookups
-    id_to_name = {
-        1: "Oak Log", 100: "Copper Chunk", 200: "Raw Wheat", 300: "Scrap Leather"
-    }
-
     return {
         "success": True,
         "materials": [
-            {"item_id": g.item_id, "name": id_to_name.get(g.item_id, f"Item {g.item_id}"), "quantity": g.quantity}
+            {
+                "item_id": g.item_id,
+                "name": get_item_name(g.item_id),  # ✅ Dynamic name lookup
+                "quantity": g.quantity
+            }
             for g in results
         ]
     }
