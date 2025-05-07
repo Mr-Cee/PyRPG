@@ -558,6 +558,82 @@ def get_gathering_state(player_name: str, db: Session = Depends(get_db)):
         "status": f"Currently {activity.value.title()}"
     }
 
+@app.post("/collect_materials")
+def collect_materials(payload: dict, db: Session = Depends(get_db)):
+    player_name = payload.get("player_name")
+
+    player = db.query(Player).filter_by(name=player_name).first()
+    if not player:
+        return {"success": False, "error": "Player not found."}
+
+    if player.current_gathering_activity == "none" or not player.gathering_start_time:
+        return {"success": False, "error": "Player is not currently gathering."}
+
+    # Determine elapsed time
+    now = datetime.datetime.utcnow()
+    elapsed = (now - player.gathering_start_time).total_seconds()
+    minutes = max(1, int(elapsed // 60))  # At least 1 minute even if <60s
+
+    activity = player.current_gathering_activity
+    skill_level = getattr(player, f"{activity}_level", 1)
+
+    from item_ID import (
+        WOODCUTTING_ITEMS, MINING_ITEMS, FARMING_ITEMS, SCAVENGING_ITEMS,
+        get_item_level, get_item_name
+    )
+
+    activity_pools = {
+        "woodcutting": WOODCUTTING_ITEMS,
+        "mining": MINING_ITEMS,
+        "farming": FARMING_ITEMS,
+        "scavenging": SCAVENGING_ITEMS
+    }
+
+    pool = activity_pools.get(activity, {})
+    eligible_items = [item_id for item_id in sorted(pool.keys()) if get_item_level(item_id) <= skill_level]
+    if not eligible_items:
+        return {"success": False, "error": "No items eligible to gather at your level."}
+
+    best_item_id = eligible_items[-1]
+    total_items = int(minutes * (1 + 0.1 * (skill_level - 1)))
+
+    # Add to GatheredMaterial table
+    existing = db.query(models.GatheredMaterial).filter_by(player_id=player.id, item_id=best_item_id).first()
+    if existing:
+        existing.quantity += total_items
+    else:
+        from item_ID import get_item_rarity
+        new_entry = models.GatheredMaterial(
+            player_id=player.id,
+            item_id=best_item_id,
+            quantity=total_items,
+            name=get_item_name(best_item_id),
+            rarity=get_item_rarity(best_item_id)
+        )
+        db.add(new_entry)
+
+    # Reset gathering state
+    player.current_gathering_activity = "none"
+    player.gathering_start_time = None
+
+    # Log to chat
+    system_msg = models.ChatMessage(
+        sender="System",
+        recipient=player.name,
+        message=f"You collected {total_items} x {get_item_name(best_item_id)} after {minutes} minute(s) of {activity}.",
+        timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+        type="System"
+    )
+    db.add(system_msg)
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Collected {total_items} x {get_item_name(best_item_id)}.",
+        "item_id": best_item_id,
+        "quantity": total_items
+    }
 
 from item_ID import get_item_name, get_item_rarity, get_item_level  # ✅ Import your item lookup function
 

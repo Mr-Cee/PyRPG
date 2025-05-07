@@ -157,17 +157,19 @@ class GatheringScreen(BaseScreen):
         def worker():
             try:
                 response = requests.post(
-                    f"{SERVER_URL}/gather/status",
-                    json={"player_name": self.player.name, "stop": True},
+                    f"{SERVER_URL}/collect_materials",
+                    json={"player_name": self.player.name},
                     timeout=5
                 )
                 if response.status_code == 200:
                     data = response.json()
                     msg = data.get("message", "Collected.")
                     pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"status_message": msg}))
+                else:
+                    raise Exception("Collection failed.")
             except Exception as e:
                 pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"status_message": "Collection failed."}))
-            self.refresh_status()  # Re-check if player is still gathering
+            self.refresh_status()
 
         import threading
         threading.Thread(target=worker, daemon=True).start()
