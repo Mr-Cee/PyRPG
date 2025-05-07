@@ -832,6 +832,8 @@ def give_item(payload: dict, db: Session = Depends(get_db)):
     if item_id not in ALL_ITEMS:
         return {"success": False, "error": f"Invalid item ID: {item_id}"}
 
+    item_name = get_item_name(item_id)
+
     player = db.query(Player).filter_by(name=target_name).first()
     if not player:
         return {"success": False, "error": f"Target player '{target_name}' not found"}
@@ -841,13 +843,18 @@ def give_item(payload: dict, db: Session = Depends(get_db)):
     if material:
         material.quantity += quantity
     else:
-        material = models.GatheredMaterial(player_id=player.id, item_id=item_id, quantity=quantity)
+        material = models.GatheredMaterial(
+            player_id=player.id,
+            item_id=item_id,
+            name=item_name,
+            quantity=quantity
+        )
         db.add(material)
 
     db.commit()
     return {
         "success": True,
-        "message": f"Gave {quantity} x {get_item_name(item_id)} to {target_name}"
+        "message": f"Gave {quantity} x {item_name} to {target_name}"
     }
 
 @app.post("/chat/send")

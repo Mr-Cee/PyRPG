@@ -502,6 +502,8 @@ class InventoryScreen(BaseScreen):
 
     def load_gathered_materials(self):
         import requests
+        from item_ID import ALL_ITEMS
+
         try:
             response = requests.get(f"{SERVER_URL}/gathered_materials", params={"player_name": self.player.name})
             if response.status_code == 200:
@@ -510,16 +512,84 @@ class InventoryScreen(BaseScreen):
                 self.materials_labels.clear()
 
                 items = response.json().get("materials", [])
-                for idx, item in enumerate(items):
-                    label = UILabel(
-                        relative_rect=pygame.Rect((10, idx * 30), (self.container_width - 30, 25)),
-                        text=f"{item['name']} x{item['quantity']}",
+
+                print(items)
+
+                # Group items by gathering type
+                grouped = {
+                    "Woodcutting": [],
+                    "Mining": [],
+                    "Farming": [],
+                    "Scavenging": []
+                }
+
+                for item in items:
+                    item_id = item["item_id"]
+                    item_data = ALL_ITEMS.get(item_id)
+                    if not item_data:
+                        continue
+
+                    # Infer gathering type from ID range
+                    if 1 <= item_id <= 99:
+                        group = "Woodcutting"
+                    elif 100 <= item_id <= 199:
+                        group = "Mining"
+                    elif 200 <= item_id <= 299:
+                        group = "Farming"
+                    elif 300 <= item_id <= 399:
+                        group = "Scavenging"
+                    else:
+                        group = "Other"
+
+                    grouped[group].append({
+                        "name": item["name"],
+                        "quantity": item["quantity"],
+                        "level": item_data.get("level", 0)
+                    })
+
+                # Sort each group by level
+                for group in grouped:
+                    grouped[group].sort(key=lambda x: x["level"])
+
+                # Build UI labels
+                y_offset = 0
+                for group_name in ["Woodcutting", "Mining", "Farming", "Scavenging"]:
+                    items_in_group = grouped.get(group_name)
+                    if not items_in_group:
+                        continue
+
+                    # Section label
+                    header = UILabel(
+                        relative_rect=pygame.Rect((10, y_offset), (280, 25)),
+                        text=f"{group_name}",
                         manager=self.manager,
                         container=self.materials_list_container,
-                        anchors={"Top": "Top", "Left": "Left"},
-                        object_id="#materials_label"
+                        object_id="#materials_label_header"
                     )
-                    self.materials_labels.append(label)
+                    self.materials_labels.append(header)
+                    y_offset += 30
+
+                    for item in items_in_group:
+                        from settings import rarity_colors
+
+                        color_hex = rarity_colors.get(item.get("rarity", "Common"), "#FFFFFF")
+                        colored_name = f"<font color='{color_hex}'>{item['name']}</font>"
+
+                        label = pygame_gui.elements.UITextBox(
+                            html_text=f"{colored_name} (Lv {item['level']}) x{item['quantity']}",
+                            relative_rect=pygame.Rect((20, y_offset), (260, 30)),
+                            manager=self.manager,
+                            container=self.materials_list_container,
+                            object_id="#materials_label"
+                        )
+                        label.disable()
+                        self.materials_labels.append(label)
+                        y_offset += 30
+
+                    y_offset += 10  # extra space between groups
+
+                # Adjust scrollable height
+                self.materials_list_container.set_dimensions((self.container_width - 20, max(y_offset + 20, self.container_height)))
         except Exception as e:
             print("[Error] Failed to load gathered materials:", e)
 

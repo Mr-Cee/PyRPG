@@ -103,9 +103,10 @@ class ServerConfig(Base):
 class GatheredMaterial(Base):
     __tablename__ = "gathered_materials"
     id = Column(Integer, primary_key=True)
+    player = relationship("Player", back_populates="gathered_materials")
     player_id = Column(UUID(as_uuid=True), ForeignKey("players.id"))
     item_id = Column(Integer)
     quantity = Column(Integer, default=0)
+    name = Column(String)
 
-    player = relationship("Player", back_populates="gathered_materials")
 
