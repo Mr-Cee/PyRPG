@@ -824,20 +824,19 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
 
 @app.post("/give_item")
 def give_item(payload: dict, db: Session = Depends(get_db)):
-    admin_name = payload.get("admin_name")
-    target_name = payload.get("target_name")
+    target_name = payload.get("target_player")
     item_id = payload.get("item_id")
     quantity = payload.get("quantity", 1)
 
-    from item_ID import ALL_ITEMS
+    from item_ID import ALL_ITEMS, get_item_name
     if item_id not in ALL_ITEMS:
-        return {"success": False, "error": "Invalid item ID"}
+        return {"success": False, "error": f"Invalid item ID: {item_id}"}
 
     player = db.query(Player).filter_by(name=target_name).first()
     if not player:
-        return {"success": False, "error": "Target player not found"}
+        return {"success": False, "error": f"Target player '{target_name}' not found"}
 
-    # Find or create material record
+    # Find or create the material record
     material = db.query(models.GatheredMaterial).filter_by(player_id=player.id, item_id=item_id).first()
     if material:
         material.quantity += quantity
@@ -846,7 +845,10 @@ def give_item(payload: dict, db: Session = Depends(get_db)):
         db.add(material)
 
     db.commit()
-    return {"success": True}
+    return {
+        "success": True,
+        "message": f"Gave {quantity} x {get_item_name(item_id)} to {target_name}"
+    }
 
 @app.post("/chat/send")
 def send_chat_message(chat: ChatMessage):

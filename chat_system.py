@@ -669,6 +669,15 @@ class ChatWindow:
 
             return
 
+        elif command == "giveitem":
+            min_role = "gm"
+            if self.has_permission(min_role):
+                self.cmd_giveitem(*args)
+            else:
+                self.log_message("No Command Found", "System")
+
+            return
+
         elif command == "addexperience":
             min_role = "dev"
             if self.has_permission(min_role):
@@ -816,41 +825,35 @@ class ChatWindow:
         except Exception as e:
             self.log_message(f"[Error] Failed to contact server: {e}", "System")
 
-    def cmd_giveitem(self, kwargs):
+    def cmd_giveitem(self, *args):
         try:
-            item_id = int(kwargs.get("id"))
-            amount = int(kwargs.get("amount", 1))
-            target_name = kwargs.get("target", self.player.name)
+            item_id = int(args[0])
+            amount = int(args[1]) if len(args) > 1 and args[1].isdigit() else 1
+            target_player = args[2] if len(args) > 2 else self.player.name
 
-            # Look up item name to confirm it's valid
-            from item_ID import ALL_ITEMS, get_item_name
-            if item_id not in ALL_ITEMS:
-                self.player.chat_window.log_message(f"❌ Invalid item ID: {item_id}", "System")
+            # Check if target is online
+            online_response = requests.get(f"{SERVER_URL}/online_players", timeout=5)
+            if online_response.status_code == 200:
+                online_names = online_response.json().get("players", [])
+                if target_player not in online_names:
+                    self.player.chat_window.log_message(f"❌ Player '{target_player}' is not online.", "System")
+                    return
+            else:
+                self.player.chat_window.log_message("❌ Failed to fetch online players.", "System")
                 return
 
-            target_player = self.screen_manager.get_online_player_by_name(target_name)
-            if not target_player:
-                self.player.chat_window.log_message(f"❌ Target player '{target_name}' not found.", "System")
-                return
-
-            # Send request to server to give item
             payload = {
-                "admin_name": self.player.name,
-                "target_name": target_player.name,
                 "item_id": item_id,
-                "quantity": amount
+                "quantity": amount,
+                "target_player": target_player
             }
-            response = requests.post(f"{SERVER_URL}/give_item", json=payload)
+            response = requests.post(f"{SERVER_URL}/giveitem", json=payload, timeout=5)
             if response.status_code == 200:
                 data = response.json()
-                if data.get("success"):
-                    self.player.chat_window.log_message(f"✅ Gave {amount}x {get_item_name(item_id)} to {target_name}.",
-                                                   "System")
-                else:
-                    self.player.chat_window.log_message(f"❌ Error: {data.get('error', 'Unknown')}", "System")
+                msg = data.get("message", "Item given.")
+                self.player.chat_window.log_message(f"✅ {msg}", "System")
             else:
-                self.player.chat_window.log_message("❌ Server error while giving item.", "System")
-
+                self.player.chat_window.log_message("❌ Failed to give item.", "System")
         except Exception as e:
             self.player.chat_window.log_message(f"❌ Failed to give item: {e}", "System")
 
