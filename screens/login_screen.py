@@ -217,11 +217,11 @@ class LoginScreen(BaseScreen):
                         manager=self.manager,
                         object_id="#login_banner"
                     )
-                    self.banner_button = pygame_gui.elements.UIButton(
-                        relative_rect=pygame.Rect((50, 60), (700, 30)),
-                        text=banner,
+                    self.patch_notes_btn = pygame_gui.elements.UIButton(
+                        relative_rect=pygame.Rect((GAME_WIDTH - 160, GAME_HEIGHT - 105), (150, 40)),
+                        text="Patch Notes",
                         manager=self.manager,
-                        object_id="#login_banner"
+                        # object_id="#patch_notes"
                     )
         except Exception as e:
             print("Failed to load banner:", e)
@@ -244,6 +244,8 @@ class LoginScreen(BaseScreen):
             self.Message_Label.kill()
         if hasattr(self, "MessageWindow"):
             self.MessageWindow.kill()
+        self.patch_notes_btn.kill()
+        self.banner_label.kill()
 
     def load_remembered_login(self):
         save_path = os.path.join('Save_Data', 'login_info.json')
@@ -438,9 +440,10 @@ class LoginScreen(BaseScreen):
         from pygame_gui.windows import UIMessageWindow
         UIMessageWindow(
             rect=pygame.Rect((200, 150), (500, 400)),
-            window_title="📋 Patch Notes",
+            window_title="Patch Notes",
             html_message=f"<b>Patch Notes:</b><br><br>{notes.replace('\n', '<br>')}",
-            manager=self.manager
+            manager=self.manager,
+            object_id="#patch_notes"
         )
 
     def handle_event(self, event):
@@ -538,7 +541,7 @@ class LoginScreen(BaseScreen):
                 except requests.exceptions.RequestException:
                     self.show_popup("Connection Error", "Failed to connect to server.")
 
-            if event.ui_element == getattr(self, "banner_button", None):
+            if event.ui_element == getattr(self, "patch_notes_btn", None):
                 self.show_patch_notes_popup()
 
 
