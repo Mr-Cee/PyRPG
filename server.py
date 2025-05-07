@@ -11,7 +11,6 @@ from passlib.context import CryptContext
 from jose import jwt
 import datetime
 from pydantic import BaseModel
-from item_ID import get_required_level
 import models
 from items import create_item
 from models import Base, Account, Player
