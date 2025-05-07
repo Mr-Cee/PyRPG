@@ -81,8 +81,6 @@ class BattleHomeScreen(BaseScreen):
                         label.kill()
                     self.leaderboard_labels.clear()
 
-
-
                     for i, entry in enumerate(data):
                         text = f"{i+1}. {entry['name']} (Lv {entry['level']} {entry['class']}) - Floor {entry['dungeon']} - {entry['time']}s"
                         label = UILabel(
@@ -96,7 +94,6 @@ class BattleHomeScreen(BaseScreen):
 
                     player_rank = response.json().get("player_rank")
 
-                    print("[Debug] player_rank =", player_rank)
                     top_names = [entry["name"] for entry in data]
                     if player_rank and player_rank["name"] not in top_names:
                         y_pos = 40 + len(data) * 22 + 10
@@ -147,7 +144,6 @@ class BattleHomeScreen(BaseScreen):
                     best_time = data.get("best_dungeon_time_seconds", 0)
                     self.player.highest_dungeon_completed = highest
                     self.player.best_dungeon_time_seconds = best_time
-                    self.dungeon_label.set_text(f"Highest Dungeon Completed: {highest}")
 
                     self.dungeon_levels = [str(i) for i in range(1, self.player.highest_dungeon_completed + 2)][::-1]
                     self.selected_dungeon_level = self.dungeon_levels[0]

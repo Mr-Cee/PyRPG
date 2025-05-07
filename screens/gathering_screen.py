@@ -18,7 +18,8 @@ class GatheringScreen(BaseScreen):
         self.buttons = []
         self.status_panel = None
         self.setup_ui()
-        self.fetch_status()
+        # self.fetch_status()
+        self.refresh_status()
 
     def setup_ui(self):
         # Back button
@@ -57,12 +58,15 @@ class GatheringScreen(BaseScreen):
             manager=self.manager,
             container=self.status_panel
         )
-        self.stop_button = UIButton(
-            relative_rect=Rect((10, 60), (150, 30)),
-            text="Stop Gathering",
+
+        self.collect_button = UIButton(
+            relative_rect=Rect((10, 100), (150, 30)),
+            text="Collect Materials",
             manager=self.manager,
             container=self.status_panel
         )
+        self.collect_button.hide()
+        self.collect_button.disable()
 
         # Skill level labels
         levels = {
@@ -79,8 +83,6 @@ class GatheringScreen(BaseScreen):
             )
             self.level_labels.append(lbl)
 
-        self.refresh_status()
-
     def refresh_status(self):
         import threading, requests
 
@@ -90,7 +92,12 @@ class GatheringScreen(BaseScreen):
                 if response.status_code == 200:
                     data = response.json()
                     if data.get("success"):
-                        self.status_label.set_text(data.get("status", ""))
+                        status_text = data.get("status", "")
+                        self.status_label.set_text(status_text)
+
+                        is_gathering = "Currently" in status_text
+                        self.collect_button.show() if is_gathering else self.collect_button.hide()
+                        self.collect_button.enable() if is_gathering else self.collect_button.disable()
             except Exception as e:
                 print("[Gathering] Failed to fetch state:", e)
 
@@ -124,7 +131,7 @@ class GatheringScreen(BaseScreen):
                     json={"player_name": self.player.name, "activity": activity},
                     timeout=5
                 )
-                self.fetch_status()
+                self.refresh_status()
             except Exception as e:
                 print("[Gathering] Failed to start", e)
 
@@ -146,18 +153,38 @@ class GatheringScreen(BaseScreen):
         import threading
         threading.Thread(target=worker, daemon=True).start()
 
+    def collect_materials_and_stop(self):
+        def worker():
+            try:
+                response = requests.post(
+                    f"{SERVER_URL}/gather/status",
+                    json={"player_name": self.player.name, "stop": True},
+                    timeout=5
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    msg = data.get("message", "Collected.")
+                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"status_message": msg}))
+            except Exception as e:
+                pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"status_message": "Collection failed."}))
+            self.refresh_status()  # Re-check if player is still gathering
+
+        import threading
+        threading.Thread(target=worker, daemon=True).start()
+
     def handle_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.back_button:
                 from screens.main_game_screen import MainGameScreen
                 self.screen_manager.set_screen(MainGameScreen(self.manager, self.screen_manager))
-            elif event.ui_element == self.stop_button:
-                self.stop_gathering()
+            elif event.ui_element == self.collect_button:
+                self.collect_materials_and_stop()
             else:
                 for btn in self.buttons:
                     if event.ui_element == btn:
                         self.start_gathering(btn.activity_name)
                         self.refresh_status()
+
 
 
         elif event.type == pygame.USEREVENT:
@@ -173,7 +200,7 @@ class GatheringScreen(BaseScreen):
     def teardown(self):
         self.back_button.kill()
         self.status_label.kill()
-        self.stop_button.kill()
+        self.collect_button.kill()
         self.status_panel.kill()
         for btn in self.buttons:
             btn.kill()

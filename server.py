@@ -11,7 +11,7 @@ from passlib.context import CryptContext
 from jose import jwt
 import datetime
 from pydantic import BaseModel
-
+from item_ID import get_required_level
 import models
 from items import create_item
 from models import Base, Account, Player
@@ -487,15 +487,31 @@ def gather_status(payload: dict, db: Session = Depends(get_db)):
     # Example: base 1 item per minute, +10% per skill level
     total_items = int(minutes * (1 + (0.1 * (skill_level - 1))))
 
-    # Dummy item IDs for now (later from a table)
-    dummy_item_ids = {
-        "woodcutting": 1,  # Oak Log
-        "mining": 100,     # Copper Chunk
-        "farming": 200,    # Raw Wheat
-        "scavenging": 300  # Scrap Leather
+    from item_ID import (
+        WOODCUTTING_ITEMS, MINING_ITEMS, FARMING_ITEMS, SCAVENGING_ITEMS,
+        get_required_level
+    )
+
+    activity_item_pools = {
+        "woodcutting": WOODCUTTING_ITEMS,
+        "mining": MINING_ITEMS,
+        "farming": FARMING_ITEMS,
+        "scavenging": SCAVENGING_ITEMS
     }
-    activity = player.current_gathering_activity.value  # e.g., "scavenging"
-    item_id = dummy_item_ids[activity]
+
+    pool = activity_item_pools.get(player.current_gathering_activity, {})
+    player_level = getattr(player, f"{player.current_gathering_activity}_level", 1)
+
+    # Choose the best item the player qualifies for
+    qualified_items = [
+        item_id for item_id in sorted(pool.keys())
+        if get_required_level(item_id) <= player_level
+    ]
+
+    if not qualified_items:
+        return {"success": False, "error": "No gatherable items available for your level."}
+
+    item_id = qualified_items[-1]  # highest one the player qualifies for
 
     # Add to gathered_materials (stack or create new)
     gathered = db.query(models.GatheredMaterial).filter_by(player_id=player.id, item_id=item_id).first()
@@ -505,7 +521,10 @@ def gather_status(payload: dict, db: Session = Depends(get_db)):
         gathered = models.GatheredMaterial(player_id=player.id, item_id=item_id, quantity=total_items)
         db.add(gathered)
 
-    message = f"{total_items} x Item #{item_id} gathered over {minutes} min"
+    from item_ID import get_item_name
+
+    item_name = get_item_name(item_id)
+    message = f"You gathered {total_items} x {item_name} over {minutes} minute(s)."
 
     # If stopping, reset the activity
     if stop:
