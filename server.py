@@ -173,6 +173,24 @@ def start_background_cleanup():
     threading.Thread(target=background_cleanup_thread, daemon=True).start()
     print("[Startup] Background cleanup thread started.")
 
+@app.get("/login_banner")
+def get_login_banner(db: Session = Depends(get_db)):
+    config = db.query(models.ServerConfig).first()
+    return {"message": config.login_banner if config else ""}
+
+@app.post("/login_banner/update")
+def update_login_banner(payload: dict, db: Session = Depends(get_db)):
+    new_banner = payload.get("message", "")
+    config = db.query(models.ServerConfig).first()
+    if not config:
+        config = models.ServerConfig(login_banner=new_banner)
+        db.add(config)
+    else:
+        config.login_banner = new_banner
+        config.last_updated = datetime.datetime.now(datetime.UTC)
+    db.commit()
+    return {"success": True, "message": "Login banner updated."}
+
 @app.post("/login")
 async def login(request: Request, db: Session = Depends(get_db)):
     body = await request.json()
@@ -1118,6 +1136,31 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
 
         db.commit()
         return {"success": True}
+
+    elif command == "setbanner":
+        if len(parts) < 2:
+            return {"success": False, "error": "Usage: /setbanner <message>"}
+        new_banner = command_text[len("/setbanner "):].strip()
+        config = db.query(models.ServerConfig).first()
+        if not config:
+            config = models.ServerConfig(login_banner=new_banner)
+            db.add(config)
+        else:
+            config.login_banner = new_banner
+            config.last_updated = datetime.datetime.now(datetime.UTC)
+        db.commit()
+
+        admin_msg = models.ChatMessage(
+            sender="Admin",
+            recipient="Admin",
+            message=f"Login banner updated: {new_banner}",
+            timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
+            type="Admin"
+        )
+        db.add(admin_msg)
+        db.commit()
+
+        return {"success": True, "message": "Login banner updated."}
 
     elif command == "spawnboss":
         if len(parts) < 2:

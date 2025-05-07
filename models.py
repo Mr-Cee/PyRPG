@@ -73,3 +73,9 @@ class ReportCase(Base):
             "resolution_message": self.resolution
         }
 
+class ServerConfig(Base):
+    __tablename__ = "server_config"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    login_banner = Column(Text, default="")
+    last_updated = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
+

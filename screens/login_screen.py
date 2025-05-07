@@ -200,8 +200,23 @@ class LoginScreen(BaseScreen):
                 manager=self.manager,
                 object_id="#error_label"
             )
-
+        self.fetch_login_banner()
         self.load_remembered_login() #Make sure this is at the end of setup
+
+    def fetch_login_banner(self):
+        try:
+            response = requests.get(f"{SERVER_URL}/login_banner")
+            if response.ok:
+                banner = response.json().get("message", "")
+                if banner:
+                    self.banner_label = pygame_gui.elements.UILabel(
+                        relative_rect=pygame.Rect((50, 60), (700, 30)),
+                        text=banner,
+                        manager=self.manager,
+                        object_id="#login_banner"
+                    )
+        except Exception as e:
+            print("Failed to load banner:", e)
 
     def teardown(self):
         self.login_label.kill()

@@ -93,7 +93,7 @@ class ChatWindow:
         self.commands.update(self._load_player_commands())
         self.commands.update(self._load_gm_commands())
         self.commands.update(self._load_dev_commands())
-        self.admin_commands = ["broadcast", "kick", "mute", "unmute"]
+        self.admin_commands = ["broadcast", "kick", "mute", "unmute", "setbanner"]
 
         self.reports_window = None
         self.resolution_popup = None
