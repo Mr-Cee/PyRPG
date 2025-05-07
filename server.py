@@ -488,7 +488,6 @@ def gather_status(payload: dict, db: Session = Depends(get_db)):
 
     from item_ID import (
         WOODCUTTING_ITEMS, MINING_ITEMS, FARMING_ITEMS, SCAVENGING_ITEMS,
-        get_required_level
     )
 
     activity_item_pools = {
@@ -504,7 +503,7 @@ def gather_status(payload: dict, db: Session = Depends(get_db)):
     # Choose the best item the player qualifies for
     qualified_items = [
         item_id for item_id in sorted(pool.keys())
-        if get_required_level(item_id) <= player_level
+        if get_item_level(item_id) <= player_level
     ]
 
     if not qualified_items:
@@ -560,7 +559,7 @@ def get_gathering_state(player_name: str, db: Session = Depends(get_db)):
     }
 
 
-from item_ID import get_item_name, get_item_rarity  # ✅ Import your item lookup function
+from item_ID import get_item_name, get_item_rarity, get_item_level  # ✅ Import your item lookup function
 
 @app.get("/gathered_materials")
 def get_gathered_materials(player_name: str, db: Session = Depends(get_db)):
