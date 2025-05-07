@@ -59,14 +59,11 @@ ALL_ITEMS = {
     **SCAVENGING_ITEMS
 }
 
-def get_item_info(item_id):
-    return ALL_ITEMS.get(item_id, {"name": f"Unknown Item #{item_id}", "level": 0, "rarity": "Unknown"})
-
 def get_item_name(item_id):
-    return get_item_info(item_id)["name"]
+    return ALL_ITEMS.get(item_id, {}).get("name", f"Unknown Item #{item_id}")
+
+def get_item_level(item_id):
+    return ALL_ITEMS.get(item_id, {}).get("level", 0)
 
 def get_item_rarity(item_id):
-    return get_item_info(item_id)["rarity"]
-
-def get_required_level(item_id):
-    return get_item_info(item_id)["level"]
+    return ALL_ITEMS.get(item_id, {}).get("rarity", "Unknown")
