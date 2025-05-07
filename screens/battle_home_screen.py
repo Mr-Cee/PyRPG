@@ -93,7 +93,7 @@ class BattleHomeScreen(BaseScreen):
                     self.leaderboard_labels.clear()
 
                     for i, entry in enumerate(data):
-                        text = f"{i + 1}. {entry['name']} - {entry['dungeon']} (⏱ {entry['time']}s)"
+                        text = f"{i + 1}. {entry['name']} - {entry['dungeon']} ({entry['time']}s)"
                         label = UILabel(
                             relative_rect=Rect((10, 40 + i * 22), (280, 20)),
                             text=text,
@@ -105,7 +105,6 @@ class BattleHomeScreen(BaseScreen):
                 print(f"[Leaderboard] Failed to load: {e}")
 
         threading.Thread(target=fetch_leaderboard, daemon=True).start()
-
 
     def handle_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
