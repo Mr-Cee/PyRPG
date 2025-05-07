@@ -471,25 +471,51 @@ def dungeon_complete(data: DungeonResult, db: Session = Depends(get_db)):
     return {"success": True, "message": "Dungeon completion recorded"}
 
 @app.get("/dungeon_leaderboard")
-def dungeon_leaderboard(db: Session = Depends(get_db)):
+def dungeon_leaderboard(player_name: str = None, db: Session = Depends(get_db)):
     top_players = (
         db.query(Player)
         .order_by(Player.highest_dungeon_completed.desc(), Player.best_dungeon_time_seconds.asc())
         .limit(10)
         .all()
     )
-    return {
-        "success": True,
-        "leaders": [
-            {
-                "name": p.name,
-                "class": p.char_class,
-                "level": p.level,
-                "dungeon": p.highest_dungeon_completed,
-                "time": p.best_dungeon_time_seconds
-            } for p in top_players
-        ]
-    }
+
+    result = [
+        {
+            "name": p.name,
+            "class": p.char_class,
+            "level": p.level,
+            "dungeon": p.highest_dungeon_completed,
+            "time": p.best_dungeon_time_seconds
+        } for p in top_players
+    ]
+
+    # If player_name not in top 10, find their rank
+    player_rank_info = None
+    if player_name:
+        subquery = db.query(
+            Player.name,
+            Player.highest_dungeon_completed,
+            Player.best_dungeon_time_seconds
+        ).order_by(
+            Player.highest_dungeon_completed.desc(),
+            Player.best_dungeon_time_seconds.asc()
+        ).all()
+
+        for idx, p in enumerate(subquery, 1):
+            if p.name == player_name:
+                player = db.query(Player).filter_by(name=player_name).first()
+                player_rank_info = {
+                    "rank": idx,
+                    "name": player.name,
+                    "class": player.char_class,
+                    "level": player.level,
+                    "dungeon": player.highest_dungeon_completed,
+                    "time": player.best_dungeon_time_seconds
+                }
+                break
+
+    return {"success": True, "leaders": result, "player_rank": player_rank_info}
+
 
 @app.post("/inventory/update")
 def update_inventory(request: InventoryUpdateRequest, db: Session = Depends(get_db)):

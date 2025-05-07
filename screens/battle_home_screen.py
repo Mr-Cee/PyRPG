@@ -82,7 +82,8 @@ class BattleHomeScreen(BaseScreen):
 
         def fetch_leaderboard():
             try:
-                response = requests.get(f"{SERVER_URL}/dungeon_leaderboard")
+                response = requests.get(f"{SERVER_URL}/dungeon_leaderboard", params={"player_name": self.player.name})
+
                 if response.status_code == 200:
                     data = response.json().get("leaders", [])
                     pygame.time.set_timer(pygame.USEREVENT + 101, 0)  # Stop any previous timer
@@ -98,7 +99,18 @@ class BattleHomeScreen(BaseScreen):
                             relative_rect=Rect((10, 40 + i * 22), (280, 20)),
                             text=text,
                             manager=self.manager,
-                            container=self.leaderboard_panel
+                            container=self.leaderboard_panel,
+                            object_id="#leaderboard_top" if entry["name"] == self.player.name else "#leaderboard_entry"
+                        )
+                        self.leaderboard_labels.append(label)
+                    player_rank = response.json().get("player_rank")
+                    if player_rank and player_rank["name"] not in [entry['name'] for entry in data]:
+                        label = UILabel(
+                            relative_rect=Rect((10, 270), (280, 20)),
+                            text=f"Your Rank: #{player_rank['rank']} - {player_rank['name']} ({player_rank['dungeon']}, {player_rank['time']}s)",
+                            manager=self.manager,
+                            container=self.leaderboard_panel,
+                            object_id="#leaderboard_self"
                         )
                         self.leaderboard_labels.append(label)
             except Exception as e:

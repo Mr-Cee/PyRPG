@@ -181,6 +181,53 @@
       "text_horiz_alignment": "Left",
       "text_vert_alignment": "Top"
     }
+  },
+  "#leaderboard_entry": {
+    "colours":
+    {
+      "normal_text": "#FFFFFF"
+    },
+    "font":
+    {
+      "size": 16
+    },
+    "misc":
+    {
+      "text_horiz_alignment": "Left",
+      "text_vert_alignment": "Top"
+    }
+  },
+  "#leaderboard_top": {
+    "colours":
+    {
+      "normal_text": "#FFD700"
+    },
+    "font":
+    {
+      "size": 16,
+      "bold": 1
+    },
+    "misc":
+    {
+      "text_horiz_alignment": "Left",
+      "text_vert_alignment": "Top"
+    }
+  },
+  "#leaderboard_self": {
+    "colours":
+    {
+      "normal_text": "#00BFFF"
+    },
+    "font":
+    {
+      "size": 16,
+      "italic": 1
+    },
+    "misc":
+    {
+      "text_horiz_alignment": "Left",
+      "text_vert_alignment": "Top"
+    }
   }
 }
 
