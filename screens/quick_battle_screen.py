@@ -256,7 +256,7 @@ class QuickBattleScreen(BaseScreen):
             max_dmg = primary_weapon["stats"].get("Max Damage", 5)
             base_primary_dmg = random.randint(min_dmg, max_dmg)
         else:
-            base_primary_dmg = 2  # default fallback
+            base_primary_dmg = random.randint(0, 2)  # default fallback
 
         secondary_weapon = self.player.equipment.get("secondary")
         if secondary_weapon:
@@ -264,7 +264,7 @@ class QuickBattleScreen(BaseScreen):
             max_dmg = secondary_weapon["stats"].get("Max Damage", 5)
             base_secondary_dmg = random.randint(min_dmg, max_dmg)
         else:
-            base_secondary_dmg = 2  # default fallback
+            base_secondary_dmg = random.randint(0, 2)
 
         bonus = self.player.total_stats.get("Bonus Damage", 0)
 
@@ -335,14 +335,18 @@ class QuickBattleScreen(BaseScreen):
         # Armor application (after all multipliers)
         dmg_after_armor = max(0, dmg - armor)
 
+        print(f"enemy damage: {dmg}")
+        print(f"armor: {armor}")
+        print(f"damage after armor: {dmg_after_armor}")
+
         if dmg_after_armor <= 0:
             self.add_log(f"<font color='#cccccc'>Your armor absorbed all damage!</font>")
         else:
             if is_crit:
                 self.add_log(
-                    f"<font color='#ff3333'>CRITICAL!</font> {self.enemy['name']} hits you for {dmg_after_armor} after armor.")
+                    f"<font color='#ff3333'>CRITICAL!</font> {self.enemy['name']} hits you for {dmg_after_armor}.")
             else:
-                self.add_log(f"{self.enemy['name']} hits you for {dmg_after_armor} after armor.")
+                self.add_log(f"{self.enemy['name']} hits you for {dmg_after_armor}.")
 
         self.player_hp -= dmg_after_armor
 

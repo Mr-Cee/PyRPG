@@ -10,11 +10,11 @@ EQUIP_SLOTS = {
 }
 
 WEAPON_TYPES = {
-    "Sword":  {"slots": 1, "block": False, "speed_secondary_penalty": True,  "base_damage": 12, "base_speed": 1.0},
-    "Dagger": {"slots": 1, "block": False, "speed_secondary_penalty": True,  "base_damage": 10, "base_speed": 1.2},
-    "Staff":  {"slots": 2, "block": False, "speed_secondary_penalty": False, "base_damage": 18, "base_speed": 0.8},
-    "Bow":    {"slots": 2, "block": False, "speed_secondary_penalty": False, "base_damage": 20, "base_speed": 0.6},
-    "Shield": {"slots": 1, "block": True,  "speed_secondary_penalty": False, "base_block": 15},
+    "Sword":  {"slots": 1, "block": False, "speed_secondary_penalty": True,  "base_damage": 7, "base_speed": 1.0},
+    "Dagger": {"slots": 1, "block": False, "speed_secondary_penalty": True,  "base_damage": 5, "base_speed": 1.2},
+    "Staff":  {"slots": 2, "block": False, "speed_secondary_penalty": False, "base_damage": 9, "base_speed": 0.8},
+    "Bow":    {"slots": 2, "block": False, "speed_secondary_penalty": False, "base_damage": 12, "base_speed": 0.6},
+    "Shield": {"slots": 1, "block": True,  "speed_secondary_penalty": False, "base_block": 10},
     "Focus":  {"slots": 1, "block": False, "speed_secondary_penalty": False, "base_damage": 8,  "base_speed": 1.1},
 }
 
@@ -48,7 +48,7 @@ def create_item(slot_type, char_class="Warrior", rarity=None, slot=None, weapon_
 
 
     # Item level scaling factor (example formula: linear scale)
-    level_scale = 1 + (item_level - 1) * 0.2  # Each level adds 20% more power
+    level_scale = 1 + (item_level - 1) * 0.1  # Each level adds 10% more power
 
     if slot_type in ("primary", "secondary") and weapon_type:
         item_name = f"{rarity} {weapon_type} | (Lv{item_level})"

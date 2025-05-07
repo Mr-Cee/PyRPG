@@ -20,7 +20,6 @@ class MainGameScreen(BaseScreen):
     def setup(self):
         self.player = self.screen_manager.player
         self.player.start_heartbeat(self.screen_manager.current_account)
-        self.player.last_logout_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=10)
         self.player.calculate_idle_rewards()
 
         self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
@@ -66,8 +65,9 @@ class MainGameScreen(BaseScreen):
         if self.player:
             self.player.stop_heartbeat()
         self.menu_panel.kill()
-        if self.idle_chest_button:
+        if hasattr(self, "idle_chest_button"):
             self.idle_chest_button.kill()
+
 
     def handle_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
