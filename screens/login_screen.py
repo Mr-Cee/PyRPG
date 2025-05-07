@@ -210,7 +210,7 @@ class LoginScreen(BaseScreen):
                 banner = response.json().get("message", "")
                 if banner:
                     self.banner_label = pygame_gui.elements.UILabel(
-                        relative_rect=pygame.Rect((50, 60), (700, 30)),
+                        relative_rect=pygame.Rect((GAME_WIDTH-450, 60), (400, 400)),
                         text=banner,
                         manager=self.manager,
                         object_id="#login_banner"
