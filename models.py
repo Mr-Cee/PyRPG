@@ -107,6 +107,7 @@ class GatheredMaterial(Base):
     player_id = Column(UUID(as_uuid=True), ForeignKey("players.id"))
     item_id = Column(Integer)
     quantity = Column(Integer, default=0)
-    name = Column(String)
+    name = Column(String, default="")
+    rarity = Column(String, default="")
 
 

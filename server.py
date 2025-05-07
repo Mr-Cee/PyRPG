@@ -560,7 +560,7 @@ def get_gathering_state(player_name: str, db: Session = Depends(get_db)):
     }
 
 
-from item_ID import get_item_name  # ✅ Import your item lookup function
+from item_ID import get_item_name, get_item_rarity  # ✅ Import your item lookup function
 
 @app.get("/gathered_materials")
 def get_gathered_materials(player_name: str, db: Session = Depends(get_db)):
@@ -576,7 +576,8 @@ def get_gathered_materials(player_name: str, db: Session = Depends(get_db)):
             {
                 "item_id": g.item_id,
                 "name": get_item_name(g.item_id),  # ✅ Dynamic name lookup
-                "quantity": g.quantity
+                "quantity": g.quantity,
+                "rarity": get_item_rarity(g.item_id)
             }
             for g in results
         ]
@@ -834,6 +835,7 @@ def give_item(payload: dict, db: Session = Depends(get_db)):
         return {"success": False, "error": f"Invalid item ID: {item_id}"}
 
     item_name = get_item_name(item_id)
+    rarity = get_item_rarity(item_id)
 
     player = db.query(Player).filter_by(name=target_name).first()
     if not player:
@@ -848,7 +850,8 @@ def give_item(payload: dict, db: Session = Depends(get_db)):
             player_id=player.id,
             item_id=item_id,
             name=item_name,
-            quantity=quantity
+            quantity=quantity,
+            rarity=rarity
         )
         db.add(material)
 
