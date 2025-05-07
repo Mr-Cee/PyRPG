@@ -494,7 +494,8 @@ def gather_status(payload: dict, db: Session = Depends(get_db)):
         "farming": 200,    # Raw Wheat
         "scavenging": 300  # Scrap Leather
     }
-    item_id = dummy_item_ids[player.current_gathering_activity]
+    activity = player.current_gathering_activity.value  # e.g., "scavenging"
+    item_id = dummy_item_ids[activity]
 
     # Add to gathered_materials (stack or create new)
     gathered = db.query(models.GatheredMaterial).filter_by(player_id=player.id, item_id=item_id).first()
