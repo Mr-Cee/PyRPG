@@ -588,7 +588,7 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
         "farming": FARMING_ITEMS,
         "scavenging": SCAVENGING_ITEMS
     }
-
+    print("Test 1")
     pool = activity_pools.get(activity, {})
     eligible_items = [item_id for item_id in sorted(pool.keys()) if get_item_level(item_id) <= skill_level]
     if not eligible_items:
@@ -596,7 +596,7 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
 
     best_item_id = eligible_items[-1]
     total_items = int(minutes * (1 + 0.1 * (skill_level - 1)))
-
+    print("Test 2")
     # Add to GatheredMaterial table
     existing = db.query(models.GatheredMaterial).filter_by(player_id=player.id, item_id=best_item_id).first()
     if existing:
@@ -611,7 +611,7 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
             rarity=get_item_rarity(best_item_id)
         )
         db.add(new_entry)
-
+    print("Test 3")
     # Reset gathering state
     player.current_gathering_activity = "none"
     player.gathering_start_time = None

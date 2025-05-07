@@ -167,12 +167,13 @@ class GatheringScreen(BaseScreen):
                 )
                 if response.status_code == 200:
                     data = response.json()
+                    print(data.get("message"))
                     msg = data.get("message", "Collected.")
-                    pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"status_message": msg}))
+                    print( {"status_message": msg})
                 else:
                     raise Exception("Collection failed.")
             except Exception as e:
-                pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"status_message": "Collection failed."}))
+                print( {"status_message": "Collection failed."})
             # self.refresh_status()
 
         import threading
