@@ -816,6 +816,44 @@ class ChatWindow:
         except Exception as e:
             self.log_message(f"[Error] Failed to contact server: {e}", "System")
 
+    def cmd_giveitem(self, kwargs):
+        try:
+            item_id = int(kwargs.get("id"))
+            amount = int(kwargs.get("amount", 1))
+            target_name = kwargs.get("target", self.player.name)
+
+            # Look up item name to confirm it's valid
+            from item_ID import ALL_ITEMS, get_item_name
+            if item_id not in ALL_ITEMS:
+                self.player.chat_window.log_message(f"❌ Invalid item ID: {item_id}", "System")
+                return
+
+            target_player = self.screen_manager.get_online_player_by_name(target_name)
+            if not target_player:
+                self.player.chat_window.log_message(f"❌ Target player '{target_name}' not found.", "System")
+                return
+
+            # Send request to server to give item
+            payload = {
+                "admin_name": self.player.name,
+                "target_name": target_player.name,
+                "item_id": item_id,
+                "quantity": amount
+            }
+            response = requests.post(f"{SERVER_URL}/give_item", json=payload)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success"):
+                    self.player.chat_window.log_message(f"✅ Gave {amount}x {get_item_name(item_id)} to {target_name}.",
+                                                   "System")
+                else:
+                    self.player.chat_window.log_message(f"❌ Error: {data.get('error', 'Unknown')}", "System")
+            else:
+                self.player.chat_window.log_message("❌ Server error while giving item.", "System")
+
+        except Exception as e:
+            self.player.chat_window.log_message(f"❌ Failed to give item: {e}", "System")
+
     def cmd_addexperience(self, *args):
         if not args:
             self.log_message("[Usage] /addexperience <amount> [player]", "System")

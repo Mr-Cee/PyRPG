@@ -560,7 +560,6 @@ def get_gathering_state(player_name: str, db: Session = Depends(get_db)):
         "status": f"Currently {activity.value.title()}"
     }
 
-
 @app.get("/gathered_materials")
 def get_gathered_materials(player_name: str, db: Session = Depends(get_db)):
     player = db.query(Player).filter_by(name=player_name).first()
@@ -822,6 +821,32 @@ def create_item_endpoint(data: dict, db: Session = Depends(get_db)):
     return {"success": True,
             "message": f"{item['name']} added to {target.name}'s inventory.",
             "item": item}
+
+@app.post("/give_item")
+def give_item(payload: dict, db: Session = Depends(get_db)):
+    admin_name = payload.get("admin_name")
+    target_name = payload.get("target_name")
+    item_id = payload.get("item_id")
+    quantity = payload.get("quantity", 1)
+
+    from item_ID import ALL_ITEMS
+    if item_id not in ALL_ITEMS:
+        return {"success": False, "error": "Invalid item ID"}
+
+    player = db.query(Player).filter_by(name=target_name).first()
+    if not player:
+        return {"success": False, "error": "Target player not found"}
+
+    # Find or create material record
+    material = db.query(models.GatheredMaterial).filter_by(player_id=player.id, item_id=item_id).first()
+    if material:
+        material.quantity += quantity
+    else:
+        material = models.GatheredMaterial(player_id=player.id, item_id=item_id, quantity=quantity)
+        db.add(material)
+
+    db.commit()
+    return {"success": True}
 
 @app.post("/chat/send")
 def send_chat_message(chat: ChatMessage):
