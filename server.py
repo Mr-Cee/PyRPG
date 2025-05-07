@@ -524,6 +524,24 @@ def gather_status(payload: dict, db: Session = Depends(get_db)):
         "quantity_gathered": total_items
     }
 
+@app.get("/gather/state")
+def get_gathering_state(player_name: str, db: Session = Depends(get_db)):
+    player = db.query(Player).filter_by(name=player_name).first()
+    if not player:
+        return {"success": False, "error": "Player not found"}
+
+    activity = player.current_gathering_activity
+    if activity == models.GatheringActivityEnum.none:
+        return {"success": True, "gathering": False, "status": "Not currently gathering"}
+
+    return {
+        "success": True,
+        "gathering": True,
+        "activity": activity.value,
+        "status": f"Currently {activity.value.title()}"
+    }
+
+
 @app.get("/gathered_materials")
 def get_gathered_materials(player_name: str, db: Session = Depends(get_db)):
     player = db.query(Player).filter_by(name=player_name).first()

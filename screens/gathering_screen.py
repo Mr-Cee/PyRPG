@@ -79,6 +79,23 @@ class GatheringScreen(BaseScreen):
             )
             self.level_labels.append(lbl)
 
+        self.refresh_status()
+
+    def refresh_status(self):
+        import threading, requests
+
+        def fetch():
+            try:
+                response = requests.get(f"{SERVER_URL}/gather/state", params={"player_name": self.player.name})
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("success"):
+                        self.status_label.set_text(data.get("status", ""))
+            except Exception as e:
+                print("[Gathering] Failed to fetch state:", e)
+
+        threading.Thread(target=fetch, daemon=True).start()
+
     def fetch_status(self):
         def worker():
             try:
@@ -140,6 +157,8 @@ class GatheringScreen(BaseScreen):
                 for btn in self.buttons:
                     if event.ui_element == btn:
                         self.start_gathering(btn.activity_name)
+                        self.refresh_status()
+
 
         elif event.type == pygame.USEREVENT:
             if "status_message" in event.__dict__:
