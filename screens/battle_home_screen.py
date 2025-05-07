@@ -35,18 +35,6 @@ class BattleHomeScreen(BaseScreen):
             manager=self.manager
         )
 
-        # Dungeon Panel
-        self.dungeon_panel = UIPanel(
-            relative_rect=Rect((GAME_WIDTH-325, 25), (300, 120)),
-            manager=self.manager
-        )
-        self.dungeon_label = UILabel(
-            relative_rect=Rect((10, 10), (280, 30)),
-            text=f"Highest Dungeon Completed: {self.player.highest_dungeon_completed}",
-            manager=self.manager,
-            container=self.dungeon_panel
-        )
-
         self.raid_button = UIButton(
             relative_rect=Rect((100, 220), (200, 40)),
             text="Raids",
@@ -59,14 +47,14 @@ class BattleHomeScreen(BaseScreen):
             manager=manager
         )
         self.leaderboard_panel = UIPanel(
-            relative_rect=Rect((GAME_WIDTH - 325, 155), (300, 275)),  # Under the dungeon panel
+            relative_rect=Rect((GAME_WIDTH - 450, 25), (425, 340)),  # Was 155, now moved up
             manager=self.manager
         )
         self.leaderboard_labels = []  # Track labels so we can clear on reload
 
         # Title
         UILabel(
-            relative_rect=Rect((10, 5), (280, 30)),
+            relative_rect=Rect((10, 5), (425, 30)),
             text="🏆 Dungeon Leaderboard",
             manager=self.manager,
             container=self.leaderboard_panel
@@ -93,21 +81,28 @@ class BattleHomeScreen(BaseScreen):
                         label.kill()
                     self.leaderboard_labels.clear()
 
+
+
                     for i, entry in enumerate(data):
-                        text = f"{i + 1}. {entry['name']} - {entry['dungeon']} ({entry['time']}s)"
+                        text = f"{i+1}. {entry['name']} (Lv {entry['level']} {entry['class']}) - Floor {entry['dungeon']} - {entry['time']}s"
                         label = UILabel(
-                            relative_rect=Rect((10, 40 + i * 22), (280, 20)),
+                            relative_rect=Rect((10, 40 + i * 22), (420, 20)),
                             text=text,
                             manager=self.manager,
                             container=self.leaderboard_panel,
                             object_id="#leaderboard_top" if entry["name"] == self.player.name else "#leaderboard_entry"
                         )
                         self.leaderboard_labels.append(label)
+
                     player_rank = response.json().get("player_rank")
-                    if player_rank and player_rank["name"] not in [entry['name'] for entry in data]:
+
+                    print("[Debug] player_rank =", player_rank)
+                    top_names = [entry["name"] for entry in data]
+                    if player_rank and player_rank["name"] not in top_names:
+                        y_pos = 40 + len(data) * 22 + 10
                         label = UILabel(
-                            relative_rect=Rect((10, 270), (280, 20)),
-                            text=f"Your Rank: #{player_rank['rank']} - {player_rank['name']} ({player_rank['dungeon']}, {player_rank['time']}s)",
+                            relative_rect=Rect((10, y_pos), (420, 20)),
+                            text=f"Your Rank: #{player_rank['rank']} - {player_rank['name']} (Lv {player_rank['level']} {player_rank['class']}) - Floor {player_rank['dungeon']} {player_rank['time']}s",
                             manager=self.manager,
                             container=self.leaderboard_panel,
                             object_id="#leaderboard_self"
@@ -183,7 +178,6 @@ class BattleHomeScreen(BaseScreen):
         self.dungeon_button.kill()
         self.raid_button.kill()
         self.back_button.kill()
-        self.dungeon_panel.kill()
         self.dungeon_dropdown.kill()
         self.leaderboard_panel.kill()
         for label in self.leaderboard_labels:
