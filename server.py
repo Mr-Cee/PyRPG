@@ -474,7 +474,7 @@ def gather_status(payload: dict, db: Session = Depends(get_db)):
         return {"success": False, "error": "No gathering in progress."}
 
     # Calculate time passed (in minutes)
-    now = datetime.datetime.now(datetime.UTC)
+    now = datetime.datetime.utcnow()
     elapsed = (now - player.gathering_start_time).total_seconds()
     minutes = int(elapsed // 60)
 
