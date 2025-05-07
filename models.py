@@ -1,10 +1,11 @@
 # models.py
 import datetime
 import uuid
-from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean, DateTime, Text
+from sqlalchemy import Column, String, Integer, ForeignKey, Float, Boolean, DateTime, Text, Enum
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
@@ -18,6 +19,13 @@ class Account(Base):
     role = Column(String, default="player")
     is_online = Column(Boolean, default=False)
     last_seen = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
+
+class GatheringActivityEnum(Enum):
+    none = "none"
+    woodcutting = "woodcutting"
+    mining = "mining"
+    farming = "farming"
+    scavenging = "scavenging"
 
 class Player(Base):
     __tablename__ = 'players'
@@ -42,6 +50,16 @@ class Player(Base):
     is_muted = Column(Boolean, default=False)
     highest_dungeon_completed = Column(Integer, default=0)
     best_dungeon_time_seconds = Column(Integer, default=0)
+
+    current_gathering_activity = Column(Enum(GatheringActivityEnum), default=GatheringActivityEnum.none)
+    gathering_start_time = Column(DateTime, nullable=True)
+
+    woodcutting_level = Column(Integer, default=1)
+    mining_level = Column(Integer, default=1)
+    farming_level = Column(Integer, default=1)
+    scavenging_level = Column(Integer, default=1)
+
+    gathered_materials = relationship("GatheredMaterial", back_populates="player")
 
 class ChatMessage(Base):
     __tablename__ = 'chat_messages'
@@ -79,4 +97,13 @@ class ServerConfig(Base):
     login_banner = Column(Text, default="")
     last_updated = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
     patch_notes = Column(Text, default="")
+
+class GatheredMaterial(Base):
+    __tablename__ = "gathered_materials"
+    id = Column(Integer, primary_key=True)
+    player_id = Column(UUID(as_uuid=True), ForeignKey("players.id"))
+    item_id = Column(Integer)
+    quantity = Column(Integer, default=0)
+
+    player = relationship("Player", back_populates="gathered_materials")
 

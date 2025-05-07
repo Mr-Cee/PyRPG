@@ -5,6 +5,7 @@ import pygame
 import pygame_gui
 from pygame import Rect
 import requests
+from pygame_gui.elements import UIButton
 
 from chat_system import ChatWindow
 from settings import SERVER_URL, rarity_colors, CLASS_WEAPON_RESTRICTIONS
@@ -72,6 +73,11 @@ class InventoryScreen(BaseScreen):
         self.setup_inventory()
 
     def setup_inventory(self):
+        self.gathered_tab_button = UIButton(
+            relative_rect=pygame.Rect((360, 10), (120, 30)),
+            text="Materials",
+            manager=self.manager
+        )
         # Setting up Grid
         # Outer inventory container (frame)
         self.inventory_container = pygame_gui.elements.UIPanel(

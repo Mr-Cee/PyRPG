@@ -443,6 +443,96 @@ def update_player(request: UpdatePlayerRequest, db: Session = Depends(get_db)):
 
     return {"msg": "Player updated successfully!"}
 
+@app.post("/gather/start")
+def start_gathering(payload: dict, db: Session = Depends(get_db)):
+    player_name = payload.get("player_name")
+    activity = payload.get("activity")
+
+    if activity not in ["woodcutting", "mining", "farming", "scavenging"]:
+        return {"success": False, "error": "Invalid activity."}
+
+    player = db.query(Player).filter_by(name=player_name).first()
+    if not player:
+        return {"success": False, "error": "Player not found."}
+
+    if player.current_gathering_activity != "none":
+        return {
+            "success": False,
+            "error": f"Player is already gathering {player.current_gathering_activity}."
+        }
+
+    player.current_gathering_activity = activity
+    player.gathering_start_time = datetime.datetime.now(datetime.UTC)
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"Started {activity} for {player.name} at {player.gathering_start_time}."
+    }
+
+@app.post("/gather/status")
+def gather_status(payload: dict, db: Session = Depends(get_db)):
+    player_name = payload.get("player_name")
+    stop = payload.get("stop", False)
+
+    player = db.query(Player).filter_by(name=player_name).first()
+    if not player:
+        return {"success": False, "error": "Player not found."}
+
+    if player.current_gathering_activity == "none" or not player.gathering_start_time:
+        return {"success": False, "error": "No gathering in progress."}
+
+    # Calculate time passed (in minutes)
+    now = datetime.datetime.now(datetime.UTC)
+    elapsed = (now - player.gathering_start_time).total_seconds()
+    minutes = int(elapsed // 60)
+
+    if minutes < 1:
+        return {"success": True, "message": "Not enough time has passed to gather materials."}
+
+    # Gather base logic (very simple for now)
+    skill_level = getattr(player, f"{player.current_gathering_activity}_level", 1)
+
+    # Example: base 1 item per minute, +10% per skill level
+    total_items = int(minutes * (1 + (0.1 * (skill_level - 1))))
+
+    # Dummy item IDs for now (later from a table)
+    dummy_item_ids = {
+        "woodcutting": 1,  # Oak Log
+        "mining": 100,     # Copper Chunk
+        "farming": 200,    # Raw Wheat
+        "scavenging": 300  # Scrap Leather
+    }
+    item_id = dummy_item_ids[player.current_gathering_activity]
+
+    # Add to gathered_materials (stack or create new)
+    gathered = db.query(models.GatheredMaterial).filter_by(player_id=player.id, item_id=item_id).first()
+    if gathered:
+        gathered.quantity += total_items
+    else:
+        gathered = models.GatheredMaterial(player_id=player.id, item_id=item_id, quantity=total_items)
+        db.add(gathered)
+
+    message = f"{total_items} x Item #{item_id} gathered over {minutes} min"
+
+    # If stopping, reset the activity
+    if stop:
+        player.current_gathering_activity = "none"
+        player.gathering_start_time = None
+        message += ". Gathering stopped."
+    else:
+        player.gathering_start_time = now  # reset for partial collection
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": message,
+        "item_id": item_id,
+        "quantity_gathered": total_items
+    }
+
 @app.post("/dungeon_complete")
 def dungeon_complete(data: DungeonResult, db: Session = Depends(get_db)):
     player = (
@@ -515,7 +605,6 @@ def dungeon_leaderboard(player_name: str = None, db: Session = Depends(get_db)):
                 break
 
     return {"success": True, "leaders": result, "player_rank": player_rank_info}
-
 
 @app.post("/inventory/update")
 def update_inventory(request: InventoryUpdateRequest, db: Session = Depends(get_db)):
