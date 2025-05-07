@@ -17,12 +17,10 @@ INVENTORY_BG_IMAGE = pygame.image.load("Assets/GUI/Inventory/inner_carving.png")
 INVENTORY_BG_IMAGE = pygame.transform.scale(INVENTORY_BG_IMAGE, (302, 309))  # Match grid area
 ROW_IMAGE = pygame.image.load("Assets/GUI/Inventory/row_slot.png").convert_alpha()
 
-
 CHAR_FRAME_IMAGE = pygame.image.load("Assets/GUI/Inventory/character_sheet_frame.png").convert_alpha()
 CHAR_FRAME_IMAGE = pygame.transform.scale(CHAR_FRAME_IMAGE, (327, 444))
 CHAR_VERTICAL_SLOTS = pygame.image.load("Assets/GUI/Inventory/Character_Sheet_Vertical_Slots.png").convert_alpha()
 CHAR_VERTICAL_SLOTS = pygame.transform.scale(CHAR_VERTICAL_SLOTS, (52, 292))
-
 
 
 class InventoryScreen(BaseScreen):
@@ -57,24 +55,23 @@ class InventoryScreen(BaseScreen):
             manager=self.manager
         )
 
-        # Title label
-        self.title_label = pygame_gui.elements.UILabel(
-            relative_rect=Rect((130, 10), (300, 30)),
-            text="Inventory (WIP)",
-            manager=self.manager
-        )
-
-        self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager, container=None, inventory_screen=self)
+        self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager, container=None,
+                                             inventory_screen=self)
         self.player.chat_window.panel.set_relative_position((10, 480))
         self.player.chat_window.panel.set_dimensions((400, 220))
-
 
         self.setup_character_sheet()
         self.setup_inventory()
 
     def setup_inventory(self):
-        self.gathered_tab_button = UIButton(
+        ## Tabs at the top of the inventory
+        self.bags_tab_button = UIButton(
             relative_rect=pygame.Rect((360, 10), (120, 30)),
+            text="Bags",
+            manager=self.manager
+        )
+        self.gathered_tab_button = UIButton(
+            relative_rect=pygame.Rect((490, 10), (120, 30)),
             text="Materials",
             manager=self.manager
         )
@@ -149,21 +146,22 @@ class InventoryScreen(BaseScreen):
 
         self.player.register_coin_update_callback(self.refresh_coin_display)
 
-
         ############ MATERIALS TAB ###############
         self.materials_panel = UIPanel(
-            relative_rect=pygame.Rect((25, 50), (650, 500)),
+            relative_rect=pygame.Rect((self.grid_origin_x, self.grid_origin_y),
+                                      (self.container_width, self.container_height)),
             manager=self.manager,
             visible=False
         )
         self.materials_scroll = pygame_gui.elements.ui_vertical_scroll_bar.UIVerticalScrollBar(
-            relative_rect=pygame.Rect((630, 0), (20, 500)),
+            relative_rect=pygame.Rect((self.container_width - 20, 0), (20, self.container_height)),
             visible=True,
+            visible_percentage=100,
             manager=self.manager,
             container=self.materials_panel
         )
         self.materials_list_container = pygame_gui.elements.ui_panel.UIPanel(
-            relative_rect=pygame.Rect((0, 0), (630, 1000)),
+            relative_rect=pygame.Rect((0, 0), (self.container_width - 20, 1000)),
             manager=self.manager,
             container=self.materials_panel
         )
@@ -174,7 +172,6 @@ class InventoryScreen(BaseScreen):
         self.equip_slot_padding = 0
         self.equip_slot_origin_y = (444 - (6 * 44 + 5 * 4)) // 2  # = 90
         self.equipment_slots = []
-
 
         slot_size = 46
         slot_padding = 4
@@ -426,7 +423,6 @@ class InventoryScreen(BaseScreen):
 
     def teardown(self):
         self.back_button.kill()
-        self.title_label.kill()
         if self.player.chat_window:
             self.player.chat_window.teardown()
             self.player.chat_window = None
@@ -434,6 +430,8 @@ class InventoryScreen(BaseScreen):
             self.coin_label.kill()
 
         ####### Inventory #######
+        self.bags_tab_button.kill()
+        self.gathered_tab_button.kill()
         for btn in self.inventory_slots:
             btn.kill()
         self.inventory_slots = []
@@ -444,6 +442,8 @@ class InventoryScreen(BaseScreen):
             self.bg_image.kill()
         if hasattr(self, "inventory_container"):
             self.inventory_container.kill()
+        if hasattr(self, "materials_panel"):
+            self.materials_panel.kill()
         for icon in self.slot_icons:
             try:
                 icon.hide()
@@ -528,9 +528,11 @@ class InventoryScreen(BaseScreen):
                 self.screen_manager.set_screen(MainGameScreen(self.manager, self.screen_manager))
             elif event.ui_element == self.gathered_tab_button:
                 self.inventory_container.hide()
-                # self.equipment_panel.hide()
                 self.materials_panel.show()
                 self.load_gathered_materials()
+            elif event.ui_element == self.bags_tab_button:
+                self.materials_panel.hide()
+                self.inventory_container.show()
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_pos = pygame.mouse.get_pos()
@@ -685,7 +687,9 @@ class InventoryScreen(BaseScreen):
 
                             # 🚫 BLOCK equipping to secondary if 2-handed weapon is equipped
                             if subtype == "secondary" and self.player.is_two_handed_weapon_equipped():
-                                self.player.chat_window.log_message("[Equip] Cannot equip secondary item while a 2-handed weapon is equipped.", "System")
+                                self.player.chat_window.log_message(
+                                    "[Equip] Cannot equip secondary item while a 2-handed weapon is equipped.",
+                                    "System")
                                 return  # Cancel the right-click equip
                             # 🚫 Check weapon class restrictions
                             weapon_type = item.get("weapon_type")
@@ -693,7 +697,8 @@ class InventoryScreen(BaseScreen):
                                 player_class = self.player.char_class
                                 allowed_weapons = CLASS_WEAPON_RESTRICTIONS.get(player_class, set())
                                 if weapon_type not in allowed_weapons:
-                                    self.player.chat_window.log_message(f"[Equip] {player_class} cannot equip {weapon_type}.","System")
+                                    self.player.chat_window.log_message(
+                                        f"[Equip] {player_class} cannot equip {weapon_type}.", "System")
                                     return
 
                             # 🔄 If equipping a 2-handed weapon, unequip both hands
@@ -751,7 +756,8 @@ class InventoryScreen(BaseScreen):
                         free_slots = list(all_slots - used_slots)
 
                         if not free_slots:
-                            self.player.chat_window.log_message("[Right-click] Cannot unequip — inventory is full.", "System")
+                            self.player.chat_window.log_message("[Right-click] Cannot unequip — inventory is full.",
+                                                                "System")
                             return
 
                         equipped_item["slot"] = free_slots[0]  # Move back to inventory
@@ -801,7 +807,6 @@ class InventoryScreen(BaseScreen):
                 slot_label = " [Off Hand]"
 
             inventory_tooltip_text = f"<b>{hovered_inventory_item['name']}</b>{slot_label}<br><i><font color='{color}'>{rarity}</font></i>"
-
 
             stats = hovered_inventory_item.get("stats", {})
             subtype = hovered_inventory_item.get("subtype")
@@ -863,7 +868,6 @@ class InventoryScreen(BaseScreen):
             self.player.chat_window.update(time_delta)
 
     def draw(self, window_surface):
-
 
         self.manager.draw_ui(window_surface)
         self.draw_item_auras(window_surface)
