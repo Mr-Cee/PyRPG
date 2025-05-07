@@ -512,9 +512,6 @@ class InventoryScreen(BaseScreen):
                 self.materials_labels.clear()
 
                 items = response.json().get("materials", [])
-
-                print(items)
-
                 # Group items by gathering type
                 grouped = {
                     "Woodcutting": [],
@@ -544,7 +541,8 @@ class InventoryScreen(BaseScreen):
                     grouped[group].append({
                         "name": item["name"],
                         "quantity": item["quantity"],
-                        "level": item_data.get("level", 0)
+                        "level": item_data.get("level", 0),
+                        "rarity": item["rarity"]
                     })
 
                 # Sort each group by level
@@ -573,6 +571,7 @@ class InventoryScreen(BaseScreen):
                         from settings import rarity_colors
 
                         color_hex = rarity_colors.get(item.get("rarity", "Common"), "#FFFFFF")
+
                         colored_name = f"<font color='{color_hex}'>{item['name']}</font>"
 
                         label = pygame_gui.elements.UITextBox(
