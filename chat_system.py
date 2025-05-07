@@ -263,6 +263,12 @@ class ChatWindow:
                 "min_role": "player",
                 "aliases": [],
                 "help": "Usage: /online\nShow who's currently online."
+            },
+            "patchnotes": {
+                "func": self.cmd_patchnotes,
+                "min_role": "player",
+                "aliases": ["notes", "changelog"],
+                "help": "Usage: /patchnotes\nView the latest patch notes."
             }
 
         }
@@ -1052,6 +1058,24 @@ class ChatWindow:
                 self.log_message(f"[Error] {data.get('error')}", "System")
         except Exception as e:
             self.log_message(f"[Error] Failed to update banner: {e}", "System")
+
+    def cmd_patchnotes(self):
+        try:
+            response = requests.get(f"{SERVER_URL}/patch_notes", timeout=5)
+            notes = response.json().get("notes", "No patch notes available.")
+        except Exception as e:
+            notes = f"[Error] Could not fetch patch notes: {e}"
+
+        # Format with line breaks
+        formatted = notes.replace('\n', '<br>')
+
+        from pygame_gui.windows import UIMessageWindow
+        UIMessageWindow(
+            rect=pygame.Rect((200, 150), (500, 400)),
+            window_title="📋 Patch Notes",
+            html_message=f"<b>Patch Notes:</b><br><br>{formatted}",
+            manager=self.manager
+        )
 
     def parse_command_arguments(self, message: str):
         parts = message.split()
