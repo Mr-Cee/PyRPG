@@ -529,7 +529,7 @@ def get_gathered_materials(player_name: str, db: Session = Depends(get_db)):
     if not player:
         return {"success": False, "error": "Player not found."}
 
-    results = db.query(GatheredMaterial).filter_by(player_id=player.id).all()
+    results = db.query(models.GatheredMaterial).filter_by(player_id=player.id).all()
 
     # TODO: Replace with item table lookups
     id_to_name = {
