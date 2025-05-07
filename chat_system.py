@@ -834,7 +834,8 @@ class ChatWindow:
             # Check if target is online
             online_response = requests.get(f"{SERVER_URL}/online_players", timeout=5)
             if online_response.status_code == 200:
-                online_names = online_response.json().get("players", [])
+                online_data = online_response.json().get("online", [])
+                online_names = [p["name"] for p in online_data]
                 if target_player not in online_names:
                     self.player.chat_window.log_message(f"❌ Player '{target_player}' is not online.", "System")
                     return
@@ -847,7 +848,7 @@ class ChatWindow:
                 "quantity": amount,
                 "target_player": target_player
             }
-            response = requests.post(f"{SERVER_URL}/giveitem", json=payload, timeout=5)
+            response = requests.post(f"{SERVER_URL}/give_item", json=payload, timeout=5)
             if response.status_code == 200:
                 data = response.json()
                 msg = data.get("message", "Item given.")

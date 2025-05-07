@@ -228,6 +228,13 @@
       "text_horiz_alignment": "Left",
       "text_vert_alignment": "Top"
     }
+  },
+  "#materials_label": {
+    "misc":
+    {
+      "text_horiz_alignment": "left",
+      "text_vert_alignment": "top"
+    }
   }
 }
 

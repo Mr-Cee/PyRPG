@@ -512,10 +512,12 @@ class InventoryScreen(BaseScreen):
                 items = response.json().get("materials", [])
                 for idx, item in enumerate(items):
                     label = UILabel(
-                        relative_rect=pygame.Rect((10, idx * 30), (600, 25)),
+                        relative_rect=pygame.Rect((10, idx * 30), (self.container_width - 30, 25)),
                         text=f"{item['name']} x{item['quantity']}",
                         manager=self.manager,
-                        container=self.materials_list_container
+                        container=self.materials_list_container,
+                        anchors={"Top": "Top", "Left": "Left"},
+                        object_id="#materials_label"
                     )
                     self.materials_labels.append(label)
         except Exception as e:
@@ -535,212 +537,213 @@ class InventoryScreen(BaseScreen):
                 self.inventory_container.show()
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            mouse_pos = pygame.mouse.get_pos()
-
-            # Check inventory slots
-            for i, slot in enumerate(self.inventory_slots):
-                if slot.get_abs_rect().collidepoint(mouse_pos):
-                    for icon in self.slot_icons:
-                        if getattr(icon, "slot_index", None) == i:
-                            self.dragging_item = icon
-                            self.dragging_index = i
-                            self.slot_icons.remove(icon)
-                            icon.kill()
-                            return  # Exit early
-
-            # Check equipped slots
-            for slot in self.equipment_slots:
-                if slot.get_abs_rect().collidepoint(mouse_pos):
-                    slot_type = slot.slot_type
-                    equipped_key = f"equipped:{slot_type}"
-
-                    # Check if inventory has at least one free slot
-                    used_slots = {item.get("slot") for item in self.inventory_data if isinstance(item.get("slot"), int)}
-                    all_slots = set(range(len(self.inventory_slots)))
-                    free_slots = all_slots - used_slots
-
-                    if not free_slots:
-                        print("[Equip] Cannot drag item — inventory is full.")
-                        return  # Don't allow drag if inventory is full
-
-                    for icon in self.slot_icons:
-                        if getattr(icon, "slot_index", None) == equipped_key:
-                            self.dragging_item = icon
-                            self.dragging_index = equipped_key
-                            self.slot_icons.remove(icon)
-                            icon.kill()
-                            return
-
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            if self.dragging_item:
+            if self.inventory_container.visible:
                 mouse_pos = pygame.mouse.get_pos()
-                drop_index = None
-
-                # First, check if dropped onto an inventory slot
+                # Check inventory slots
                 for i, slot in enumerate(self.inventory_slots):
                     if slot.get_abs_rect().collidepoint(mouse_pos):
-                        drop_index = i
-                        break
+                        for icon in self.slot_icons:
+                            if getattr(icon, "slot_index", None) == i:
+                                self.dragging_item = icon
+                                self.dragging_index = i
+                                self.slot_icons.remove(icon)
+                                icon.kill()
+                                return  # Exit early
 
-                # Then, check if dropped onto an equipment slot
-                if drop_index is None:
-                    for slot_panel in self.equipment_slots:
-                        if slot_panel.get_abs_rect().collidepoint(mouse_pos):
-                            drop_index = f"equipped:{slot_panel.slot_type}"
+                # Check equipped slots
+                for slot in self.equipment_slots:
+                    if slot.get_abs_rect().collidepoint(mouse_pos):
+                        slot_type = slot.slot_type
+                        equipped_key = f"equipped:{slot_type}"
+
+                        # Check if inventory has at least one free slot
+                        used_slots = {item.get("slot") for item in self.inventory_data if isinstance(item.get("slot"), int)}
+                        all_slots = set(range(len(self.inventory_slots)))
+                        free_slots = all_slots - used_slots
+
+                        if not free_slots:
+                            print("[Equip] Cannot drag item — inventory is full.")
+                            return  # Don't allow drag if inventory is full
+
+                        for icon in self.slot_icons:
+                            if getattr(icon, "slot_index", None) == equipped_key:
+                                self.dragging_item = icon
+                                self.dragging_index = equipped_key
+                                self.slot_icons.remove(icon)
+                                icon.kill()
+                                return
+
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            if self.inventory_container.visible:
+                if self.dragging_item:
+                    mouse_pos = pygame.mouse.get_pos()
+                    drop_index = None
+
+                    # First, check if dropped onto an inventory slot
+                    for i, slot in enumerate(self.inventory_slots):
+                        if slot.get_abs_rect().collidepoint(mouse_pos):
+                            drop_index = i
                             break
 
-                # If dropped outside both, return to original
-                if drop_index is None:
-                    drop_index = self.dragging_index
+                    # Then, check if dropped onto an equipment slot
+                    if drop_index is None:
+                        for slot_panel in self.equipment_slots:
+                            if slot_panel.get_abs_rect().collidepoint(mouse_pos):
+                                drop_index = f"equipped:{slot_panel.slot_type}"
+                                break
 
-                # Find dragged item
-                dragged_item = next((item for item in self.inventory_data if item.get("slot") == self.dragging_index),
-                                    None)
+                    # If dropped outside both, return to original
+                    if drop_index is None:
+                        drop_index = self.dragging_index
 
-                # If trying to equip (into equipment slot)
-                if isinstance(drop_index, str) and drop_index.startswith("equipped:"):
-                    slot_type = drop_index.split(":")[1]
-                    weapon_type = dragged_item.get("weapon_type")
-                    subtype = dragged_item.get("subtype")
+                    # Find dragged item
+                    dragged_item = next((item for item in self.inventory_data if item.get("slot") == self.dragging_index),
+                                        None)
 
-                    # 🎯 Redirect 2-handed weapons to primary no matter what
-                    if weapon_type in ("Bow", "Staff"):
-                        drop_index = "equipped:primary"
-                        # Unequip both hands
-                        for hand in ("primary", "secondary"):
-                            equip_key = f"equipped:{hand}"
-                            equipped_hand_item = next(
-                                (itm for itm in self.inventory_data if itm.get("slot") == equip_key), None)
-                            if equipped_hand_item:
-                                used_slots = {itm.get("slot") for itm in self.inventory_data if
-                                              isinstance(itm.get("slot"), int)}
-                                all_slots = set(range(len(self.inventory_slots)))
-                                free_slots = list(all_slots - used_slots)
-                                if free_slots:
-                                    equipped_hand_item["slot"] = free_slots[0]
-                                else:
-                                    print("[Equip] No space to unequip 2-handed weapon items!")
-                                    drop_index = self.dragging_index  # Cancel equip
-                                    break
+                    # If trying to equip (into equipment slot)
+                    if isinstance(drop_index, str) and drop_index.startswith("equipped:"):
+                        slot_type = drop_index.split(":")[1]
+                        weapon_type = dragged_item.get("weapon_type")
+                        subtype = dragged_item.get("subtype")
 
-                    # ❌ Prevent invalid subtype (e.g., putting head into chest slot)
-                    elif subtype != slot_type:
-                        print(f"[Equip] Invalid: {dragged_item['subtype']} can't go into {slot_type}")
-                        drop_index = self.dragging_index  # Cancel equip
+                        # 🎯 Redirect 2-handed weapons to primary no matter what
+                        if weapon_type in ("Bow", "Staff"):
+                            drop_index = "equipped:primary"
+                            # Unequip both hands
+                            for hand in ("primary", "secondary"):
+                                equip_key = f"equipped:{hand}"
+                                equipped_hand_item = next(
+                                    (itm for itm in self.inventory_data if itm.get("slot") == equip_key), None)
+                                if equipped_hand_item:
+                                    used_slots = {itm.get("slot") for itm in self.inventory_data if
+                                                  isinstance(itm.get("slot"), int)}
+                                    all_slots = set(range(len(self.inventory_slots)))
+                                    free_slots = list(all_slots - used_slots)
+                                    if free_slots:
+                                        equipped_hand_item["slot"] = free_slots[0]
+                                    else:
+                                        print("[Equip] No space to unequip 2-handed weapon items!")
+                                        drop_index = self.dragging_index  # Cancel equip
+                                        break
 
-                    # ❌ Prevent invalid weapon class
-                    if weapon_type:
-                        player_class = self.player.char_class
-                        allowed_weapons = CLASS_WEAPON_RESTRICTIONS.get(player_class, set())
-                        if weapon_type not in allowed_weapons:
-                            print(f"[Equip] {player_class} cannot equip {weapon_type}.")
+                        # ❌ Prevent invalid subtype (e.g., putting head into chest slot)
+                        elif subtype != slot_type:
+                            print(f"[Equip] Invalid: {dragged_item['subtype']} can't go into {slot_type}")
                             drop_index = self.dragging_index  # Cancel equip
 
-                # Prevent equipping into secondary if 2-hander is equipped
-                if drop_index == "equipped:secondary" and self.player.is_two_handed_weapon_equipped():
-                    print("[Equip] Cannot equip secondary item with 2-handed weapon.")
-                    drop_index = self.dragging_index  # Cancel
+                        # ❌ Prevent invalid weapon class
+                        if weapon_type:
+                            player_class = self.player.char_class
+                            allowed_weapons = CLASS_WEAPON_RESTRICTIONS.get(player_class, set())
+                            if weapon_type not in allowed_weapons:
+                                print(f"[Equip] {player_class} cannot equip {weapon_type}.")
+                                drop_index = self.dragging_index  # Cancel equip
 
-                # Find item already in the drop slot (if any)
-                existing_item = next((item for item in self.inventory_data if item.get("slot") == drop_index), None)
+                    # Prevent equipping into secondary if 2-hander is equipped
+                    if drop_index == "equipped:secondary" and self.player.is_two_handed_weapon_equipped():
+                        print("[Equip] Cannot equip secondary item with 2-handed weapon.")
+                        drop_index = self.dragging_index  # Cancel
 
-                # Swap slots
-                if dragged_item:
-                    dragged_item["slot"] = drop_index
-                if existing_item:
-                    existing_item["slot"] = self.dragging_index
+                    # Find item already in the drop slot (if any)
+                    existing_item = next((item for item in self.inventory_data if item.get("slot") == drop_index), None)
 
-                self.render_inventory_icons()
+                    # Swap slots
+                    if dragged_item:
+                        dragged_item["slot"] = drop_index
+                    if existing_item:
+                        existing_item["slot"] = self.dragging_index
 
-                # Save changes to server
-                try:
-                    payload = {
-                        "character_name": self.screen_manager.player.name,
-                        "inventory": self.inventory_data
-                    }
-                    response = requests.post(f"{SERVER_URL}/inventory/update", json=payload, timeout=5)
-                    response.raise_for_status()
-                except Exception as e:
-                    print(f"[Inventory] Failed to update inventory: {e}")
+                    self.render_inventory_icons()
 
-                self.dragging_item = None
-                self.dragging_index = None
+                    # Save changes to server
+                    try:
+                        payload = {
+                            "character_name": self.screen_manager.player.name,
+                            "inventory": self.inventory_data
+                        }
+                        response = requests.post(f"{SERVER_URL}/inventory/update", json=payload, timeout=5)
+                        response.raise_for_status()
+                    except Exception as e:
+                        print(f"[Inventory] Failed to update inventory: {e}")
 
-                self.sync_equipment_to_player()
-                self.player.save_stats_and_equipment()
-                self.update_secondary_slot_visual()
-                self.refresh_stat_display()
+                    self.dragging_item = None
+                    self.dragging_index = None
+
+                    self.sync_equipment_to_player()
+                    self.player.save_stats_and_equipment()
+                    self.update_secondary_slot_visual()
+                    self.refresh_stat_display()
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
             mouse_pos = pygame.mouse.get_pos()
+            if self.inventory_container.visible:
+                ####### Right-click Inventory Item to Equip ########
+                for i, slot in enumerate(self.inventory_slots):
+                    if slot.get_abs_rect().collidepoint(mouse_pos):
+                        item = next((item for item in self.inventory_data if item.get("slot") == i), None)
+                        if item:
+                            subtype = item.get("subtype")
+                            if subtype:
+                                equip_key = f"equipped:{subtype}"
+                                equipped_item = next((itm for itm in self.inventory_data if itm.get("slot") == equip_key),
+                                                     None)
 
-            ####### Right-click Inventory Item to Equip ########
-            for i, slot in enumerate(self.inventory_slots):
-                if slot.get_abs_rect().collidepoint(mouse_pos):
-                    item = next((item for item in self.inventory_data if item.get("slot") == i), None)
-                    if item:
-                        subtype = item.get("subtype")
-                        if subtype:
-                            equip_key = f"equipped:{subtype}"
-                            equipped_item = next((itm for itm in self.inventory_data if itm.get("slot") == equip_key),
-                                                 None)
-
-                            # 🚫 BLOCK equipping to secondary if 2-handed weapon is equipped
-                            if subtype == "secondary" and self.player.is_two_handed_weapon_equipped():
-                                self.player.chat_window.log_message(
-                                    "[Equip] Cannot equip secondary item while a 2-handed weapon is equipped.",
-                                    "System")
-                                return  # Cancel the right-click equip
-                            # 🚫 Check weapon class restrictions
-                            weapon_type = item.get("weapon_type")
-                            if weapon_type:
-                                player_class = self.player.char_class
-                                allowed_weapons = CLASS_WEAPON_RESTRICTIONS.get(player_class, set())
-                                if weapon_type not in allowed_weapons:
+                                # 🚫 BLOCK equipping to secondary if 2-handed weapon is equipped
+                                if subtype == "secondary" and self.player.is_two_handed_weapon_equipped():
                                     self.player.chat_window.log_message(
-                                        f"[Equip] {player_class} cannot equip {weapon_type}.", "System")
-                                    return
+                                        "[Equip] Cannot equip secondary item while a 2-handed weapon is equipped.",
+                                        "System")
+                                    return  # Cancel the right-click equip
+                                # 🚫 Check weapon class restrictions
+                                weapon_type = item.get("weapon_type")
+                                if weapon_type:
+                                    player_class = self.player.char_class
+                                    allowed_weapons = CLASS_WEAPON_RESTRICTIONS.get(player_class, set())
+                                    if weapon_type not in allowed_weapons:
+                                        self.player.chat_window.log_message(
+                                            f"[Equip] {player_class} cannot equip {weapon_type}.", "System")
+                                        return
 
-                            # 🔄 If equipping a 2-handed weapon, unequip both hands
-                            if subtype == "primary" and weapon_type in ("Bow", "Staff"):
-                                # Unequip both primary and secondary if they exist
-                                for hand in ("primary", "secondary"):
-                                    equip_key = f"equipped:{hand}"
-                                    equipped_hand_item = next(
-                                        (itm for itm in self.inventory_data if itm.get("slot") == equip_key), None)
-                                    if equipped_hand_item:
-                                        # Find an open inventory slot
-                                        used_slots = {itm.get("slot") for itm in self.inventory_data if
-                                                      isinstance(itm.get("slot"), int)}
-                                        all_slots = set(range(len(self.inventory_slots)))
-                                        free_slots = list(all_slots - used_slots)
+                                # 🔄 If equipping a 2-handed weapon, unequip both hands
+                                if subtype == "primary" and weapon_type in ("Bow", "Staff"):
+                                    # Unequip both primary and secondary if they exist
+                                    for hand in ("primary", "secondary"):
+                                        equip_key = f"equipped:{hand}"
+                                        equipped_hand_item = next(
+                                            (itm for itm in self.inventory_data if itm.get("slot") == equip_key), None)
+                                        if equipped_hand_item:
+                                            # Find an open inventory slot
+                                            used_slots = {itm.get("slot") for itm in self.inventory_data if
+                                                          isinstance(itm.get("slot"), int)}
+                                            all_slots = set(range(len(self.inventory_slots)))
+                                            free_slots = list(all_slots - used_slots)
 
-                                        if free_slots:
-                                            equipped_hand_item["slot"] = free_slots[0]
-                                        else:
-                                            print("[Equip] No space to unequip old weapon!")
-                                            return  # Cancel equipping if we can't unequip the old weapon
+                                            if free_slots:
+                                                equipped_hand_item["slot"] = free_slots[0]
+                                            else:
+                                                print("[Equip] No space to unequip old weapon!")
+                                                return  # Cancel equipping if we can't unequip the old weapon
 
-                            equipped_item = next((itm for itm in self.inventory_data if itm.get("slot") == equip_key),
-                                                 None)
+                                equipped_item = next((itm for itm in self.inventory_data if itm.get("slot") == equip_key),
+                                                     None)
 
-                            # Equip current item
-                            if weapon_type in ("Bow", "Staff"):
-                                item["slot"] = "equipped:primary"
-                            else:
-                                item["slot"] = equip_key
+                                # Equip current item
+                                if weapon_type in ("Bow", "Staff"):
+                                    item["slot"] = "equipped:primary"
+                                else:
+                                    item["slot"] = equip_key
 
-                            # If something is already equipped, move it BACK to the same inventory slot
-                            if equipped_item:
-                                equipped_item["slot"] = i
+                                # If something is already equipped, move it BACK to the same inventory slot
+                                if equipped_item:
+                                    equipped_item["slot"] = i
 
-                            self.render_inventory_icons()
-                            self.sync_equipment_to_player()
-                            self.player.save_stats_and_equipment()
-                            self.update_secondary_slot_visual()
-                            self.refresh_stat_display()
-                            self._save_inventory()
-                    return
+                                self.render_inventory_icons()
+                                self.sync_equipment_to_player()
+                                self.player.save_stats_and_equipment()
+                                self.update_secondary_slot_visual()
+                                self.refresh_stat_display()
+                                self._save_inventory()
+                        return
 
             ####### Right-click Equipped Item to Unequip ########
             for slot_panel in self.equipment_slots:
@@ -777,6 +780,10 @@ class InventoryScreen(BaseScreen):
         mouse_pos = pygame.mouse.get_pos()
         hovered_index = None
         hovered_inventory_item = None
+
+        if not self.inventory_container.visible:
+            self.hover_tooltip_box.hide()
+            return  # Skip hover checks if bags tab is hidden
 
         # Step 1: Hovering inventory slot?
         for i, slot in enumerate(self.inventory_slots):
