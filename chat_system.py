@@ -93,7 +93,7 @@ class ChatWindow:
         self.commands.update(self._load_player_commands())
         self.commands.update(self._load_gm_commands())
         self.commands.update(self._load_dev_commands())
-        self.admin_commands = ["broadcast", "kick", "mute", "unmute", "setbanner"]
+        self.admin_commands = ["broadcast", "kick", "mute", "unmute"]
 
         self.reports_window = None
         self.resolution_popup = None
@@ -312,7 +312,13 @@ class ChatWindow:
                 "min_role": "dev",
                 "aliases": [""],
                 "help": "Usage: /addExperience <amount> [player]\nGives experience to self if no player is specified."
-            }
+            },
+            "setbanner": {
+                "func": self.cmd_setbanner,
+                "min_role": "dev",
+                "aliases": [],
+                "help": "Usage: /setbanner <message>\nSets the login banner message."
+            },
         }
 
     def send_admin_command(self, command_text):
@@ -328,17 +334,6 @@ class ChatWindow:
             data = response.json()
             if data.get("success"):
                 pass
-                # # ✅ Send to server chat as an admin message
-                # payload = {
-                #     "sender": self.player.name,
-                #     "message": data.get("message"),
-                #     "timestamp": time.time(),
-                #     "type": "Admin"
-                # }
-                # try:
-                #     requests.post(f"{SERVER_URL}/chat/send", json=payload, timeout=2)
-                # except Exception as e:
-                #     self.log_message(f"[Error] Failed to log admin message: {e}", "System")
             else:
                 self.log_message(f"[Error] {data.get('error')}", "System")
         except Exception as e:
@@ -1035,6 +1030,27 @@ class ChatWindow:
 
         except Exception as e:
             self.log_message(f"[Error] Failed to fetch stats: {e}", "System")
+
+    def cmd_setbanner(self, *args):
+        if not args:
+            self.log_message("Usage: /setbanner <message>", "System")
+            return
+
+        message = " ".join(args).replace("\\n", "\n")
+        payload = {
+            "username": self.screen_manager.current_account,
+            "message": message
+        }
+
+        try:
+            response = requests.post(f"{SERVER_URL}/set_banner", json=payload, timeout=5)
+            data = response.json()
+            if data.get("success"):
+                self.log_message("[Banner] Login banner updated successfully.", "System")
+            else:
+                self.log_message(f"[Error] {data.get('error')}", "System")
+        except Exception as e:
+            self.log_message(f"[Error] Failed to update banner: {e}", "System")
 
     def parse_command_arguments(self, message: str):
         parts = message.split()
