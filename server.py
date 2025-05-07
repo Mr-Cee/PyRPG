@@ -616,6 +616,8 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
     player.current_gathering_activity = "none"
     player.gathering_start_time = None
 
+    print(player.current_gathering_activity)
+
     # Log to chat
     system_msg = models.ChatMessage(
         sender="System",

@@ -98,8 +98,12 @@ class GatheringScreen(BaseScreen):
                         is_gathering = "Currently" in status_text
                         self.collect_button.show() if is_gathering else self.collect_button.hide()
                         self.collect_button.enable() if is_gathering else self.collect_button.disable()
+
+                        print(status_text)
             except Exception as e:
                 print("[Gathering] Failed to fetch state:", e)
+
+
 
         threading.Thread(target=fetch, daemon=True).start()
 
@@ -169,7 +173,7 @@ class GatheringScreen(BaseScreen):
                     raise Exception("Collection failed.")
             except Exception as e:
                 pygame.event.post(pygame.event.Event(pygame.USEREVENT, {"status_message": "Collection failed."}))
-            self.refresh_status()
+            # self.refresh_status()
 
         import threading
         threading.Thread(target=worker, daemon=True).start()
