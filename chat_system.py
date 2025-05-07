@@ -1036,6 +1036,7 @@ class ChatWindow:
             self.log_message("Usage: /setbanner <message>", "System")
             return
 
+
         message = " ".join(args).replace("\\n", "\n")
         payload = {
             "username": self.screen_manager.current_account,

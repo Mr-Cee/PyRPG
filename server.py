@@ -1048,7 +1048,6 @@ def admin_command(payload: dict, db: Session = Depends(get_db)):
     if command not in allowed_commands:
         return {"success": False, "error": f"Permission denied for command: /{command}"}
 
-
     # ✅ Step 2: Parse command
     if command_text.startswith("/broadcast"):
         parts = command_text.split(maxsplit=1)
