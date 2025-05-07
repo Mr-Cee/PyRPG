@@ -470,6 +470,27 @@ def dungeon_complete(data: DungeonResult, db: Session = Depends(get_db)):
 
     return {"success": True, "message": "Dungeon completion recorded"}
 
+@app.get("/dungeon_leaderboard")
+def dungeon_leaderboard(db: Session = Depends(get_db)):
+    top_players = (
+        db.query(Player)
+        .order_by(Player.highest_dungeon_completed.desc(), Player.best_dungeon_time_seconds.asc())
+        .limit(10)
+        .all()
+    )
+    return {
+        "success": True,
+        "leaders": [
+            {
+                "name": p.name,
+                "class": p.char_class,
+                "level": p.level,
+                "dungeon": p.highest_dungeon_completed,
+                "time": p.best_dungeon_time_seconds
+            } for p in top_players
+        ]
+    }
+
 @app.post("/inventory/update")
 def update_inventory(request: InventoryUpdateRequest, db: Session = Depends(get_db)):
     player = db.query(Player).filter_by(name=request.character_name).first()

@@ -58,8 +58,53 @@ class BattleHomeScreen(BaseScreen):
             text="Back",
             manager=manager
         )
+        self.leaderboard_panel = UIPanel(
+            relative_rect=Rect((GAME_WIDTH - 325, 155), (300, 275)),  # Under the dungeon panel
+            manager=self.manager
+        )
+        self.leaderboard_labels = []  # Track labels so we can clear on reload
+
+        # Title
+        UILabel(
+            relative_rect=Rect((10, 5), (280, 30)),
+            text="🏆 Dungeon Leaderboard",
+            manager=self.manager,
+            container=self.leaderboard_panel
+        )
+
+        self.load_leaderboard()
 
         self.load_dungeon_stats()
+
+    def load_leaderboard(self):
+        import threading
+        import requests
+
+        def fetch_leaderboard():
+            try:
+                response = requests.get(f"{SERVER_URL}/dungeon_leaderboard")
+                if response.status_code == 200:
+                    data = response.json().get("leaders", [])
+                    pygame.time.set_timer(pygame.USEREVENT + 101, 0)  # Stop any previous timer
+
+                    # Clear previous labels
+                    for label in self.leaderboard_labels:
+                        label.kill()
+                    self.leaderboard_labels.clear()
+
+                    for i, entry in enumerate(data):
+                        text = f"{i + 1}. {entry['name']} - {entry['dungeon']} (⏱ {entry['time']}s)"
+                        label = UILabel(
+                            relative_rect=Rect((10, 40 + i * 22), (280, 20)),
+                            text=text,
+                            manager=self.manager,
+                            container=self.leaderboard_panel
+                        )
+                        self.leaderboard_labels.append(label)
+            except Exception as e:
+                print(f"[Leaderboard] Failed to load: {e}")
+
+        threading.Thread(target=fetch_leaderboard, daemon=True).start()
 
 
     def handle_event(self, event):
@@ -129,5 +174,8 @@ class BattleHomeScreen(BaseScreen):
         self.back_button.kill()
         self.dungeon_panel.kill()
         self.dungeon_dropdown.kill()
+        self.leaderboard_panel.kill()
+        for label in self.leaderboard_labels:
+            label.kill()
 
 ScreenRegistry.register("battle_home", BattleHomeScreen)
