@@ -78,4 +78,5 @@ class ServerConfig(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     login_banner = Column(Text, default="")
     last_updated = Column(DateTime, default=datetime.datetime.now(datetime.UTC))
+    patch_notes = Column(Text, default="")
 
