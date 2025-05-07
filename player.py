@@ -65,6 +65,11 @@ class Player:
         self.last_logout_time = None  # Track when they logged out
         self.pending_idle_rewards = None  # Store calculated rewards when logging back in
 
+        self.woodcutting_level = 1
+        self.mining_level = 1
+        self.farming_level = 1
+        self.scavenging_level = 1
+
     def gain_experience(self, amount):
         self.experience += amount
 
@@ -504,6 +509,11 @@ class Player:
             "copper": 0, "silver": 0, "gold": 0, "platinum": 0
         })
         player._notify_coin_update()
+
+        player.woodcutting_level = data.get("woodcutting_level", 1)
+        player.mining_level = data.get("mining_level", 1)
+        player.farming_level = data.get("farming_level", 1)
+        player.scavenging_level = data.get("scavenging_level", 1)
 
         return player
 

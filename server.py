@@ -444,32 +444,22 @@ def update_player(request: UpdatePlayerRequest, db: Session = Depends(get_db)):
     return {"msg": "Player updated successfully!"}
 
 @app.post("/gather/start")
-def start_gathering(payload: dict, db: Session = Depends(get_db)):
-    player_name = payload.get("player_name")
-    activity = payload.get("activity")
+def start_gathering(data: dict, db: Session = Depends(get_db)):
+    player_name = data.get("player_name")
+    activity = data.get("activity")
 
-    if activity not in ["woodcutting", "mining", "farming", "scavenging"]:
-        return {"success": False, "error": "Invalid activity."}
+    player = db.query(Player).filter(Player.name == player_name).first()
 
-    player = db.query(Player).filter_by(name=player_name).first()
     if not player:
-        return {"success": False, "error": "Player not found."}
+        return {"success": False, "error": "Player not found"}
 
-    if player.current_gathering_activity != "none":
-        return {
-            "success": False,
-            "error": f"Player is already gathering {player.current_gathering_activity}."
-        }
+    if activity not in models.GatheringActivityEnum.__members__:
+        return {"success": False, "error": "Invalid activity"}
 
     player.current_gathering_activity = activity
     player.gathering_start_time = datetime.datetime.now(datetime.UTC)
-
     db.commit()
-
-    return {
-        "success": True,
-        "message": f"Started {activity} for {player.name} at {player.gathering_start_time}."
-    }
+    return {"success": True, "message": f"{activity.title()} started"}
 
 @app.post("/gather/status")
 def gather_status(payload: dict, db: Session = Depends(get_db)):

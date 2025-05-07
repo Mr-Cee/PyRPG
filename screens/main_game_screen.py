@@ -37,7 +37,7 @@ class MainGameScreen(BaseScreen):
             manager=self.manager
         )
         # Main Menu Buttons
-        button_labels = ["Inventory", "Battle", "Quests", "Skills", "World Map", "Logout"]
+        button_labels = ["Inventory", "Battle", "Skills", "Gathering", "World Map", "Logout"]
         self.menu_buttons = []
 
         for i, label in enumerate(button_labels):
@@ -96,6 +96,9 @@ class MainGameScreen(BaseScreen):
                         battle_screen = ScreenRegistry.get("battle_home")
                         if battle_screen:
                             self.screen_manager.set_screen(battle_screen(self.manager, self.screen_manager))
+                    elif label == "Gathering":
+                        from screens.gathering_screen import GatheringScreen
+                        self.screen_manager.set_screen(GatheringScreen(self.manager, self.screen_manager))
                     elif label == "Logout":
                         self.screen_manager.force_logout("Logged out.")
                     else:
