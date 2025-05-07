@@ -68,5 +68,5 @@ def get_item_name(item_id):
 def get_item_rarity(item_id):
     return get_item_info(item_id)["rarity"]
 
-def get_item_level(item_id):
+def get_required_level(item_id):
     return get_item_info(item_id)["level"]
