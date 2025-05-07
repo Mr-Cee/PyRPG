@@ -152,7 +152,7 @@
       "text_vert_alignment": "top"
     }
   },
-  "#login_banne": {
+  "#login_banner": {
     "colours":
     {
       "normal_border": "#00000000",
@@ -162,7 +162,7 @@
     "misc":
     {
       "text_horiz_alignment": "center",
-      "text_vert_alignment": "top"
+      "text_vert_alignment": "center"
     }
   }
 }
