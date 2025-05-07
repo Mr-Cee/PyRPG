@@ -5,7 +5,7 @@ import pygame
 import pygame_gui
 from pygame import Rect
 import requests
-from pygame_gui.elements import UIButton
+from pygame_gui.elements import UIButton, UIPanel, UILabel
 
 from chat_system import ChatWindow
 from settings import SERVER_URL, rarity_colors, CLASS_WEAPON_RESTRICTIONS
@@ -148,6 +148,26 @@ class InventoryScreen(BaseScreen):
         )
 
         self.player.register_coin_update_callback(self.refresh_coin_display)
+
+
+        ############ MATERIALS TAB ###############
+        self.materials_panel = UIPanel(
+            relative_rect=pygame.Rect((25, 50), (650, 500)),
+            manager=self.manager,
+            visible=False
+        )
+        self.materials_scroll = pygame_gui.elements.ui_vertical_scroll_bar.UIVerticalScrollBar(
+            relative_rect=pygame.Rect((630, 0), (20, 500)),
+            visible=True,
+            manager=self.manager,
+            container=self.materials_panel
+        )
+        self.materials_list_container = pygame_gui.elements.ui_panel.UIPanel(
+            relative_rect=pygame.Rect((0, 0), (630, 1000)),
+            manager=self.manager,
+            container=self.materials_panel
+        )
+        self.materials_labels = []
 
     def setup_character_sheet(self):
         self.equip_slot_size = 44
@@ -480,11 +500,37 @@ class InventoryScreen(BaseScreen):
                 if subtype in self.player.equipment:
                     self.player.equipment[subtype] = item
 
+    def load_gathered_materials(self):
+        import requests
+        try:
+            response = requests.get(f"{SERVER_URL}/gathered_materials", params={"player_name": self.player.name})
+            if response.status_code == 200:
+                for label in self.materials_labels:
+                    label.kill()
+                self.materials_labels.clear()
+
+                items = response.json().get("materials", [])
+                for idx, item in enumerate(items):
+                    label = UILabel(
+                        relative_rect=pygame.Rect((10, idx * 30), (600, 25)),
+                        text=f"{item['name']} x{item['quantity']}",
+                        manager=self.manager,
+                        container=self.materials_list_container
+                    )
+                    self.materials_labels.append(label)
+        except Exception as e:
+            print("[Error] Failed to load gathered materials:", e)
+
     def handle_event(self, event):
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == self.back_button:
                 from screens.main_game_screen import MainGameScreen
                 self.screen_manager.set_screen(MainGameScreen(self.manager, self.screen_manager))
+            elif event.ui_element == self.gathered_tab_button:
+                self.inventory_container.hide()
+                # self.equipment_panel.hide()
+                self.materials_panel.show()
+                self.load_gathered_materials()
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             mouse_pos = pygame.mouse.get_pos()

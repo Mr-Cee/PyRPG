@@ -533,6 +533,27 @@ def gather_status(payload: dict, db: Session = Depends(get_db)):
         "quantity_gathered": total_items
     }
 
+@app.get("/gathered_materials")
+def get_gathered_materials(player_name: str, db: Session = Depends(get_db)):
+    player = db.query(Player).filter_by(name=player_name).first()
+    if not player:
+        return {"success": False, "error": "Player not found."}
+
+    results = db.query(GatheredMaterial).filter_by(player_id=player.id).all()
+
+    # TODO: Replace with item table lookups
+    id_to_name = {
+        1: "Oak Log", 100: "Copper Chunk", 200: "Raw Wheat", 300: "Scrap Leather"
+    }
+
+    return {
+        "success": True,
+        "materials": [
+            {"item_id": g.item_id, "name": id_to_name.get(g.item_id, f"Item {g.item_id}"), "quantity": g.quantity}
+            for g in results
+        ]
+    }
+
 @app.post("/dungeon_complete")
 def dungeon_complete(data: DungeonResult, db: Session = Depends(get_db)):
     player = (
