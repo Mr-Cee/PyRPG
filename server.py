@@ -561,20 +561,25 @@ def get_gathering_state(player_name: str, db: Session = Depends(get_db)):
 @app.post("/collect_materials")
 def collect_materials(payload: dict, db: Session = Depends(get_db)):
     player_name = payload.get("player_name")
+    print(f"[DEBUG] /collect_materials called by {player_name}")
 
     player = db.query(Player).filter_by(name=player_name).first()
     if not player:
+        print("[DEBUG] Player not found")
         return {"success": False, "error": "Player not found."}
 
     if player.current_gathering_activity == "none" or not player.gathering_start_time:
+        print("[DEBUG] Player is not currently gathering")
         return {"success": False, "error": "Player is not currently gathering."}
 
     now = datetime.datetime.utcnow()
     elapsed = (now - player.gathering_start_time).total_seconds()
     minutes = max(1, int(elapsed // 60))
+    print(f"[DEBUG] Elapsed seconds: {elapsed}, Minutes used: {minutes}")
 
     activity = player.current_gathering_activity
     skill_level = getattr(player, f"{activity}_level", 1)
+    print(f"[DEBUG] Activity: {activity}, Skill Level: {skill_level}")
 
     from item_ID import (
         WOODCUTTING_ITEMS, MINING_ITEMS, FARMING_ITEMS, SCAVENGING_ITEMS,
@@ -590,25 +595,30 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
 
     pool = activity_pools.get(activity)
     if not pool:
-        # Activity was invalid (e.g. typo or corrupt)
+        print(f"[DEBUG] Invalid activity: {activity}")
         player.current_gathering_activity = "none"
         player.gathering_start_time = None
         db.commit()
         return {"success": False, "error": f"Invalid gathering activity: {activity}"}
 
     eligible_items = [item_id for item_id in sorted(pool.keys()) if get_item_level(item_id) <= skill_level]
+    print(f"[DEBUG] Eligible items: {eligible_items}")
 
     if not eligible_items:
-        # Safely fall back to first item in pool (but still stop gathering)
         best_item_id = next(iter(pool), None)
         total_items = 0
     else:
         best_item_id = eligible_items[-1]
         total_items = int(minutes * (1 + 0.1 * (skill_level - 1)))
+
+        print(f"[DEBUG] Chosen item ID: {best_item_id}, Name: {get_item_name(best_item_id)}, Total: {total_items}")
+
         existing = db.query(models.GatheredMaterial).filter_by(player_id=player.id, item_id=best_item_id).first()
         if existing:
+            print("[DEBUG] Existing entry found, incrementing quantity")
             existing.quantity += total_items
         else:
+            print("[DEBUG] Creating new GatheredMaterial entry")
             new_entry = models.GatheredMaterial(
                 player_id=player.id,
                 item_id=best_item_id,
@@ -618,14 +628,12 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
             )
             db.add(new_entry)
 
-    print(f"Minutes: {minutes}, Skill Level: {skill_level}, Total Items: {total_items}")
-    print(f"Awarding item_id {best_item_id} ({get_item_name(best_item_id)}) x{total_items}")
-
-    # Always stop gathering
     player.current_gathering_activity = "none"
     player.gathering_start_time = None
 
     message = f"You collected {total_items} x {get_item_name(best_item_id)} after {minutes} minute(s) of {activity}."
+    print(f"[DEBUG] {message}")
+
     system_msg = models.ChatMessage(
         sender="System",
         recipient=player.name,
@@ -634,7 +642,9 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
         type="System"
     )
     db.add(system_msg)
+
     db.commit()
+    print("[DEBUG] Database committed successfully")
 
     return {
         "success": True,
@@ -642,6 +652,7 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
         "item_id": best_item_id,
         "quantity": total_items
     }
+
 
 from item_ID import get_item_name, get_item_rarity, get_item_level  # ✅ Import your item lookup function
 
