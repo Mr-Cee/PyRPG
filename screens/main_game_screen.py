@@ -37,7 +37,7 @@ class MainGameScreen(BaseScreen):
             manager=self.manager
         )
         # Main Menu Buttons
-        button_labels = ["Inventory", "Battle", "Skills", "Gathering", "World Map", "Logout"]
+        button_labels = ["Inventory", "Battle", "Abilities [WIP]", "Gathering", "World Map [WIP]", "Logout"]
         self.menu_buttons = []
 
         for i, label in enumerate(button_labels):
