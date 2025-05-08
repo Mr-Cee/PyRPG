@@ -589,10 +589,16 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
         "scavenging": SCAVENGING_ITEMS
     }
     print("Test 1")
+    # Fetch item pool
     pool = activity_pools.get(activity, {})
     eligible_items = [item_id for item_id in sorted(pool.keys()) if get_item_level(item_id) <= skill_level]
+
     if not eligible_items:
-        return {"success": False, "error": "No items eligible to gather at your level."}
+        # Still reset the gathering state
+        player.current_gathering_activity = "none"
+        player.gathering_start_time = None
+        db.commit()
+        return {"success": False, "error": "No gatherable items available for your level. Gathering stopped."}
 
     best_item_id = eligible_items[-1]
     total_items = int(minutes * (1 + 0.1 * (skill_level - 1)))
