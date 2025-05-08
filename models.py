@@ -60,7 +60,6 @@ class Player(Base):
     mining_level = Column(Integer, default=1)
     farming_level = Column(Integer, default=1)
     scavenging_level = Column(Integer, default=1)
-
     gathered_materials = relationship("GatheredMaterial", back_populates="player")
 
 class ChatMessage(Base):

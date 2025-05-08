@@ -103,7 +103,6 @@ class DungeonResult(BaseModel):
     level_completed: int
     time_seconds: int
 
-
 def create_access_token(data: dict, expires_delta: datetime.timedelta = None):
     to_encode = data.copy()
     expire = datetime.datetime.utcnow() + (expires_delta or datetime.timedelta(minutes=15))
