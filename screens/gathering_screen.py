@@ -88,8 +88,6 @@ class GatheringScreen(BaseScreen):
             )
             self.level_labels.append(lbl)
 
-
-
     def refresh_status(self):
         import threading, requests
 
@@ -109,9 +107,6 @@ class GatheringScreen(BaseScreen):
                         print(status_text)
             except Exception as e:
                 print("[Gathering] Failed to fetch state:", e)
-
-
-
         threading.Thread(target=fetch, daemon=True).start()
 
     def fetch_status(self):
@@ -197,15 +192,13 @@ class GatheringScreen(BaseScreen):
                         self.start_gathering(btn.activity_name)
                         self.refresh_status()
 
-        # Let the chat system process any events too
-        if self.player.chat_window:
-            self.player.chat_window.process_event(event)
-
-
-
         elif event.type == pygame.USEREVENT:
             if "status_message" in event.__dict__:
                 self.status_label.set_text(event.status_message)
+
+        # Let the chat system process any events too
+        if self.player.chat_window:
+            self.player.chat_window.process_event(event)
 
     def update(self, time_delta):
         self.manager.update(time_delta)
