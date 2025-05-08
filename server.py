@@ -577,7 +577,8 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
     minutes = max(1, int(elapsed // 60))
     print(f"[DEBUG] Elapsed seconds: {elapsed}, Minutes used: {minutes}")
 
-    activity = player.current_gathering_activity
+    activity = player.current_gathering_activity.value if hasattr(player.current_gathering_activity, 'value') else player.current_gathering_activity
+
     skill_level = getattr(player, f"{activity}_level", 1)
     print(f"[DEBUG] Activity: {activity}, Skill Level: {skill_level}")
 
