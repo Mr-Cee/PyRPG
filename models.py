@@ -54,7 +54,7 @@ class Player(Base):
     best_dungeon_time_seconds = Column(Integer, default=0)
 
     current_gathering_activity = Column(SqlEnum(GatheringActivityEnum), default=GatheringActivityEnum.none)
-    gathering_start_time = Column(DateTime, nullable=True)
+    gathering_start_time = Column(DateTime(timezone=True), nullable=True)
 
     woodcutting_level = Column(Integer, default=1)
     mining_level = Column(Integer, default=1)
