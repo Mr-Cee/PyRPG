@@ -569,17 +569,16 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
     if player.current_gathering_activity == "none" or not player.gathering_start_time:
         return {"success": False, "error": "Player is not currently gathering."}
 
-    # Determine elapsed time
     now = datetime.datetime.utcnow()
     elapsed = (now - player.gathering_start_time).total_seconds()
-    minutes = max(1, int(elapsed // 60))  # At least 1 minute even if <60s
+    minutes = max(1, int(elapsed // 60))
 
     activity = player.current_gathering_activity
     skill_level = getattr(player, f"{activity}_level", 1)
 
     from item_ID import (
         WOODCUTTING_ITEMS, MINING_ITEMS, FARMING_ITEMS, SCAVENGING_ITEMS,
-        get_item_level, get_item_name
+        get_item_level, get_item_name, get_item_rarity
     )
 
     activity_pools = {
@@ -588,57 +587,49 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
         "farming": FARMING_ITEMS,
         "scavenging": SCAVENGING_ITEMS
     }
-    print("Test 1")
-    # Fetch item pool
+
     pool = activity_pools.get(activity, {})
     eligible_items = [item_id for item_id in sorted(pool.keys()) if get_item_level(item_id) <= skill_level]
 
     if not eligible_items:
-        # Still reset the gathering state
-        player.current_gathering_activity = "none"
-        player.gathering_start_time = None
-        db.commit()
-        return {"success": False, "error": "No gatherable items available for your level. Gathering stopped."}
-
-    best_item_id = eligible_items[-1]
-    total_items = int(minutes * (1 + 0.1 * (skill_level - 1)))
-    print("Test 2")
-    # Add to GatheredMaterial table
-    existing = db.query(models.GatheredMaterial).filter_by(player_id=player.id, item_id=best_item_id).first()
-    if existing:
-        existing.quantity += total_items
+        # Fallback: default to lowest item in pool
+        best_item_id = min(pool.keys())
+        total_items = 0
     else:
-        from item_ID import get_item_rarity
-        new_entry = models.GatheredMaterial(
-            player_id=player.id,
-            item_id=best_item_id,
-            quantity=total_items,
-            name=get_item_name(best_item_id),
-            rarity=get_item_rarity(best_item_id)
-        )
-        db.add(new_entry)
-    print("Test 3")
-    # Reset gathering state
+        best_item_id = eligible_items[-1]
+        total_items = int(minutes * (1 + 0.1 * (skill_level - 1)))
+
+        existing = db.query(models.GatheredMaterial).filter_by(player_id=player.id, item_id=best_item_id).first()
+        if existing:
+            existing.quantity += total_items
+        else:
+            new_entry = models.GatheredMaterial(
+                player_id=player.id,
+                item_id=best_item_id,
+                quantity=total_items,
+                name=get_item_name(best_item_id),
+                rarity=get_item_rarity(best_item_id)
+            )
+            db.add(new_entry)
+
+    # Always stop gathering
     player.current_gathering_activity = "none"
     player.gathering_start_time = None
 
-    print(player.current_gathering_activity)
-
-    # Log to chat
+    message = f"You collected {total_items} x {get_item_name(best_item_id)} after {minutes} minute(s) of {activity}."
     system_msg = models.ChatMessage(
         sender="System",
         recipient=player.name,
-        message=f"You collected {total_items} x {get_item_name(best_item_id)} after {minutes} minute(s) of {activity}.",
+        message=message,
         timestamp=datetime.datetime.now(datetime.UTC).timestamp(),
         type="System"
     )
     db.add(system_msg)
-
     db.commit()
 
     return {
         "success": True,
-        "message": f"Collected {total_items} x {get_item_name(best_item_id)}.",
+        "message": message,
         "item_id": best_item_id,
         "quantity": total_items
     }
