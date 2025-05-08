@@ -174,7 +174,7 @@ class GatheringScreen(BaseScreen):
                     raise Exception("Collection failed.")
             except Exception as e:
                 print( {"status_message": "Collection failed."})
-            # self.refresh_status()
+            self.refresh_status()
 
         import threading
         threading.Thread(target=worker, daemon=True).start()
