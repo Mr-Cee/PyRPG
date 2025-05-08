@@ -588,17 +588,23 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
         "scavenging": SCAVENGING_ITEMS
     }
 
-    pool = activity_pools.get(activity, {})
+    pool = activity_pools.get(activity)
+    if not pool:
+        # Activity was invalid (e.g. typo or corrupt)
+        player.current_gathering_activity = "none"
+        player.gathering_start_time = None
+        db.commit()
+        return {"success": False, "error": f"Invalid gathering activity: {activity}"}
+
     eligible_items = [item_id for item_id in sorted(pool.keys()) if get_item_level(item_id) <= skill_level]
 
     if not eligible_items:
-        # Fallback: default to lowest item in pool
-        best_item_id = min(pool.keys())
+        # Safely fall back to first item in pool (but still stop gathering)
+        best_item_id = next(iter(pool), None)
         total_items = 0
     else:
         best_item_id = eligible_items[-1]
         total_items = int(minutes * (1 + 0.1 * (skill_level - 1)))
-
         existing = db.query(models.GatheredMaterial).filter_by(player_id=player.id, item_id=best_item_id).first()
         if existing:
             existing.quantity += total_items
