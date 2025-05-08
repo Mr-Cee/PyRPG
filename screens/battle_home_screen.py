@@ -2,6 +2,8 @@ import pygame
 import pygame_gui
 from pygame import Rect
 from pygame_gui.elements import UIButton, UIPanel, UILabel, UIDropDownMenu
+
+from chat_system import ChatWindow
 from settings import *
 from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
@@ -11,6 +13,7 @@ class BattleHomeScreen(BaseScreen):
     def __init__(self, manager, screen_manager):
         super().__init__(manager, screen_manager)
         self.player = screen_manager.player
+        self.manager = manager
 
         self.quick_button = UIButton(
             relative_rect=Rect((100, 100), (200, 40)),
@@ -63,6 +66,11 @@ class BattleHomeScreen(BaseScreen):
         self.load_leaderboard()
 
         self.load_dungeon_stats()
+
+    def setup(self):
+        self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
+        self.player.chat_window.panel.set_relative_position((10, 480))
+        self.player.chat_window.panel.set_dimensions((400, 220))
 
     def load_leaderboard(self):
         import threading
@@ -131,6 +139,10 @@ class BattleHomeScreen(BaseScreen):
             if event.ui_element == self.dungeon_dropdown:
                 self.selected_dungeon_level = int(event.text)
 
+        # Let the chat system process any events too
+        if self.player.chat_window:
+            self.player.chat_window.process_event(event)
+
     def load_dungeon_stats(self):
         import threading
         import requests
@@ -166,6 +178,9 @@ class BattleHomeScreen(BaseScreen):
     def update(self, time_delta):
         self.manager.update(time_delta)
 
+        if self.player.chat_window:
+            self.player.chat_window.update(time_delta)
+
     def draw(self, window_surface):
         self.manager.draw_ui(window_surface)
 
@@ -178,5 +193,8 @@ class BattleHomeScreen(BaseScreen):
         self.leaderboard_panel.kill()
         for label in self.leaderboard_labels:
             label.kill()
+        if self.player.chat_window:
+            self.player.chat_window.teardown()
+            self.player.chat_window = None
 
 ScreenRegistry.register("battle_home", BattleHomeScreen)

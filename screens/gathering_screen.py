@@ -14,17 +14,23 @@ from settings import SERVER_URL
 class GatheringScreen(BaseScreen):
     def __init__(self, manager, screen_manager):
         super().__init__(manager, screen_manager)
-        self.player = screen_manager.player
+        self.player = self.screen_manager.player
+        self.manager = manager
+
+
+
         self.status_label = None
         self.level_labels = []
         self.buttons = []
         self.status_panel = None
+
+        self.setup_ui()
+        self.refresh_status()
+
+    def setup(self):
         self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
         self.player.chat_window.panel.set_relative_position((10, 480))
         self.player.chat_window.panel.set_dimensions((400, 220))
-        self.setup_ui()
-        # self.fetch_status()
-        self.refresh_status()
 
     def setup_ui(self):
         # Back button
@@ -87,6 +93,8 @@ class GatheringScreen(BaseScreen):
                 manager=self.manager
             )
             self.level_labels.append(lbl)
+
+
 
     def refresh_status(self):
         import threading, requests
@@ -170,6 +178,7 @@ class GatheringScreen(BaseScreen):
                 if response.status_code == 200:
                     data = response.json()
                     msg = data.get("message", "Collected.")
+                    self.player.chat_window.log_message(msg, "System")
                 else:
                     raise Exception("Collection failed.")
             except Exception as e:
@@ -220,8 +229,10 @@ class GatheringScreen(BaseScreen):
         for lbl in self.level_labels:
             lbl.kill()
         if self.player.chat_window:
+            print("Teardown")
             self.player.chat_window.teardown()
             self.player.chat_window = None
+            print(self.player.chat_window)
 
 
 ScreenRegistry.register("gathering", GatheringScreen)

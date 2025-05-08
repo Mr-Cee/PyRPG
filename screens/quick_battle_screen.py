@@ -22,10 +22,6 @@ class QuickBattleScreen(BaseScreen):
         self.player = self.screen_manager.player
         self.manager = manager
 
-        self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
-        self.player.chat_window.panel.set_relative_position((10, 480))
-        self.player.chat_window.panel.set_dimensions((400, 220))
-
         self.pending_enemy_spawn = False
         self.enemy_spawn_timer = 0.0
         self.enemy_spawn_delay = 3.0  # 1 second delay
@@ -132,6 +128,11 @@ class QuickBattleScreen(BaseScreen):
 
         self.update_hp_display()
         self.add_log(f"You engage a {self.enemy['name']}!")
+
+    def setup(self):
+        self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
+        self.player.chat_window.panel.set_relative_position((10, 480))
+        self.player.chat_window.panel.set_dimensions((400, 220))
 
     def start_new_battle(self):
         self.battle_log = []
