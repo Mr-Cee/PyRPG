@@ -572,7 +572,10 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
         print("[DEBUG] Player is not currently gathering")
         return {"success": False, "error": "Player is not currently gathering."}
 
-    now = datetime.datetime.utcnow()
+    now = datetime.datetime.now(datetime.UTC)
+    print(f"[DEBUG] Now: {now}")
+    print(f"[Debug] Start time: {player.gathering_start_time}")
+    print(f"seconds: {now - player.gathering_start_time}")
     elapsed = (now - player.gathering_start_time).total_seconds()
     minutes = max(1, int(elapsed // 60))
     print(f"[DEBUG] Elapsed seconds: {elapsed}, Minutes used: {minutes}")
