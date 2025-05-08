@@ -153,6 +153,8 @@ class DungeonScreen(BaseScreen):
         self.enemy_attack_timer = 0
         self.battle_running = True
 
+        self.level_label.set_text(f"Dungeon Level {self.level}")
+
         # Hide continue button if it's visible
         if hasattr(self, "continue_button"):
             self.continue_button.hide()

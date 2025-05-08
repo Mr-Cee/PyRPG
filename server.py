@@ -618,6 +618,9 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
             )
             db.add(new_entry)
 
+    print(f"Minutes: {minutes}, Skill Level: {skill_level}, Total Items: {total_items}")
+    print(f"Awarding item_id {best_item_id} ({get_item_name(best_item_id)}) x{total_items}")
+
     # Always stop gathering
     player.current_gathering_activity = "none"
     player.gathering_start_time = None

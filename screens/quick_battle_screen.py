@@ -335,10 +335,6 @@ class QuickBattleScreen(BaseScreen):
         # Armor application (after all multipliers)
         dmg_after_armor = max(0, dmg - armor)
 
-        print(f"enemy damage: {dmg}")
-        print(f"armor: {armor}")
-        print(f"damage after armor: {dmg_after_armor}")
-
         if dmg_after_armor <= 0:
             self.add_log(f"<font color='#cccccc'>Your armor absorbed all damage!</font>")
         else:

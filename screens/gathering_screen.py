@@ -4,6 +4,8 @@ from pygame import Rect
 from pygame_gui.elements import UIButton, UILabel, UIPanel
 import requests
 import datetime
+
+from chat_system import ChatWindow
 from screen_manager import BaseScreen
 from screen_registry import ScreenRegistry
 from settings import SERVER_URL
@@ -17,6 +19,9 @@ class GatheringScreen(BaseScreen):
         self.level_labels = []
         self.buttons = []
         self.status_panel = None
+        self.player.chat_window = ChatWindow(self.manager, self.player, self.screen_manager)
+        self.player.chat_window.panel.set_relative_position((10, 480))
+        self.player.chat_window.panel.set_dimensions((400, 220))
         self.setup_ui()
         # self.fetch_status()
         self.refresh_status()
@@ -30,7 +35,7 @@ class GatheringScreen(BaseScreen):
         )
 
         # Title
-        UILabel(
+        self.title_label = UILabel(
             relative_rect=Rect((150, 10), (300, 30)),
             text="Gathering Activities",
             manager=self.manager
@@ -82,6 +87,8 @@ class GatheringScreen(BaseScreen):
                 manager=self.manager
             )
             self.level_labels.append(lbl)
+
+
 
     def refresh_status(self):
         import threading, requests
@@ -167,9 +174,7 @@ class GatheringScreen(BaseScreen):
                 )
                 if response.status_code == 200:
                     data = response.json()
-                    print(data.get("message"))
                     msg = data.get("message", "Collected.")
-                    print( {"status_message": msg})
                 else:
                     raise Exception("Collection failed.")
             except Exception as e:
@@ -192,6 +197,10 @@ class GatheringScreen(BaseScreen):
                         self.start_gathering(btn.activity_name)
                         self.refresh_status()
 
+        # Let the chat system process any events too
+        if self.player.chat_window:
+            self.player.chat_window.process_event(event)
+
 
 
         elif event.type == pygame.USEREVENT:
@@ -201,11 +210,15 @@ class GatheringScreen(BaseScreen):
     def update(self, time_delta):
         self.manager.update(time_delta)
 
+        if self.player.chat_window:
+            self.player.chat_window.update(time_delta)
+
     def draw(self, surface):
         self.manager.draw_ui(surface)
 
     def teardown(self):
         self.back_button.kill()
+        self.title_label.kill()
         self.status_label.kill()
         self.collect_button.kill()
         self.status_panel.kill()
@@ -213,6 +226,9 @@ class GatheringScreen(BaseScreen):
             btn.kill()
         for lbl in self.level_labels:
             lbl.kill()
+        if self.player.chat_window:
+            self.player.chat_window.teardown()
+            self.player.chat_window = None
 
 
 ScreenRegistry.register("gathering", GatheringScreen)
