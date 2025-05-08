@@ -638,7 +638,7 @@ def collect_materials(payload: dict, db: Session = Depends(get_db)):
     player.current_gathering_activity = "none"
     player.gathering_start_time = None
 
-    message = f"You collected {total_items} x {get_item_name(best_item_id)} after {minutes} minute(s) of {activity}."
+    message = f"You collected {total_items} x {get_item_name(best_item_id)} after {units} second(s) of {activity}."
     # print(f"[DEBUG] {message}")
 
     system_msg = models.ChatMessage(
